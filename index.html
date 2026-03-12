@@ -276,33 +276,33 @@ background-color: #ff5252;
 
 <h1>Games</h1>
 <div class="button-container">
-<button onclick="openGame(1)">Baldi Plus</button>
-<button onclick="openGame(2)">Epstein</button>
-<button onclick="openGame(3)">Baldi</button>
-<button onclick="openGame(4)">Minecraft</button>
-<button onclick="openGame(5)">Half Life</button>
+<button onclick="openGame(1)"></button>
+<button onclick="openGame(2)"></button>
+<button onclick="openGame(3)"></button>
+<button onclick="openGame(4)"></button>
+<button onclick="openGame(5)"></button>
 <button onclick="openGame(6)">Ultrakill</button>
-<button onclick="openGame(7)">Cookie Clicker</button>
-<button onclick="openGame(8)">Doge Miner 2</button>
-<button onclick="openGame(9)">Doge Miner</button>
-<button onclick="openGame(10)">Cuphead (takes a while to load)</button>
-<button onclick="openGame(11)">Mario</button>
+<button onclick="openGame(7)"></button>
+<button onclick="openGame(8)"></button>
+<button onclick="openGame(9)"></button>
+<button onclick="openGame(10)"></button>
+<button onclick="openGame(11)"></button>
 <button onclick="openGame(12)">FNAF Launcher</button>
-<button onclick="openGame(13)">Cooking Mama</button>
-<button onclick="openGame(14)">Kindergarten</button>
-<button onclick="openGame(15)">Kindergarten 2</button>
-<button onclick="openGame(16)">Kindergarten 3</button>
+<button onclick="openGame(13)"></button>
+<button onclick="openGame(14)"></button>
+<button onclick="openGame(15)"></button>
+<button onclick="openGame(16)"></button>
 <button onclick="openGame(17)">2v2.io</button>
-<button onclick="openGame(18)">Polytrack</button>
-<button onclick="openGame(19)">Jetski Race</button>
-<button onclick="openGame(20)">Portal</button>
-<button onclick="openGame(21)">Zombies</button>
-<button onclick="openGame(22)">Skibidi Toilet(we are gaining braincells)</button>
-<button onclick="openGame(23)">Friday Night Funkin'</button>
+<button onclick="openGame(18)"></button>
+<button onclick="openGame(19)"></button>
+<button onclick="openGame(20)"></button>
+<button onclick="openGame(21)"></button>
+<button onclick="openGame(22)"></button>
+<button onclick="openGame(23)"></button>
 <button onclick="openGame(24)">zombie</button>
-<button onclick="openGame(25)">Basketball Stars</button>
-<button onclick="openGame(26)">Game26</button>
-<button onclick="openGame(27)">Game27</button>
+<button onclick="openGame(25)"></button>
+<button onclick="openGame(26)"></button>
+<button onclick="openGame(27)"></button>
 <button onclick="openGame(28)">calcslover</button>
 </div>
 
@@ -534,7 +534,7 @@ if (userBanNotification) userBanNotification.style.display = 'block';
 
 const SITE_LOGINS = {
 'kaiden': 'KHDisco806',
-'j_glizzy': 'yomama!1',
+'jjj': 'yomama!1',
 'Jeremy_Wade': 'Hal',
 'gnb_fartball': 'imaura6767',
 'luka': 'thejepstein',
@@ -833,31 +833,31 @@ showSiteLoginModal();
 });
 
 const gameUrls = {
-1: 'https://lessons.mrwheeler.uk/resources/semag/baldi-plus/index.html',
-2: 'https://lessons.mrwheeler.uk/resources/semag/fnae/index.html',
-3: 'https://lessons.mrwheeler.uk/resources/semag/baldis-basics/index.html',
-4: 'https://lessons.mrwheeler.uk/resources/semag/eag/18wasm/index.html',
-5: 'https://lessons.mrwheeler.uk/resources/semag/halflife/index.html',
+1: '',
+2: '',
+3: '',
+4: '',
+5: '',
 6: 'https://html-classic.itch.zone/html/15139480/ultrakill/index.html',
-7: 'https://lessons.mrwheeler.uk/resources/semag/cookieclicker/index.html',
-8: 'https://lessons.mrwheeler.uk/resources/semag/dogeminer2/index.html',
-9: 'https://lessons.mrwheeler.uk/resources/semag/dogeminer/index.html',
-10: 'https://lessons.mrwheeler.uk/resources/semag/cuphead/index.html',
-11: 'https://lessons.mrwheeler.uk/resources/semag/mario/index.html',
+7: '',
+8: '',
+9: '',
+10: '',
+11: '',
 12: 'https://irv77.github.io/FnafLauncher',
-13: 'https://lessons.mrwheeler.uk/resources/semag/cookingmama/index.html',
-14: 'https://lessons.mrwheeler.uk/resources/semag/kindergarten/index.html',
-15: 'https://lessons.mrwheeler.uk/resources/semag/kindergarten2/index.html',
-16: 'https://lessons.mrwheeler.uk/resources/semag/kindergarten3/index.html',
+13: '',
+14: '',
+15: '',
+16: '',
 17: 'https://2v2.io',
-18: 'https://html-classic.itch.zone/html/15451330/index.html',
-19: 'https://lessons.mrwheeler.uk/resources/semag/jetskirace/index.html',
-20: 'https://lessons.mrwheeler.uk/resources/semag/portal/portal.html',
-21: 'https://lessons.mrwheeler.uk/resources/semag/nzp/index.html',
-22: 'https://lessons.mrwheeler.uk/resources/semag/skibiditoilet/index.html',
-23: 'https://lessons.mrwheeler.uk/resources/semag/fridaynightfunkin/index.html',
+18: '',
+19: '',
+20: '',
+21: '',
+22: '',
+23: '',
 24: 'https://nzp.gay',
-25: 'https://lessons.mrwheeler.uk/resources/semag/basketball-stars/index.html',
+25: '',
 26: '',
 27: '',
 28: 'https://calcsolver.net'
@@ -956,7 +956,7 @@ alert(`IP ${ip} has been banned!`);
 }
 }
 
-// User Ban System
+
 function getBannedUsers() {
 const stored = localStorage.getItem('bannedUsers');
 return stored ? JSON.parse(stored) : [];
@@ -1021,15 +1021,11 @@ updateBannedUsersList();
 alert('All user bans cleared!');
 }
 
-// --- Static ban list (edit this array to ban users by username in code) ---
 const STATIC_BANNED_USERS = [
   '',
   '',
-// Add usernames to ban here, e.g.:
-// 'baduser1',
-// 'troublemaker',
-];
-// -------------------------------------------------------------
+
+]
 
 </script>
 </body>
