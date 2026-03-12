@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>chud games</title>
+<style>
+body {
+background-color: #333333;
+font-family: Arial, sans-serif;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+min-height: 100vh;
+margin: 0;
+}
+
+h1 {
+color: #ffffff;
+font-size: 2rem;         
+margin-bottom: 1.875rem; 
+}
+
+.button-container {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+gap: 0.9375rem;          
+max-width: 37.5rem;     
+}
+
+button {
+padding: 1rem;           
+font-size: 1rem;         
+background-color: #000;
+color: #fff;
+border: none;
+border-radius: 0.5rem;   
+cursor: pointer;
+transition: background-color 0.3s;
+}
+
+button:hover {
+background-color: #fff;
+color: #000;
+}
+
+.iframe-container {
+display: none;
+width: 100vw;
+height: 100vh;
+position: fixed;
+top: 0;
+left: 0;
+z-index: 1000;
+flex-direction: column;
+}
+
+.game-iframe {
+width: 100%;
+height: 100%;
+border: none;
+}
+
+
+.iframe-controls {
+position: absolute;
+top: 0.625rem;
+right: 0.625rem;
+display: flex;
+gap: 0.5rem;
+z-index: 1001;
+}
+
+.close-btn,
+.refresh-btn {
+background-color: #333;
+padding: 0.3125rem 0.625rem;
+cursor: pointer;
+border: none;
+border-radius: 0.25rem;
+color: #fff;
+font-size: 0.45rem;
+}
+
+.close-btn:hover,
+.refresh-btn:hover {
+background-color: #555;
+}
+
+
+#ip-notification {
+position: fixed;
+top: 1rem;
+left: 50%;
+transform: translateX(-50%);
+background-color: #1a1a1a;
+color: #fff;
+padding: 1rem 1.5rem;
+border-radius: 0.5rem;
+border-left: 4px solid #ff9800;
+z-index: 9999;
+box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+max-width: 90%;
+animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+from {
+opacity: 0;
+transform: translateX(-50%) translateY(-20px);
+}
+to {
+opacity: 1;
+transform: translateX(-50%) translateY(0);
+}
+}
+
+.close-notification {
+margin-left: 1rem;
+background-color: #ff9800;
+border: none;
+color: #000;
+padding: 0.25rem 0.75rem;
+border-radius: 0.25rem;
+cursor: pointer;
+font-weight: bold;
+}
+
+.close-notification:hover {
+background-color: #ffb74d;
+}
+
+#ban-notification {
+position: fixed;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+background-color: #d32f2f;
+color: #fff;
+padding: 2rem;
+border-radius: 0.5rem;
+z-index: 10000;
+text-align: center;
+box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+#ban-notification h2 {
+margin-top: 0;
+font-size: 1.5rem;
+}
+
+#ban-notification p {
+margin: 1rem 0;
+font-size: 1.1rem;
+}
+
+.ban-item {
+background-color: #444;
+padding: 0.75rem;
+margin: 0.5rem 0;
+border-radius: 0.25rem;
+display: flex;
+justify-content: space-between;
+align-items: center;
+border-left: 3px solid #d32f2f;
+}
+
+.ban-item span {
+flex: 1;
+word-break: break-all;
+}
+
+.ban-item button {
+padding: 0.25rem 0.5rem;
+font-size: 0.8rem;
+background-color: #d32f2f;
+margin-left: 0.5rem;
+}
+
+.ban-item button:hover {
+background-color: #ff5252;
+}
+
+#user-ban-notification {
+position: fixed;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+background-color: #d32f2f;
+color: #fff;
+padding: 2rem;
+border-radius: 0.5rem;
+z-index: 10000;
+text-align: center;
+box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+#user-ban-notification h2 {
+margin-top: 0;
+font-size: 1.5rem;
+}
+
+#user-ban-notification p {
+margin: 1rem 0;
+font-size: 1.1rem;
+}
+
+.user-ban-item {
+background-color: #444;
+padding: 0.75rem;
+margin: 0.5rem 0;
+border-radius: 0.25rem;
+display: flex;
+justify-content: space-between;
+align-items: center;
+border-left: 3px solid #d32f2f;
+}
+
+.user-ban-item span {
+flex: 1;
+word-break: break-all;
+}
+
+.user-ban-item button {
+padding: 0.25rem 0.5rem;
+font-size: 0.8rem;
+background-color: #d32f2f;
+margin-left: 0.5rem;
+}
+
+.user-ban-item button:hover {
+background-color: #ff5252;
+}
+</style>
+</head>
+<body>
+<!-- Login Modal (site-wide, required on load) -->
+<div id="site-login-modal" style="display:flex; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:4000; align-items:center; justify-content:center; flex-direction:column;">
+<div style="background:#222; padding:2.5rem 2rem; border-radius:0.5rem; text-align:center; color:#fff; min-width:300px; box-shadow:0 8px 32px #000a;">
+<h2>Login Required</h2>
+<div style="color:#ff9800; background:#222; border-radius:0.25rem; padding:0.5rem 1rem; margin-bottom:1rem; font-size:1rem;">
+<strong>Do not share your login information with anyone.</strong>
+</div>
+<input type="text" id="site-login-username" placeholder="Username" style="padding:0.5rem; margin:0.5rem 0; width:220px; border:none; border-radius:0.25rem;" autocomplete="username" />
+<input type="password" id="site-login-password" placeholder="Password" style="padding:0.5rem; margin:0.5rem 0; width:220px; border:none; border-radius:0.25rem;" autocomplete="current-password" />
+<button onclick="siteLoginSubmit()" style="padding:0.5rem 1.5rem; background:#000; color:#fff; border:none; border-radius:0.25rem; margin-top:1rem;">Login</button>
+<button onclick="window.open('https://forms.gle/NbnT5SNakh3eWgBs8','_blank')" style="margin-top:1rem; background:#444; color:#fff; border:none; border-radius:0.25rem; padding:0.5rem 1.5rem;">Request an Account</button>
+<div id="site-login-error" style="color:#ff5252; margin-top:0.75rem; min-height:1.5em;"></div>
+</div>
+</div>
+<!-- Name Modal (after login) -->
+<div id="name-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); z-index:3000; align-items:center; justify-content:center; flex-direction:column;">
+<div style="background:#444; padding:2rem; border-radius:0.5rem; text-align:center; color:#fff; display:flex; flex-direction:column; align-items:center;">
+<h2>Enter Your Name</h2>
+<input type="text" id="user-name-input" placeholder="Your name" style="padding:0.5rem; margin:1rem 0; width:200px; border:none; border-radius:0.25rem;" />
+<button onclick="submitUserName()" style="padding:0.5rem 1rem; background:#000; color:#fff; border:none; border-radius:0.25rem;">Continue</button>
+</div>
+</div>
+<div id="ip-notification" style="display: none;">
+<span id="notification-text">Loading your information...</span>
+<button class="close-notification" onclick="closeIPNotification()">✕</button>
+</div>
+
+<div id="ban-notification" style="display: none;">
+<h2>🚫 Access Denied</h2>
+<p>Your IP address has been banned from this site.</p>
+<p id="ban-reason"></p>
+</div>
+
+<div id="user-ban-notification" style="display: none;">
+<h2>🚫 Access Denied</h2>
+<p>Your account has been banned from this site.</p>
+<p id="user-ban-reason"></p>
+</div>
+
+<h1>Games</h1>
+<div class="button-container">
+<button onclick="openGame(1)">Baldi Plus</button>
+<button onclick="openGame(2)">Epstein</button>
+<button onclick="openGame(3)">Baldi</button>
+<button onclick="openGame(4)">Minecraft</button>
+<button onclick="openGame(5)">Half Life</button>
+<button onclick="openGame(6)">Ultrakill</button>
+<button onclick="openGame(7)">Cookie Clicker</button>
+<button onclick="openGame(8)">Doge Miner 2</button>
+<button onclick="openGame(9)">Doge Miner</button>
+<button onclick="openGame(10)">Cuphead (takes a while to load)</button>
+<button onclick="openGame(11)">Mario</button>
+<button onclick="openGame(12)">FNAF Launcher</button>
+<button onclick="openGame(13)">Cooking Mama</button>
+<button onclick="openGame(14)">Kindergarten</button>
+<button onclick="openGame(15)">Kindergarten 2</button>
+<button onclick="openGame(16)">Kindergarten 3</button>
+<button onclick="openGame(17)">2v2.io</button>
+<button onclick="openGame(18)">Polytrack</button>
+<button onclick="openGame(19)">Jetski Race</button>
+<button onclick="openGame(20)">Portal</button>
+<button onclick="openGame(21)">Zombies</button>
+<button onclick="openGame(22)">Skibidi Toilet(we are gaining braincells)</button>
+<button onclick="openGame(23)">Friday Night Funkin'</button>
+<button onclick="openGame(24)">Game24</button>
+<button onclick="openGame(25)">Basketball Stars</button>
+<button onclick="openGame(26)">Game26</button>
+<button onclick="openGame(27)">Game27</button>
+<button onclick="openGame(28)">calcslove</button>
+</div>
+
+
+<div style="margin-top:1rem; text-align:center;">
+<button
+onclick="window.open('https://forms.gle/UXbHXv2NLfeEsCbb8','_blank')">
+Suggest a Game
+</button>
+</div>
+
+
+<div id="iframe-container-1" class="iframe-container">
+<iframe id="game-iframe-1" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(1)">Refresh</button>
+<button class="close-btn" onclick="closeGame(1)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-2" class="iframe-container">
+<iframe id="game-iframe-2" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(2)">Refresh</button>
+<button class="close-btn" onclick="closeGame(2)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-3" class="iframe-container">
+<iframe id="game-iframe-3" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(3)">Refresh</button>
+<button class="close-btn" onclick="closeGame(3)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-4" class="iframe-container">
+<iframe id="game-iframe-4" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(4)">Refresh</button>
+<button class="close-btn" onclick="closeGame(4)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-5" class="iframe-container">
+<iframe id="game-iframe-5" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(5)">Refresh</button>
+<button class="close-btn" onclick="closeGame(5)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-6" class="iframe-container">
+<iframe id="game-iframe-6" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(6)">Refresh</button>
+<button class="close-btn" onclick="closeGame(6)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-7" class="iframe-container">
+<iframe id="game-iframe-7" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(7)">Refresh</button>
+<button class="close-btn" onclick="closeGame(7)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-8" class="iframe-container">
+<iframe id="game-iframe-8" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(8)">Refresh</button>
+<button class="close-btn" onclick="closeGame(8)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-9" class="iframe-container">
+<iframe id="game-iframe-9" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(9)">Refresh</button>
+<button class="close-btn" onclick="closeGame(9)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-10" class="iframe-container">
+<iframe id="game-iframe-10" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(10)">Refresh</button>
+<button class="close-btn" onclick="closeGame(10)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-11" class="iframe-container">
+<iframe id="game-iframe-11" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(11)">Refresh</button>
+<button class="close-btn" onclick="closeGame(11)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-12" class="iframe-container">
+<iframe id="game-iframe-12" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(12)">Refresh</button>
+<button class="close-btn" onclick="closeGame(12)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-13" class="iframe-container">
+<iframe id="game-iframe-13" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(13)">Refresh</button>
+<button class="close-btn" onclick="closeGame(13)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-14" class="iframe-container">
+<iframe id="game-iframe-14" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(14)">Refresh</button>
+<button class="close-btn" onclick="closeGame(14)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-15" class="iframe-container">
+<iframe id="game-iframe-15" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(15)">Refresh</button>
+<button class="close-btn" onclick="closeGame(15)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-16" class="iframe-container">
+<iframe id="game-iframe-16" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(16)">Refresh</button>
+<button class="close-btn" onclick="closeGame(16)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-17" class="iframe-container">
+<iframe id="game-iframe-17" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(17)">Refresh</button>
+<button class="close-btn" onclick="closeGame(17)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-18" class="iframe-container">
+<iframe id="game-iframe-18" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(18)">Refresh</button>
+<button class="close-btn" onclick="closeGame(18)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-19" class="iframe-container">
+<iframe id="game-iframe-19" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(19)">Refresh</button>
+<button class="close-btn" onclick="closeGame(19)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-20" class="iframe-container">
+<iframe id="game-iframe-20" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(20)">Refresh</button>
+<button class="close-btn" onclick="closeGame(20)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-21" class="iframe-container">
+<iframe id="game-iframe-21" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(21)">Refresh</button>
+<button class="close-btn" onclick="closeGame(21)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-22" class="iframe-container">
+<iframe id="game-iframe-22" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(22)">Refresh</button>
+<button class="close-btn" onclick="closeGame(22)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-23" class="iframe-container">
+<iframe id="game-iframe-23" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(23)">Refresh</button>
+<button class="close-btn" onclick="closeGame(23)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-24" class="iframe-container">
+<iframe id="game-iframe-24" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(24)">Refresh</button>
+<button class="close-btn" onclick="closeGame(24)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-25" class="iframe-container">
+<iframe id="game-iframe-25" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(25)">Refresh</button>
+<button class="close-btn" onclick="closeGame(25)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-26" class="iframe-container">
+<iframe id="game-iframe-26" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(26)">Refresh</button>
+<button class="close-btn" onclick="closeGame(26)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-27" class="iframe-container">
+<iframe id="game-iframe-27" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(27)">Refresh</button>
+<button class="close-btn" onclick="closeGame(27)">Close Game</button>
+</div>
+</div>
+<div id="iframe-container-28" class="iframe-container">
+<iframe id="game-iframe-28" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" onclick="refreshGame(28)">Refresh</button>
+<button class="close-btn" onclick="closeGame(28)">Close Game</button>
+</div>
+
+<script>
+// Site-wide login logic (multiple logins)
+function showUserBanNotification() {
+var loginModal = document.getElementById('site-login-modal');
+if (loginModal) loginModal.style.display = 'none';
+var nameModal = document.getElementById('name-modal');
+if (nameModal) nameModal.style.display = 'none';
+var ipNotif = document.getElementById('ip-notification');
+if (ipNotif) ipNotif.style.display = 'none';
+var banNotif = document.getElementById('ban-notification');
+if (banNotif) banNotif.style.display = 'none';
+document.body.style.overflow = 'auto';
+Array.from(document.body.children).forEach(function(child) {
+if (child.id !== 'user-ban-notification') {
+child.style.display = 'none';
+}
+});
+var userBanNotification = document.getElementById('user-ban-notification');
+if (userBanNotification) userBanNotification.style.display = 'block';
+}
+
+const SITE_LOGINS = {
+'kaiden': 'KHDisco806',
+'j_glizzy': 'yomama!1',
+'Jeremy_Wade': 'Hal',
+'gnb_fartball': 'imaura6767',
+'luka': 'thejepstein',
+'XxJermiah2coolxX': 'gian123'
+};
+let siteLoginPassed = false;
+
+function showSiteLoginModal() {
+document.getElementById('site-login-modal').style.display = 'flex';
+document.body.style.overflow = 'hidden';
+setTimeout(() => {
+document.getElementById('site-login-username').focus();
+}, 100);
+}
+
+function hideSiteLoginModal() {
+document.getElementById('site-login-modal').style.display = 'none';
+document.body.style.overflow = 'auto';
+}
+
+function siteLoginSubmit() {
+const username = document.getElementById('site-login-username').value.trim();
+const password = document.getElementById('site-login-password').value;
+const errorDiv = document.getElementById('site-login-error');
+if (!username || !password) {
+errorDiv.textContent = 'Please enter both username and password.';
+return;
+}
+if (SITE_LOGINS.hasOwnProperty(username) && SITE_LOGINS[username] === password) {
+// Check ban immediately after login, before anything else
+if (isUserBanned(username)) {
+hideSiteLoginModal();
+document.body.style.overflow = 'auto';
+showUserBanNotification(); // Only show once, no message
+return;
+}
+siteLoginPassed = true;
+hideSiteLoginModal();
+// Continue to name modal or site
+if (!getUserName()) {
+showNameModal();
+} else {
+initIPLogging();
+}
+} else {
+errorDiv.textContent = 'Invalid username or password.';
+}
+}
+
+// Allow Enter key to submit login
+document.addEventListener('DOMContentLoaded', function() {
+const loginModal = document.getElementById('site-login-modal');
+if (loginModal) {
+loginModal.addEventListener('keydown', function(e) {
+if (e.key === 'Enter') siteLoginSubmit();
+});
+}
+});
+
+// Name prompt logic (after login)
+function showNameModal() {
+document.getElementById('name-modal').style.display = 'flex';
+document.getElementById('user-name-input').focus();
+}
+
+function submitUserName() {
+const name = document.getElementById('user-name-input').value.trim();
+if (!name) {
+alert('Please enter your name.');
+return;
+}
+localStorage.setItem('userName', name);
+document.getElementById('name-modal').style.display = 'none';
+// Now allow the rest of the site to load
+initIPLogging();
+}
+
+function getUserName() {
+return localStorage.getItem('userName') || '';
+}
+// Restore missing getBannedIPs function
+function getBannedIPs() {
+const stored = localStorage.getItem('bannedIPs');
+return stored ? JSON.parse(stored) : [];
+}
+// IP Logging and Notification System
+let currentUserIP = '';
+let userName = getUserName();
+
+async function initIPLogging() {
+try {
+const response = await fetch('https://api.ipify.org?format=json');
+const data = await response.json();
+const userIP = data.ip;
+currentUserIP = userIP;
+userName = getUserName();
+// Check if user is banned (static or dynamic) right after login
+if (isUserBanned(userName)) {
+hideSiteLoginModal();
+document.body.style.overflow = 'auto';
+showUserBanNotification(); // Only show once, no message
+return;
+}
+// Check if IP is banned
+if (isIPBanned(userIP)) {
+showBanNotification('Your IP address has been banned from this site.');
+return;
+}
+// Get additional info from geolocation API
+const geoResponse = await fetch(`https://ipapi.co/${userIP}/json/`);
+const geoData = await geoResponse.json();
+// Display notification
+const notification = document.getElementById('ip-notification');
+const notificationText = document.getElementById('notification-text');
+const locationInfo = geoData.city ? ` (${geoData.city}, ${geoData.country_name})` : '';
+notificationText.textContent = `⚠️ Your IP will be tracked: ${userName ? userName + ' - ' : ''}${userIP}${locationInfo}`;
+notification.style.display = 'flex';
+// Log the IP data to console
+console.log('IP Tracking Information:', {
+timestamp: new Date().toISOString(),
+name: userName,
+ip: userIP,
+city: geoData.city || 'Unknown',
+country: geoData.country_name || 'Unknown',
+country_code: geoData.country_code || 'Unknown',
+region: geoData.region || 'Unknown',
+latitude: geoData.latitude || 'Unknown',
+longitude: geoData.longitude || 'Unknown',
+isp: geoData.org || 'Unknown'
+});
+
+// Prevent duplicate IP logging and check for duplicate names
+let alreadyLogged = false;
+let duplicateNameIPs = [];
+try {
+const res = await fetch('https://script.google.com/macros/s/AKfycbzmOBgZz57adqQfVIJtRiQHdhmeHfHsw3fJZH0nbHoXR1MKB1QIv1fQ8pMgUnFfQkSy/exec');
+const ipList = await res.json();
+alreadyLogged = ipList.some(entry => entry.ip === userIP);
+// Find all IPs with the same name (excluding this IP)
+if (userName) {
+duplicateNameIPs = ipList.filter(entry => entry.name && entry.name === userName && entry.ip !== userIP).map(entry => entry.ip);
+}
+} catch (e) {
+// If fetch fails, allow logging (fail open)
+}
+
+// If duplicate name found on different IP, ban both (except for 'kaiden')
+if (duplicateNameIPs.length > 0 && userName.toLowerCase() !== 'kaiden') {
+const bannedIPs = getBannedIPs();
+let updated = false;
+// Ban this IP
+if (!bannedIPs.includes(userIP)) {
+bannedIPs.push(userIP);
+updated = true;
+}
+// Ban all other IPs with the same name
+duplicateNameIPs.forEach(ip => {
+if (!bannedIPs.includes(ip)) {
+bannedIPs.push(ip);
+updated = true;
+}
+});
+if (updated) saveBannedIPs(bannedIPs);
+showBanNotification('Your IP has been banned for sharing your name on multiple IPs.');
+return;
+}
+
+if (!alreadyLogged) {
+const formData = new URLSearchParams();
+formData.append('timestamp', new Date().toISOString());
+formData.append('name', userName);
+formData.append('ip', userIP);
+formData.append('city', geoData.city || 'Unknown');
+formData.append('country', geoData.country_name || 'Unknown');
+formData.append('country_code', geoData.country_code || 'Unknown');
+formData.append('region', geoData.region || 'Unknown');
+formData.append('latitude', geoData.latitude || 'Unknown');
+formData.append('longitude', geoData.longitude || 'Unknown');
+formData.append('isp', geoData.org || 'Unknown');
+await fetch('https://script.google.com/macros/s/AKfycbzmOBgZz57adqQfVIJtRiQHdhmeHfHsw3fJZH0nbHoXR1MKB1QIv1fQ8pMgUnFfQkSy/exec', {
+method: 'POST',
+body: formData
+});
+} else {
+console.log('IP already logged, skipping duplicate.');
+}
+} catch (error) {
+console.error('IP logging error:', error);
+const notification = document.getElementById('ip-notification');
+document.getElementById('notification-text').textContent = '⚠️ Tracking information unavailable';
+notification.style.display = 'flex';
+}
+}
+
+function closeIPNotification() {
+const notification = document.getElementById('ip-notification');
+notification.style.display = 'none';
+}
+
+
+function saveBannedIPs(ips) {
+localStorage.setItem('bannedIPs', JSON.stringify(ips));
+}
+
+function isIPBanned(ip) {
+const bannedIPs = getBannedIPs();
+return bannedIPs.includes(ip);
+}
+
+function banIP() {
+const ipInput = document.getElementById('ban-ip-input');
+const ip = ipInput.value.trim();
+
+if (!ip) {
+alert('Please enter an IP address');
+return;
+}
+
+if (!/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip)) {
+alert('Invalid IP format. Please use XXX.XXX.XXX.XXX');
+return;
+}
+
+const bannedIPs = getBannedIPs();
+if (bannedIPs.includes(ip)) {
+alert('This IP is already banned');
+return;
+}
+
+bannedIPs.push(ip);
+saveBannedIPs(bannedIPs);
+ipInput.value = '';
+
+updateBannedIPsList();
+alert(`IP ${ip} has been banned!`);
+}
+
+function unbanIP(ip) {
+const bannedIPs = getBannedIPs();
+const index = bannedIPs.indexOf(ip);
+
+if (index > -1) {
+bannedIPs.splice(index, 1);
+saveBannedIPs(bannedIPs);
+updateBannedIPsList();
+alert(`IP ${ip} has been unbanned!`);
+}
+}
+
+function updateBannedIPsList() {
+const bannedIPs = getBannedIPs();
+const list = document.getElementById('banned-ips-list');
+
+if (bannedIPs.length === 0) {
+list.innerHTML = '<p style="color: #aaa; font-style: italic;">No IPs banned</p>';
+return;
+}
+
+list.innerHTML = '';
+bannedIPs.forEach(ip => {
+const item = document.createElement('div');
+item.className = 'ban-item';
+item.innerHTML = `
+          <span>${ip}</span>
+          <button onclick="unbanIP('${ip}')">Unban</button>
+      `;
+list.appendChild(item);
+});
+}
+
+function showBanNotification(reason) {
+// Hide all modals and overlays
+var loginModal = document.getElementById('site-login-modal');
+if (loginModal) loginModal.style.display = 'none';
+var nameModal = document.getElementById('name-modal');
+if (nameModal) nameModal.style.display = 'none';
+var ipNotif = document.getElementById('ip-notification');
+if (ipNotif) ipNotif.style.display = 'none';
+var banNotif = document.getElementById('ban-notification');
+if (banNotif) banNotif.style.display = 'none';
+document.body.style.overflow = 'auto';
+Array.from(document.body.children).forEach(function(child) {
+if (child.id !== 'user-ban-notification') {
+child.style.display = 'none';
+}
+});
+var userBanNotification = document.getElementById('user-ban-notification');
+if (userBanNotification) userBanNotification.style.display = 'block';
+var reasonElem = document.getElementById('user-ban-reason');
+if (reasonElem) reasonElem.textContent = '';
+}
+
+// Initialize login modal on page load
+window.addEventListener('load', function() {
+showSiteLoginModal();
+});
+
+const gameUrls = {
+1: 'https://lessons.mrwheeler.uk/resources/semag/baldi-plus/index.html',
+2: 'https://lessons.mrwheeler.uk/resources/semag/fnae/index.html',
+3: 'https://lessons.mrwheeler.uk/resources/semag/baldis-basics/index.html',
+4: 'https://lessons.mrwheeler.uk/resources/semag/eag/18wasm/index.html',
+5: 'https://lessons.mrwheeler.uk/resources/semag/halflife/index.html',
+6: 'https://html-classic.itch.zone/html/15139480/ultrakill/index.html',
+7: 'https://lessons.mrwheeler.uk/resources/semag/cookieclicker/index.html',
+8: 'https://lessons.mrwheeler.uk/resources/semag/dogeminer2/index.html',
+9: 'https://lessons.mrwheeler.uk/resources/semag/dogeminer/index.html',
+10: 'https://lessons.mrwheeler.uk/resources/semag/cuphead/index.html',
+11: 'https://lessons.mrwheeler.uk/resources/semag/mario/index.html',
+12: 'https://irv77.github.io/FnafLauncher',
+13: 'https://lessons.mrwheeler.uk/resources/semag/cookingmama/index.html',
+14: 'https://lessons.mrwheeler.uk/resources/semag/kindergarten/index.html',
+15: 'https://lessons.mrwheeler.uk/resources/semag/kindergarten2/index.html',
+16: 'https://lessons.mrwheeler.uk/resources/semag/kindergarten3/index.html',
+17: 'https://2v2.io',
+18: 'https://html-classic.itch.zone/html/15451330/index.html',
+19: 'https://lessons.mrwheeler.uk/resources/semag/jetskirace/index.html',
+20: 'https://lessons.mrwheeler.uk/resources/semag/portal/portal.html',
+21: 'https://lessons.mrwheeler.uk/resources/semag/nzp/index.html',
+22: 'https://lessons.mrwheeler.uk/resources/semag/skibiditoilet/index.html',
+23: 'https://lessons.mrwheeler.uk/resources/semag/fridaynightfunkin/index.html',
+24: '',
+25: 'https://lessons.mrwheeler.uk/resources/semag/basketball-stars/index.html',
+26: '',
+27: '',
+28: 'https://calcsolver.net'
+};
+
+function openGame(gameNum) {
+const iframe = document.getElementById('game-iframe-' + gameNum);
+const container = document.getElementById('iframe-container-' + gameNum);
+if (!iframe || !container) return;
+iframe.src = gameUrls[gameNum] || '';
+container.style.display = 'flex';
+document.body.style.overflow = 'hidden';
+}
+
+function closeGame(gameNum) {
+const iframe = document.getElementById('game-iframe-' + gameNum);
+const container = document.getElementById('iframe-container-' + gameNum);
+if (iframe) iframe.src = '';
+if (container) container.style.display = 'none';
+document.body.style.overflow = 'auto';
+}
+
+function refreshGame(gameNum) {
+const iframe = document.getElementById('game-iframe-' + gameNum);
+if (iframe) {
+iframe.src = gameUrls[gameNum] || '';
+}
+}
+
+const ADMIN_PASSWORD = '67chud67';
+let isLoggedIn = false;
+
+function showLoginModal() {
+if (isLoggedIn) {
+showAdminPanel();
+} else {
+document.getElementById('login-modal').classList.add('show');
+document.getElementById('password-input').focus();
+}
+}
+
+function login() {
+const password = document.getElementById('password-input').value;
+if (password === ADMIN_PASSWORD) {
+isLoggedIn = true;
+document.getElementById('login-modal').classList.remove('show');
+document.getElementById('password-input').value = '';
+showAdminPanel();
+} else {
+alert('Incorrect password');
+}
+}
+
+function logout() {
+isLoggedIn = false;
+document.getElementById('admin-panel').classList.remove('show');
+document.getElementById('login-modal').classList.remove('show');
+}
+
+function showAdminPanel() {
+document.getElementById('admin-panel').classList.add('show');
+document.getElementById('admin-current-ip').textContent = currentUserIP || 'Unknown';
+updateBannedIPsList();
+fetchLoggedIPs();
+}
+
+
+
+async function fetchLoggedIPs() {
+const res = await fetch('https://script.google.com/macros/s/AKfycbzmOBgZz57adqQfVIJtRiQHdhmeHfHsw3fJZH0nbHoXR1MKB1QIv1fQ8pMgUnFfQkSy/exec');
+const ipList = await res.json();
+const list = document.getElementById('logged-ips-list');
+list.innerHTML = '';
+ipList.forEach(entry => {
+const ip = entry.ip;
+const name = entry.name || '(No Name)';
+if (!ip) return;
+const item = document.createElement('div');
+item.className = 'ban-item';
+item.innerHTML = `
+           <span>${ip}</span>
+           <span>${name}</span>
+          <button onclick="banIPFromList('${ip}')">Ban</button>
+      `;
+list.appendChild(item);
+});
+}
+
+function banIPFromList(ip) {
+const bannedIPs = getBannedIPs();
+if (!bannedIPs.includes(ip)) {
+bannedIPs.push(ip);
+saveBannedIPs(bannedIPs);
+updateBannedIPsList();
+alert(`IP ${ip} has been banned!`);
+}
+}
+
+// User Ban System
+function getBannedUsers() {
+const stored = localStorage.getItem('bannedUsers');
+return stored ? JSON.parse(stored) : [];
+}
+function saveBannedUsers(users) {
+localStorage.setItem('bannedUsers', JSON.stringify(users));
+}
+function isUserBanned(username) {
+if (STATIC_BANNED_USERS.includes(username)) return true;
+const bannedUsers = getBannedUsers();
+return bannedUsers.includes(username);
+}
+function banUser() {
+const userInput = document.getElementById('ban-user-input');
+const username = userInput.value.trim();
+if (!username) {
+alert('Please enter a username');
+return;
+}
+const bannedUsers = getBannedUsers();
+if (bannedUsers.includes(username)) {
+alert('This user is already banned');
+return;
+}
+bannedUsers.push(username);
+saveBannedUsers(bannedUsers);
+userInput.value = '';
+updateBannedUsersList();
+alert(`User ${username} has been banned!`);
+}
+function unbanUser(username) {
+const bannedUsers = getBannedUsers();
+const index = bannedUsers.indexOf(username);
+if (index > -1) {
+bannedUsers.splice(index, 1);
+saveBannedUsers(bannedUsers);
+updateBannedUsersList();
+alert(`User ${username} has been unbanned!`);
+}
+}
+function updateBannedUsersList() {
+const bannedUsers = getBannedUsers();
+const list = document.getElementById('banned-users-list');
+if (bannedUsers.length === 0) {
+list.innerHTML = '<p style="color: #aaa; font-style: italic;">No users banned</p>';
+return;
+}
+list.innerHTML = '';
+bannedUsers.forEach(username => {
+const item = document.createElement('div');
+item.className = 'ban-item';
+item.innerHTML = `
+     <span>${username}</span>
+     <button onclick="unbanUser('${username}')">Unban</button>
+   `;
+list.appendChild(item);
+});
+}
+function clearBannedUsers() {
+saveBannedUsers([]);
+updateBannedUsersList();
+alert('All user bans cleared!');
+}
+
+// --- Static ban list (edit this array to ban users by username in code) ---
+const STATIC_BANNED_USERS = [
+  '',
+  '',
+// Add usernames to ban here, e.g.:
+// 'baduser1',
+// 'troublemaker',
+];
+// -------------------------------------------------------------
+
+</script>
+</body>
+</html>
+~
