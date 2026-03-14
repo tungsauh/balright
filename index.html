@@ -235,6 +235,17 @@ background-color: #ff5252;
 </style>
 </head>
 <body>
+<!-- Admin Menu -->
+<div id="admin-menu" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); z-index:5000; align-items:center; justify-content:center; flex-direction:column;">
+  <div style="background:#222; padding:2rem; border-radius:0.5rem; text-align:center; color:#fff; min-width:300px; box-shadow:0 8px 32px #000a;">
+    <h2>Admin Ban Panel</h2>
+    <input type="text" id="admin-ban-username" placeholder="Username to ban" style="padding:0.5rem; margin:0.5rem 0; width:220px; border:none; border-radius:0.25rem;" />
+    <button onclick="adminBanUser()" style="padding:0.5rem 1.5rem; background:#d32f2f; color:#fff; border:none; border-radius:0.25rem; margin-top:1rem;">Ban Username</button>
+    <button onclick="closeAdminMenu()" style="margin-top:1rem; background:#444; color:#fff; border:none; border-radius:0.25rem; padding:0.5rem 1.5rem;">Close</button>
+    <div id="admin-ban-status" style="color:#ff9800; margin-top:0.75rem; min-height:1.5em;"></div>
+  </div>
+</div>
+<button onclick="openAdminMenu()" style="position:fixed; bottom:1rem; right:1rem; z-index:10000; background:#d32f2f; color:#fff; border:none; border-radius:0.5rem; padding:0.75rem 1.5rem; font-size:1rem;">Admin Menu</button>
 <!-- Login Modal (site-wide, required on load) -->
 <div id="site-login-modal" style="display:flex; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:4000; align-items:center; justify-content:center; flex-direction:column;">
 <div style="background:#222; padding:2.5rem 2rem; border-radius:0.5rem; text-align:center; color:#fff; min-width:300px; box-shadow:0 8px 32px #000a;">
@@ -275,36 +286,7 @@ background-color: #ff5252;
 </div>
 
 <h1>Games</h1>
-<div class="button-container">
-<button onclick="openGame(1)">Gunblood</button>
-<button onclick="openGame(2)">Tung Tung Sahur</button>
-<button onclick="openGame(3)">Basketball Random</button>
-<button onclick="openGame(4)">Cookie Clicker</button>
-<button onclick="openGame(5)"></button>
-<button onclick="openGame(6)">Ultrakill</button>
-<button onclick="openGame(7)"></button>
-<button onclick="openGame(8)"></button>
-<button onclick="openGame(9)"></button>
-<button onclick="openGame(10)"></button>
-<button onclick="openGame(11)"></button>
-<button onclick="openGame(12)">FNAF Launcher</button>
-<button onclick="openGame(13)"></button>
-<button onclick="openGame(14)"></button>
-<button onclick="openGame(15)"></button>
-<button onclick="openGame(16)"></button>
-<button onclick="openGame(17)">2v2.io</button>
-<button onclick="openGame(18)"></button>
-<button onclick="openGame(19)"></button>
-<button onclick="openGame(20)"></button>
-<button onclick="openGame(21)"></button>
-<button onclick="openGame(22)"></button>
-<button onclick="openGame(23)"></button>
-<button onclick="openGame(24)">zombie</button>
-<button onclick="openGame(25)"></button>
-<button onclick="openGame(26)"></button>
-<button onclick="openGame(27)"></button>
-<button onclick="openGame(28)">calcslover</button>
-</div>
+<div class="button-container" id="game-buttons"></div>
 
 
 <div style="margin-top:1rem; text-align:center;">
@@ -322,14 +304,13 @@ Suggest a Game
 <button class="close-btn" onclick="closeGame(1)">Close Game</button>
 </div>
 </div>
-<div id="iframe-container-2" class="iframe-container">
-<iframe id="game-iframe-2" class="game-iframe" src=""></iframe>
-<div class="iframe-controls">
-<button class="refresh-btn" onclick="refreshGame(2)">Refresh</button>
-<button class="close-btn" onclick="closeGame(2)">Close Game</button>
+<div id="iframe-container" class="iframe-container">
+  <iframe id="game-iframe" class="game-iframe" src=""></iframe>
+  <div class="iframe-controls">
+    <button class="refresh-btn" id="refresh-btn">Refresh</button>
+    <button class="close-btn" id="close-btn">Close Game</button>
+  </div>
 </div>
-</div>
-<div id="iframe-container-3" class="iframe-container">
 <iframe id="game-iframe-3" class="game-iframe" src=""></iframe>
 <div class="iframe-controls">
 <button class="refresh-btn" onclick="refreshGame(3)">Refresh</button>
@@ -512,7 +493,65 @@ Suggest a Game
 </div>
 
 <script>
-// Site-wide login logic (multiple logins)
+// Admin menu logic
+function openAdminMenu() {
+  document.getElementById('admin-menu').style.display = 'flex';
+}
+function closeAdminMenu() {
+  document.getElementById('admin-menu').style.display = 'none';
+}
+async function adminBanUser() {
+  const username = document.getElementById('admin-ban-username').value.trim();
+  const statusDiv = document.getElementById('admin-ban-status');
+  if (!username) {
+    statusDiv.textContent = 'Please enter a username.';
+    return;
+  }
+  try {
+    await fetch(BAN_API_URL, {
+      method: 'POST',
+      body: new URLSearchParams({ username, reason: 'admin ban' })
+    });
+    statusDiv.textContent = `User '${username}' has been banned.`;
+    document.getElementById('admin-ban-username').value = '';
+  } catch (e) {
+    statusDiv.textContent = 'Failed to ban user.';
+  }
+}
+
+// Fetch banned usernames from sheet
+async function getBannedUsernames() {
+  try {
+    const res = await fetch(BAN_API_URL);
+    const text = await res.text();
+    // Expecting CSV or JSON, but for simplicity, treat as CSV: username,reason,timestamp per line
+    const lines = text.split('\n');
+    return lines.map(line => line.split(',')[0].trim()).filter(u => u);
+  } catch (e) {
+    return [];
+  }
+}
+const BAN_API_URL = 'https://script.google.com/macros/s/AKfycbyTjQ9nNctNoYOFSSgPOmXUky36v3N-mAqNslkowcKrAkJIdcSAbrLLszYHHrzusvo/exec';
+
+async function checkBan(username, ip) {
+  try {
+    const res = await fetch(`${BAN_API_URL}?username=${encodeURIComponent(username)}&ip=${encodeURIComponent(ip)}`);
+    const status = await res.text();
+    return status === 'banned';
+  } catch (e) {
+    return false;
+  }
+}
+
+async function addBan(username, ip, reason = '') {
+  try {
+    await fetch(BAN_API_URL, {
+      method: 'POST',
+      body: new URLSearchParams({ username, ip, reason })
+    });
+  } catch (e) {}
+}
+
 function showUserBanNotification() {
 var loginModal = document.getElementById('site-login-modal');
 if (loginModal) loginModal.style.display = 'none';
@@ -538,7 +577,8 @@ const SITE_LOGINS = {
 'Jeremy_Wade': 'Hal',
 'gnb_fartball': 'imaura6767',
 'luka': 'thejepstein',
-'XxJermiah2coolxX': 'gian123'
+'XxJermiah2coolxX': 'gian123',
+'ileighlin': 'Leighlin123'
 };
 let siteLoginPassed = false;
 
@@ -556,32 +596,33 @@ document.body.style.overflow = 'auto';
 }
 
 function siteLoginSubmit() {
+document.body.style.overflow = 'auto';
 const username = document.getElementById('site-login-username').value.trim();
 const password = document.getElementById('site-login-password').value;
 const errorDiv = document.getElementById('site-login-error');
 if (!username || !password) {
-errorDiv.textContent = 'Please enter both username and password.';
-return;
+  errorDiv.textContent = 'Please enter both username and password.';
+  return;
 }
-if (SITE_LOGINS.hasOwnProperty(username) && SITE_LOGINS[username] === password) {
-// Check ban immediately after login, before anything else
-if (isUserBanned(username)) {
-hideSiteLoginModal();
-document.body.style.overflow = 'auto';
-showUserBanNotification(); // Only show once, no message
-return;
-}
-siteLoginPassed = true;
-hideSiteLoginModal();
-// Continue to name modal or site
-if (!getUserName()) {
-showNameModal();
-} else {
-initIPLogging();
-}
-} else {
-errorDiv.textContent = 'Invalid username or password.';
-}
+getBannedUsernames().then(bannedList => {
+  if (bannedList.includes(username)) {
+    hideSiteLoginModal();
+    document.body.style.overflow = 'auto';
+    showUserBanNotification();
+    return;
+  }
+  if (SITE_LOGINS.hasOwnProperty(username) && SITE_LOGINS[username] === password) {
+    siteLoginPassed = true;
+    hideSiteLoginModal();
+    if (!getUserName()) {
+      showNameModal();
+    } else {
+      initIPLogging();
+    }
+  } else {
+    errorDiv.textContent = 'Invalid username or password.';
+  }
+});
 }
 
 // Allow Enter key to submit login
@@ -666,31 +707,26 @@ longitude: geoData.longitude || 'Unknown',
 isp: geoData.org || 'Unknown'
 });
 
-// Prevent duplicate IP logging and check for duplicate names
+
 let alreadyLogged = false;
 let duplicateNameIPs = [];
 try {
 const res = await fetch('https://script.google.com/macros/s/AKfycbzmOBgZz57adqQfVIJtRiQHdhmeHfHsw3fJZH0nbHoXR1MKB1QIv1fQ8pMgUnFfQkSy/exec');
 const ipList = await res.json();
 alreadyLogged = ipList.some(entry => entry.ip === userIP);
-// Find all IPs with the same name (excluding this IP)
 if (userName) {
 duplicateNameIPs = ipList.filter(entry => entry.name && entry.name === userName && entry.ip !== userIP).map(entry => entry.ip);
 }
 } catch (e) {
-// If fetch fails, allow logging (fail open)
 }
 
-// If duplicate name found on different IP, ban both (except for 'kaiden')
 if (duplicateNameIPs.length > 0 && userName.toLowerCase() !== 'kaiden') {
 const bannedIPs = getBannedIPs();
 let updated = false;
-// Ban this IP
 if (!bannedIPs.includes(userIP)) {
 bannedIPs.push(userIP);
 updated = true;
 }
-// Ban all other IPs with the same name
 duplicateNameIPs.forEach(ip => {
 if (!bannedIPs.includes(ip)) {
 bannedIPs.push(ip);
@@ -806,7 +842,6 @@ list.appendChild(item);
 }
 
 function showBanNotification(reason) {
-// Hide all modals and overlays
 var loginModal = document.getElementById('site-login-modal');
 if (loginModal) loginModal.style.display = 'none';
 var nameModal = document.getElementById('name-modal');
@@ -826,66 +861,84 @@ if (userBanNotification) userBanNotification.style.display = 'block';
 var reasonElem = document.getElementById('user-ban-reason');
 if (reasonElem) reasonElem.textContent = '';
 }
-
-// Initialize login modal on page load
 window.addEventListener('load', function() {
 showSiteLoginModal();
 });
 
-const gameUrls = {
-1: 'https://script.google.com/macros/s/AKfycbwrC64nl7D5u4ABIjEEb_vpJU83n4zUMxe4Yf0HbaOL9EEo6gg6L-T_KIZ69HLtdSiT/exec',
-2: 'https://files.twoplayergames.org/files/games/h1/italian-brainrot-obby-parkour-v01l/index.html',
-3: 'https://script.google.com/macros/s/AKfycbwiQgeRHVDP8wzJ_CeSE1LyaKCMu1qdlopwylhD4LdBvBVd2y36VjlWY0iyk38WH0JiJA/exec',
-4: 'https://script.google.com/macros/s/AKfycbxGM35J29NkO-2LYjxWj_cA9IUaaXypkUy-LqXyLRbGTz0R6lXmAEapz1STN1jlTIRavw/exec',
-5: 'https://www.gstatic.com/atari/embeds/83a60601c213b72fb19c1855fb0c5f26/intermediate-frame-minified.html?jsh=m%3B%2F_%2Fscs%2Fabc-static%2F_%2Fjs%2Fk%3Dgapi.lb.en.PCvl17LujMs.O%2Fd%3D1%2Frs%3DAHpOoo-sAn5Asuf3MvShXCH_dsg8tE46Tw%2Fm%3D__features__&r=768808644',
-6: 'https://html-classic.itch.zone/html/15139480/ultrakill/index.html',
-7: '',
-8: '',
-9: '',
-10: '',
-11: '',
-12: 'https://irv77.github.io/FnafLauncher',
-13: '',
-14: '',
-15: '',
-16: '',
-17: 'https://2v2.io',
-18: '',
-19: '',
-20: '',
-21: '',
-22: '',
-23: '',
-24: 'https://nzp.gay',
-25: '',
-26: '',
-27: '',
-28: 'https://calcsolver.net'
-};
 
-function openGame(gameNum) {
-const iframe = document.getElementById('game-iframe-' + gameNum);
-const container = document.getElementById('iframe-container-' + gameNum);
-if (!iframe || !container) return;
-iframe.src = gameUrls[gameNum] || '';
-container.style.display = 'flex';
+const games = [
+  {name: 'Gunblood', url: 'https://script.google.com/macros/s/AKfycbwrC64nl7D5u4ABIjEEb_vpJU83n4zUMxe4Yf0HbaOL9EEo6gg6L-T_KIZ69HLtdSiT/exec'},
+  {name: 'Tung Tung Sahur', url: 'https://files.twoplayergames.org/files/games/h1/italian-brainrot-obby-parkour-v01l/index.html'},
+  {name: 'Basketball Random', url: 'https://script.google.com/macros/s/AKfycbwiQgeRHVDP8wzJ_CeSE1LyaKCMu1qdlopwylhD4LdBvBVd2y36VjlWY0iyk38WH0JiJA/exec'},
+  {name: 'Cookie Clicker', url: 'https://script.google.com/macros/s/AKfycbxGM35J29NkO-2LYjxWj_cA9IUaaXypkUy-LqXyLRbGTz0R6lXmAEapz1STN1jlTIRavw/exec'},
+  {name: '', url: 'https://www.gstatic.com/atari/embeds/83a60601c213b72fb19c1855fb0c5f26/intermediate-frame-minified.html?jsh=m%3B%2F_%2Fscs%2Fabc-static%2F_%2Fjs%2Fk%3Dgapi.lb.en.PCvl17LujMs.O%2Fd%3D1%2Frs%3DAHpOoo-sAn5Asuf3MvShXCH_dsg8tE46Tw%2Fm%3D__features__&r=768808644'},
+  {name: 'Ultrakill', url: 'https://html-classic.itch.zone/html/15139480/ultrakill/index.html'},
+  {name: '', url: ''},
+  {name: '', url: ''},
+  {name: '', url: ''},
+  {name: '', url: ''},
+  {name: '', url: ''},
+  {name: 'FNAF Launcher', url: 'https://irv77.github.io/FnafLauncher'},
+  {name: '', url: ''},
+  {name: '', url: ''},
+  {name: '', url: ''},
+  {name: '', url: ''},
+  {name: '2v2.io', url: 'https://2v2.io'},
+  {name: '', url: ''},
+  {name: '', url: ''},
+  {name: '', url: ''},
+  {name: '', url: ''},
+  {name: '', url: ''},
+  {name: '', url: ''},
+  {name: 'zombie', url: 'https://nzp.gay'},
+  {name: '', url: ''},
+  {name: '', url: ''},
+  {name: '', url: ''},
+  {name: 'calcslover', url: 'https://calcsolver.net'}
+];
+
 document.body.style.overflow = 'hidden';
-}
-
-function closeGame(gameNum) {
-const iframe = document.getElementById('game-iframe-' + gameNum);
-const container = document.getElementById('iframe-container-' + gameNum);
-if (iframe) iframe.src = '';
-if (container) container.style.display = 'none';
 document.body.style.overflow = 'auto';
+
+
+const gameButtons = document.getElementById('game-buttons');
+games.forEach((game, idx) => {
+  const btn = document.createElement('button');
+  btn.textContent = game.name || `Game ${idx+1}`;
+  btn.onclick = () => openGame(idx);
+  gameButtons.appendChild(btn);
+});
+
+
+const iframeContainer = document.getElementById('iframe-container');
+const gameIframe = document.getElementById('game-iframe');
+const refreshBtn = document.getElementById('refresh-btn');
+const closeBtn = document.getElementById('close-btn');
+let currentGameIdx = null;
+
+function openGame(idx) {
+  if (!games[idx] || !games[idx].url) return;
+  currentGameIdx = idx;
+  gameIframe.src = games[idx].url;
+  iframeContainer.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
 }
 
-function refreshGame(gameNum) {
-const iframe = document.getElementById('game-iframe-' + gameNum);
-if (iframe) {
-iframe.src = gameUrls[gameNum] || '';
+function closeGame() {
+  gameIframe.src = '';
+  iframeContainer.style.display = 'none';
+  document.body.style.overflow = 'auto';
+  currentGameIdx = null;
 }
+
+function refreshGame() {
+  if (currentGameIdx !== null && games[currentGameIdx]) {
+    gameIframe.src = games[currentGameIdx].url;
+  }
 }
+
+refreshBtn.onclick = refreshGame;
+closeBtn.onclick = closeGame;
 
 
 function showLoginModal() {
@@ -971,19 +1024,16 @@ function banUser() {
 const userInput = document.getElementById('ban-user-input');
 const username = userInput.value.trim();
 if (!username) {
-alert('Please enter a username');
-return;
+  alert('Please enter a username');
+  return;
 }
-const bannedUsers = getBannedUsers();
-if (bannedUsers.includes(username)) {
-alert('This user is already banned');
-return;
-}
-bannedUsers.push(username);
-saveBannedUsers(bannedUsers);
-userInput.value = '';
-updateBannedUsersList();
-alert(`User ${username} has been banned!`);
+fetch('https://api.ipify.org?format=json')
+  .then(res => res.json())
+  .then(data => {
+    addBan(username, data.ip, 'manual ban');
+    userInput.value = '';
+    alert(`User ${username} has been banned globally!`);
+  });
 }
 function unbanUser(username) {
 const bannedUsers = getBannedUsers();
