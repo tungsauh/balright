@@ -2074,7 +2074,7 @@ async function loadChatMessages() {
         }).join('');
 
         const replyBtn = isSystem ? '' : `<button class="chat-action-btn" onclick="setReplyTo('${docId}')">↩ Reply</button>`;
-        const reactBtns = isSystem ? '' : ['👍','❤️','😂','😮','😢','🔥'].map(e => `<button class="chat-action-btn" onclick="toggleReaction('${docId}','${e}')">${e}</button>`).join('');
+        const reactBtns = isSystem ? '' : ['❤️','😂','😢','🔥'].map(e => `<button class="chat-action-btn" onclick="toggleReaction('${docId}','${e}')">${e}</button>`).join('');
         const imageReactBtn = isSystem ? '' : `<button class="chat-action-btn" onclick="promptImageReaction('${docId}')">🖼 Img</button>`;
         const deleteBtn = isAdmin ? `<button class="chat-action-btn" style="color:#ff8a80;" onclick="adminDeleteMessage('${docId}')">🗑 Delete</button>` : '';
 
