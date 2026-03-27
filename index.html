@@ -2336,6 +2336,21 @@ reactionsUsed: 0
 };
 }
 
+async function fetchStatsFromFirestore(userKey) {
+try {
+const db = firebase.firestore();
+const doc = await db.collection(USER_STATS_COLLECTION).doc(userKey).get();
+if (doc.exists) {
+const data = doc.data();
+const store = getStatsStore();
+store[userKey] = data;
+saveStatsStore(store);
+return data;
+}
+} catch (e) {}
+return getStatsForUserKey(userKey);
+}
+
 function getCurrentUserStats() {
 return getStatsForUserKey(getStatsUserKey());
 }
@@ -2359,16 +2374,19 @@ return ACHIEVEMENTS.slice();
 return ACHIEVEMENTS.filter(item => (stats[item.stat] || 0) >= item.goal);
 }
 
-function openProfileModal(event) {
+async function openProfileModal(event) {
 if (event) event.stopPropagation();
-renderProfileModal(getStatsUserKey());
+const key = getStatsUserKey();
+if (key) await fetchStatsFromFirestore(key);
+renderProfileModal(key);
 document.getElementById('profile-modal').style.display = 'flex';
 }
 
-function openUserProfileFromChat(encodedUsername, event) {
+async function openUserProfileFromChat(encodedUsername, event) {
 if (event) event.stopPropagation();
 const username = normalizeUsername(decodeURIComponent(encodedUsername || ''));
 if (!username) return;
+await fetchStatsFromFirestore(username);
 renderProfileModal(username);
 document.getElementById('profile-modal').style.display = 'flex';
 }
@@ -3173,8 +3191,8 @@ changed = true;
 if (changed) {
 store[userKey] = current;
 saveStatsStore(store);
-pushUserStatsToFirestore(userKey, current);
 }
+pushUserStatsToFirestore(userKey, current);
 } catch (err) {
 console.error('Failed to backfill legacy message stats:', err);
 }
