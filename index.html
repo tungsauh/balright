@@ -2286,8 +2286,8 @@ const CHAT_IMAGE_MAX_HEIGHT = 1280;
 const CHAT_IMAGE_QUALITY = 0.82;
 const CHAT_IMAGE_SIZE_LIMIT = 700000;
 const CHAT_VIDEO_SIZE_LIMIT = 700000;
-const TENOR_API_KEY = 'YOUR_TENOR_API_KEY'; // Replace with your Tenor v2 API key from https://developers.google.com/tenor
-// Note: API keys in client-side code are visible to users. Restrict your Tenor key by HTTP referrer in the Tenor console.
+const GIPHY_API_KEY = 'YOUR_GIPHY_API_KEY'; // Replace with your Giphy API key from https://developers.giphy.com
+// Note: API keys in client-side code are visible to users. Restrict your Giphy key by domain in the Giphy developer console.
 
 function getStatsStore() {
 try {
@@ -3238,7 +3238,7 @@ document.getElementById('tab-upload-btn').classList.toggle('active', tab === 'up
 document.getElementById('tab-gif-btn').classList.toggle('active', tab === 'gif');
 if (tab === 'gif') {
   const input = document.getElementById('gif-search-input');
-  if (!input.value) searchTenorGifs('trending');
+  if (!input.value) searchGiphyGifs('trending');
   setTimeout(() => input.focus(), 50);
 }
 }
@@ -3247,22 +3247,22 @@ let gifSearchTimer = null;
 function onGifSearchInput() {
 clearTimeout(gifSearchTimer);
 const query = document.getElementById('gif-search-input').value.trim();
-gifSearchTimer = setTimeout(() => searchTenorGifs(query || 'trending'), 400);
+gifSearchTimer = setTimeout(() => searchGiphyGifs(query || 'trending'), 400);
 }
 
 let _gifResults = [];
-async function searchTenorGifs(query) {
+async function searchGiphyGifs(query) {
 const grid = document.getElementById('gif-grid');
 grid.innerHTML = '<div style="color:#999;padding:1rem;text-align:center;grid-column:1/-1;">Loading…</div>';
 try {
   const isTrending = !query || query === 'trending';
   const endpoint = isTrending
-    ? `https://tenor.googleapis.com/v2/featured?key=${TENOR_API_KEY}&limit=24&media_filter=tinygif,gif`
-    : `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=${TENOR_API_KEY}&limit=24&media_filter=tinygif,gif`;
+    ? `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=24&rating=g`
+    : `https://api.giphy.com/v1/gifs/search?q=${encodeURIComponent(query)}&api_key=${GIPHY_API_KEY}&limit=24&rating=g`;
   const res = await fetch(endpoint);
-  if (!res.ok) throw new Error('Tenor API error ' + res.status + ' ' + res.statusText);
+  if (!res.ok) throw new Error('Giphy API error: ' + res.status + ' - ' + res.statusText);
   const json = await res.json();
-  _gifResults = json.results || [];
+  _gifResults = json.data || [];
   renderGifGrid(_gifResults);
 } catch (err) {
   console.error('GIF search error:', err);
@@ -3277,8 +3277,9 @@ if (!gifs.length) {
   return;
 }
 grid.innerHTML = gifs.map((gif, i) => {
-  const fmt = gif.media_formats || {};
-  const thumbUrl = (fmt.tinygif && fmt.tinygif.url) || (fmt.gif && fmt.gif.url) || '';
+  const images = gif.images || {};
+  const thumbUrl = (images.fixed_height_small && images.fixed_height_small.url) ||
+                   (images.fixed_height && images.fixed_height.url) || '';
   if (!thumbUrl) return '';
   const safeThumb = escapeHtml(thumbUrl);
   return `<img class="gif-thumb" src="${safeThumb}" alt="GIF" loading="lazy" onclick="sendGifFromIndex(${i})" />`;
@@ -3288,8 +3289,9 @@ grid.innerHTML = gifs.map((gif, i) => {
 function sendGifFromIndex(i) {
 const gif = _gifResults[i];
 if (!gif) return;
-const fmt = gif.media_formats || {};
-const gifUrl = (fmt.gif && fmt.gif.url) || (fmt.tinygif && fmt.tinygif.url) || '';
+const images = gif.images || {};
+const gifUrl = (images.original && images.original.url) ||
+               (images.fixed_height && images.fixed_height.url) || '';
 if (!gifUrl) return;
 sendGifMessage(gifUrl);
 }
@@ -3297,11 +3299,10 @@ sendGifMessage(gifUrl);
 function isTrustedGifUrl(url) {
 try {
   const parsed = new URL(url);
-  return parsed.protocol === 'https:' && (
-    parsed.hostname === 'media.tenor.com' ||
-    parsed.hostname === 'c.tenor.com' ||
-    parsed.hostname === 'tenor.com'
-  );
+  if (parsed.protocol !== 'https:') return false;
+  // Allow media.giphy.com and Giphy's numbered CDN subdomains (e.g. media0.giphy.com, media1.giphy.com)
+  return parsed.hostname === 'media.giphy.com' ||
+    /^media\d+\.giphy\.com$/.test(parsed.hostname);
 } catch (_) {
   return false;
 }
@@ -3434,7 +3435,7 @@ const isOwn = data.user === currentChatUser;
 const isSystem = data.system === true;
 const hasImage = typeof data.imageData === 'string' && data.imageData !== '';
 const hasVideo = typeof data.videoData === 'string' && data.videoData !== '';
-const hasGif = data.type === 'gif' && isTrustedGifUrl(data.gifUrl);
+const hasGif = data.type === 'gif' && data.gifUrl && isTrustedGifUrl(data.gifUrl);
 const safeCaption = data.message ? escapeHtml(data.message) : '';
 const messageColor = data.color || (isSystem ? '#2f2f2f' : (isOwn ? '#1565c0' : '#5f6368'));
 const timeStr = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleString([], {month:'short', day:'numeric', hour: '2-digit', minute:'2-digit'}) : '';
@@ -3848,16 +3849,6 @@ return `https://media.giphy.com/media/${giphyId}/giphy.gif`;
 }
 
 try {
-if (host.includes('tenor.com') && !host.includes('media.tenor.com')) {
-const res = await fetch(`https://tenor.com/oembed?url=${encodeURIComponent(normalized)}`);
-const data = await res.json();
-const candidates = [data.url, data.thumbnail_url]
-.map(v => normalizeReactionImageUrl(v || ''))
-.filter(Boolean);
-const direct = candidates.find(v => isValidReactionImageUrl(v) && isDirectImageUrl(v));
-if (direct) return direct;
-}
-
 if (host.includes('giphy.com') && !host.includes('media.giphy.com')) {
 const res = await fetch(`https://giphy.com/services/oembed?url=${encodeURIComponent(normalized)}`);
 const data = await res.json();
@@ -3874,7 +3865,7 @@ return '';
 
 async function promptImageReaction(docId) {
 if (!chatInitialized) return;
-const inputUrl = normalizeReactionImageUrl(prompt('Paste image or GIF URL (Tenor, Giphy, direct links):'));
+const inputUrl = normalizeReactionImageUrl(prompt('Paste image or GIF URL (Giphy, direct links):'));
 if (!inputUrl) return;
 if (!isValidReactionImageUrl(inputUrl)) {
 alert('Use a valid image URL (http/https or data:image).');
@@ -3882,7 +3873,7 @@ return;
 }
 const imageUrl = await resolveReactionImageUrl(inputUrl);
 if (!imageUrl) {
-alert('Could not resolve that link to a direct image/GIF. Try a direct .gif/.webp image URL, or a standard Giphy/Tenor share link.');
+alert('Could not resolve that link to a direct image/GIF. Try a direct .gif/.webp image URL, or a standard Giphy share link.');
 return;
 }
 toggleImageReaction(docId, encodeURIComponent(imageUrl));
