@@ -237,672 +237,672 @@ background-color: #ff5252;
 
 /* Chat Styles */
 #chat-container {
-  position: fixed;
-  bottom: 0;
-  right: 0;
-  width: 350px;
-  height: 500px;
-  background-color: #000;
-  border: 2px solid #000;
-  border-radius: 10px 10px 0 0;
-  display: flex;
-  flex-direction: column;
-  z-index: 999;
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.5);
-  font-family: Arial, sans-serif;
+position: fixed;
+bottom: 0;
+right: 0;
+width: 350px;
+height: 500px;
+background-color: #000;
+border: 2px solid #000;
+border-radius: 10px 10px 0 0;
+display: flex;
+flex-direction: column;
+z-index: 999;
+box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.5);
+font-family: Arial, sans-serif;
 }
 
 #chat-container.minimized {
-  height: auto;
+height: auto;
 }
 
 #chat-header {
-  background: #000;
-  color: #fff;
-  padding: 1rem;
-  border-bottom: 2px solid #000;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-radius: 8px 8px 0 0;
-  cursor: move;
+background: #000;
+color: #fff;
+padding: 1rem;
+border-bottom: 2px solid #000;
+display: flex;
+justify-content: space-between;
+align-items: center;
+border-radius: 8px 8px 0 0;
+cursor: move;
 }
 
 #chat-header h3 {
-  margin: 0;
-  font-size: 1rem;
-  user-select: none;
+margin: 0;
+font-size: 1rem;
+user-select: none;
 }
 
 #chat-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+display: flex;
+align-items: center;
+gap: 0.5rem;
 }
 
 #pinned-message-bar {
-  display: none;
-  padding: 0.55rem 0.75rem;
-  background: #111;
-  border-bottom: 1px solid #222;
-  color: #ddd;
-  font-size: 0.78rem;
-  gap: 0.5rem;
-  align-items: flex-start;
+display: none;
+padding: 0.55rem 0.75rem;
+background: #111;
+border-bottom: 1px solid #222;
+color: #ddd;
+font-size: 0.78rem;
+gap: 0.5rem;
+align-items: flex-start;
 }
 
 #pinned-message-label {
-  color: #ffca28;
-  font-weight: bold;
-  flex-shrink: 0;
+color: #ffca28;
+font-weight: bold;
+flex-shrink: 0;
 }
 
 #pinned-message-text {
-  flex: 1;
-  min-width: 0;
-  word-break: break-word;
+flex: 1;
+min-width: 0;
+word-break: break-word;
 }
 
 
 
 .utility-btn {
-  background-color: #111;
+background-color: #111;
 }
 
 .utility-btn:hover {
-  background-color: #fff;
+background-color: #fff;
 }
 
 .profile-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.5rem;
-  margin-top: 1rem;
+display: grid;
+grid-template-columns: repeat(2, minmax(0, 1fr));
+gap: 0.5rem;
+margin-top: 1rem;
 }
 
 .profile-stat-card {
-  background: #111;
-  border: 1px solid #2d2d2d;
-  border-radius: 0.5rem;
-  padding: 0.75rem;
+background: #111;
+border: 1px solid #2d2d2d;
+border-radius: 0.5rem;
+padding: 0.75rem;
 }
 
 .achievement-list {
-  margin-top: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  max-height: 260px;
-  overflow-y: auto;
+margin-top: 1rem;
+display: flex;
+flex-direction: column;
+gap: 0.5rem;
+max-height: 260px;
+overflow-y: auto;
 }
 
 .achievement-item {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-  background: #111;
-  border: 1px solid #2d2d2d;
-  border-radius: 0.5rem;
-  padding: 0.7rem 0.8rem;
-  text-align: left;
+display: flex;
+justify-content: space-between;
+gap: 0.75rem;
+background: #111;
+border: 1px solid #2d2d2d;
+border-radius: 0.5rem;
+padding: 0.7rem 0.8rem;
+text-align: left;
 }
 
 .achievement-item.unlocked {
-  border-color: #66bb6a;
+border-color: #66bb6a;
 }
 
 #chat-leaderboard-btn,
 #chat-profile-btn {
-  background: none;
-  border: none;
-  color: #ddd;
-  cursor: pointer;
-  padding: 0.5rem 0.7rem;
-  font-size: 0.85rem;
-  border-radius: 0.3rem;
-  transition: all 0.2s;
+background: none;
+border: none;
+color: #ddd;
+cursor: pointer;
+padding: 0.5rem 0.7rem;
+font-size: 0.85rem;
+border-radius: 0.3rem;
+transition: all 0.2s;
 }
 
 #chat-leaderboard-btn:hover,
 #chat-profile-btn:hover {
-  background-color: #2d2d2d;
-  color: #fff;
+background-color: #2d2d2d;
+color: #fff;
 }
 
 .leaderboard-entry {
-  display: grid;
-  grid-template-columns: 0.35fr 1.2fr 0.6fr 0.8fr;
-  gap: 0.75rem;
-  align-items: center;
-  padding: 0.7rem;
-  background: #111;
-  border: 1px solid #2a2a2a;
-  border-radius: 0.4rem;
-  margin-top: 0.5rem;
-  font-size: 0.95rem;
+display: grid;
+grid-template-columns: 0.35fr 1.2fr 0.6fr 0.8fr;
+gap: 0.75rem;
+align-items: center;
+padding: 0.7rem;
+background: #111;
+border: 1px solid #2a2a2a;
+border-radius: 0.4rem;
+margin-top: 0.5rem;
+font-size: 0.95rem;
 }
 
 .leaderboard-rank {
-  font-weight: bold;
-  color: #ffca28;
-  text-align: center;
-  font-size: 1.1rem;
+font-weight: bold;
+color: #ffca28;
+text-align: center;
+font-size: 1.1rem;
 }
 
 .leaderboard-username {
-  color: #ddd;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+color: #ddd;
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
 }
 
 .leaderboard-level {
-  background: linear-gradient(135deg, #66bb6a 0%, #4a9d50 100%);
-  padding: 0.3rem 0.6rem;
-  border-radius: 0.3rem;
-  text-align: center;
-  font-weight: bold;
-  color: #fff;
-  font-size: 0.85rem;
+background: linear-gradient(135deg, #66bb6a 0%, #4a9d50 100%);
+padding: 0.3rem 0.6rem;
+border-radius: 0.3rem;
+text-align: center;
+font-weight: bold;
+color: #fff;
+font-size: 0.85rem;
 }
 
 .leaderboard-points {
-  color: #bbb;
-  text-align: right;
-  font-size: 0.9rem;
+color: #bbb;
+text-align: right;
+font-size: 0.9rem;
 }
 
 .owner-tag {
-  display: inline-block;
-  background: #ff3333;
-  color: #fff;
-  font-size: 0.65rem;
-  font-weight: bold;
-  padding: 0.15rem 0.4rem;
-  border-radius: 0.25rem;
-  margin-left: 0.4rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+display: inline-block;
+background: #ff3333;
+color: #fff;
+font-size: 0.65rem;
+font-weight: bold;
+padding: 0.15rem 0.4rem;
+border-radius: 0.25rem;
+margin-left: 0.4rem;
+text-transform: uppercase;
+letter-spacing: 0.5px;
 }
 
 .party-action-row {
-  display: flex;
-  justify-content: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+display: flex;
+justify-content: center;
+gap: 0.75rem;
+flex-wrap: wrap;
 }
 
 #chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 1rem;
-  background-color: #000;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+flex: 1;
+overflow-y: auto;
+padding: 1rem;
+background-color: #000;
+display: flex;
+flex-direction: column;
+gap: 0.75rem;
 }
 
 .chat-message {
-  padding: 0.75rem;
-  border-radius: 8px;
-  word-wrap: break-word;
-  font-size: 0.9rem;
+padding: 0.75rem;
+border-radius: 8px;
+word-wrap: break-word;
+font-size: 0.9rem;
 }
 
 .chat-message.own {
-  background-color: #1565c0;
-  color: #fff;
-  align-self: flex-end;
-  max-width: 80%;
+background-color: #1565c0;
+color: #fff;
+align-self: flex-end;
+max-width: 80%;
 }
 
 .chat-message.other {
-  background-color: #5f6368;
-  color: #fff;
-  align-self: flex-start;
-  max-width: 80%;
+background-color: #5f6368;
+color: #fff;
+align-self: flex-start;
+max-width: 80%;
 }
 
 .chat-message.system {
-  background-color: transparent;
-  color: #9aa0a6;
-  align-self: center;
-  max-width: 96%;
-  border: none;
-  padding: 0.15rem 0.35rem;
-  text-align: center;
+background-color: transparent;
+color: #9aa0a6;
+align-self: center;
+max-width: 96%;
+border: none;
+padding: 0.15rem 0.35rem;
+text-align: center;
 }
 
 .chat-message.system .chat-message-user {
-  display: none;
+display: none;
 }
 
 .chat-message.system .chat-message-caption {
-  font-size: 0.74rem;
-  color: #9aa0a6;
-  margin-top: 0;
+font-size: 0.74rem;
+color: #9aa0a6;
+margin-top: 0;
 }
 
 .chat-message.system .chat-message-time {
-  text-align: center;
-  margin-top: 0.1rem;
-  font-size: 0.62rem;
-  opacity: 0.7;
+text-align: center;
+margin-top: 0.1rem;
+font-size: 0.62rem;
+opacity: 0.7;
 }
 
 .chat-message.system .chat-message-actions {
-  display: none;
-  justify-content: center;
-  margin-top: 0.15rem;
+display: none;
+justify-content: center;
+margin-top: 0.15rem;
 }
 
 .chat-message.system:hover .chat-message-actions {
-  display: flex;
+display: flex;
 }
 
 .chat-message.system .chat-action-btn {
-  font-size: 0.62rem;
-  padding: 0.05rem 0.35rem;
+font-size: 0.62rem;
+padding: 0.05rem 0.35rem;
 }
 
 .chat-message-user {
-  font-weight: bold;
-  font-size: 0.85rem;
-  margin-bottom: 0.25rem;
-  opacity: 0.9;
+font-weight: bold;
+font-size: 0.85rem;
+margin-bottom: 0.25rem;
+opacity: 0.9;
 }
 
 .chat-user-link {
-  cursor: pointer;
+cursor: pointer;
 }
 
 .chat-user-link:hover {
-  text-decoration: underline;
+text-decoration: underline;
 }
 
 .chat-message-time {
-  font-size: 0.6rem;
-  opacity: 0.55;
-  margin-top: 0.2rem;
-  text-align: right;
+font-size: 0.6rem;
+opacity: 0.55;
+margin-top: 0.2rem;
+text-align: right;
 }
 
 .chat-message-actions {
-  display: none;
-  gap: 0.25rem;
-  margin-top: 0.35rem;
-  flex-wrap: wrap;
+display: none;
+gap: 0.25rem;
+margin-top: 0.35rem;
+flex-wrap: wrap;
 }
 .chat-message:hover .chat-message-actions {
-  display: flex;
+display: flex;
 }
 .chat-action-btn {
-  background: rgba(255,255,255,0.18);
-  border: none;
-  border-radius: 4px;
-  color: #fff;
-  font-size: 0.7rem;
-  padding: 0.15rem 0.4rem;
-  cursor: pointer;
-  line-height: 1.3;
+background: rgba(255,255,255,0.18);
+border: none;
+border-radius: 4px;
+color: #fff;
+font-size: 0.7rem;
+padding: 0.15rem 0.4rem;
+cursor: pointer;
+line-height: 1.3;
 }
 .chat-action-btn:hover {
-  background: rgba(255,255,255,0.35);
+background: rgba(255,255,255,0.35);
 }
 .chat-message-reply-quote {
-  background: rgba(0,0,0,0.25);
-  border-left: 3px solid rgba(255,255,255,0.5);
-  padding: 0.25rem 0.5rem;
-  border-radius: 0 4px 4px 0;
-  margin-bottom: 0.35rem;
-  font-size: 0.75rem;
-  opacity: 0.85;
+background: rgba(0,0,0,0.25);
+border-left: 3px solid rgba(255,255,255,0.5);
+padding: 0.25rem 0.5rem;
+border-radius: 0 4px 4px 0;
+margin-bottom: 0.35rem;
+font-size: 0.75rem;
+opacity: 0.85;
 }
 #reply-preview-bar {
-  display: none;
-  background: #111;
-  padding: 0.4rem 0.75rem;
-  border-top: 1px solid #333;
-  color: #ccc;
-  font-size: 0.8rem;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
+display: none;
+background: #111;
+padding: 0.4rem 0.75rem;
+border-top: 1px solid #333;
+color: #ccc;
+font-size: 0.8rem;
+align-items: center;
+gap: 0.5rem;
+flex-shrink: 0;
 }
 #reply-preview-bar span {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+flex: 1;
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
 }
 #reply-cancel-btn {
-  background: #333;
-  border: none;
-  color: #fff;
-  border-radius: 4px;
-  padding: 0.15rem 0.4rem;
-  cursor: pointer;
-  font-size: 0.75rem;
-  flex-shrink: 0;
+background: #333;
+border: none;
+color: #fff;
+border-radius: 4px;
+padding: 0.15rem 0.4rem;
+cursor: pointer;
+font-size: 0.75rem;
+flex-shrink: 0;
 }
 .chat-reactions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  margin-top: 0.3rem;
+display: flex;
+flex-wrap: wrap;
+gap: 0.25rem;
+margin-top: 0.3rem;
 }
 .reaction-pill {
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 10px;
-  padding: 0.1rem 0.45rem;
-  font-size: 0.78rem;
-  cursor: pointer;
-  color: #fff;
-  line-height: 1.4;
-  position: relative;
+background: rgba(255,255,255,0.12);
+border: 1px solid rgba(255,255,255,0.2);
+border-radius: 10px;
+padding: 0.1rem 0.45rem;
+font-size: 0.78rem;
+cursor: pointer;
+color: #fff;
+line-height: 1.4;
+position: relative;
 }
 .reaction-pill:hover .reaction-tooltip {
-  display: block;
+display: block;
 }
 .reaction-tooltip {
-  display: none;
-  position: absolute;
-  bottom: calc(100% + 5px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: #222;
-  color: #fff;
-  font-size: 0.72rem;
-  padding: 0.3rem 0.6rem;
-  border-radius: 6px;
-  white-space: nowrap;
-  border: 1px solid #444;
-  pointer-events: none;
-  z-index: 9999;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+display: none;
+position: absolute;
+bottom: calc(100% + 5px);
+left: 50%;
+transform: translateX(-50%);
+background: #222;
+color: #fff;
+font-size: 0.72rem;
+padding: 0.3rem 0.6rem;
+border-radius: 6px;
+white-space: nowrap;
+border: 1px solid #444;
+pointer-events: none;
+z-index: 9999;
+max-width: 200px;
+overflow: hidden;
+text-overflow: ellipsis;
 }
 .reaction-pill.reacted {
-  background: rgba(255,255,255,0.3);
-  border-color: rgba(255,255,255,0.6);
+background: rgba(255,255,255,0.3);
+border-color: rgba(255,255,255,0.6);
 }
 .reaction-image-thumb {
-  width: 128px;
-  height: 128px;
-  object-fit: cover;
-  border-radius: 3px;
-  vertical-align: middle;
-  margin-right: 6px;
-  border: 1px solid rgba(255,255,255,0.4);
+width: 128px;
+height: 128px;
+object-fit: cover;
+border-radius: 3px;
+vertical-align: middle;
+margin-right: 6px;
+border: 1px solid rgba(255,255,255,0.4);
 }
 #online-users-panel {
-  display: none;
-  background: #0a0a0a;
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #222;
-  max-height: 110px;
-  overflow-y: auto;
-  flex-shrink: 0;
+display: none;
+background: #0a0a0a;
+padding: 0.5rem 0.75rem;
+border-bottom: 1px solid #222;
+max-height: 110px;
+overflow-y: auto;
+flex-shrink: 0;
 }
 #online-users-panel .online-user-item {
-  font-size: 0.8rem;
-  color: #66bb6a;
-  padding: 0.1rem 0;
+font-size: 0.8rem;
+color: #66bb6a;
+padding: 0.1rem 0;
 }
 #online-users-panel .online-count {
-  font-size: 0.75rem;
-  color: #999;
-  margin-bottom: 0.3rem;
+font-size: 0.75rem;
+color: #999;
+margin-bottom: 0.3rem;
 }
 #chat-online-btn {
-  background: #333;
-  border: none;
-  color: #66bb6a;
-  padding: 0.25rem 0.5rem;
-  cursor: pointer;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  flex-shrink: 0;
+background: #333;
+border: none;
+color: #66bb6a;
+padding: 0.25rem 0.5rem;
+cursor: pointer;
+border-radius: 4px;
+font-size: 0.8rem;
+flex-shrink: 0;
 }
 #chat-online-btn:hover {
-  background: #555;
+background: #555;
 }
 
 #typing-indicator {
-  padding: 0.2rem 0.75rem;
-  color: #aaa;
-  font-size: 0.72rem;
-  font-style: italic;
-  min-height: 1.2rem;
-  flex-shrink: 0;
-  background: #000;
+padding: 0.2rem 0.75rem;
+color: #aaa;
+font-size: 0.72rem;
+font-style: italic;
+min-height: 1.2rem;
+flex-shrink: 0;
+background: #000;
 }
 
 #chat-unread-badge {
-  display: none;
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  background: #f44336;
-  color: #fff;
-  border-radius: 50%;
-  font-size: 0.65rem;
-  min-width: 18px;
-  height: 18px;
-  line-height: 18px;
-  text-align: center;
-  font-weight: bold;
-  padding: 0 3px;
-  box-sizing: border-box;
-  pointer-events: none;
+display: none;
+position: absolute;
+top: -6px;
+right: -6px;
+background: #f44336;
+color: #fff;
+border-radius: 50%;
+font-size: 0.65rem;
+min-width: 18px;
+height: 18px;
+line-height: 18px;
+text-align: center;
+font-weight: bold;
+padding: 0 3px;
+box-sizing: border-box;
+pointer-events: none;
 }
 
 #chat-input-area {
-  padding: 1rem;
-  border-top: 1px solid #000;
-  background-color: #000;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  box-sizing: border-box;
+padding: 1rem;
+border-top: 1px solid #000;
+background-color: #000;
+display: flex;
+align-items: center;
+gap: 0.5rem;
+box-sizing: border-box;
 }
 
 #chat-message-input {
-  flex: 1;
-  min-width: 0;
-  padding: 0.5rem;
-  border: 1px solid #5f6368;
-  border-radius: 4px;
-  background-color: #1f1f1f;
-  color: #fff;
-  font-size: 0.9rem;
-  box-sizing: border-box;
+flex: 1;
+min-width: 0;
+padding: 0.5rem;
+border: 1px solid #5f6368;
+border-radius: 4px;
+background-color: #1f1f1f;
+color: #fff;
+font-size: 0.9rem;
+box-sizing: border-box;
 }
 
 #chat-message-input::placeholder {
-  color: #999;
+color: #999;
 }
 
 #chat-image-btn {
-  padding: 0.5rem 0.75rem;
-  background-color: #333;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  flex-shrink: 0;
+padding: 0.5rem 0.75rem;
+background-color: #333;
+color: #fff;
+border: none;
+border-radius: 4px;
+cursor: pointer;
+font-weight: bold;
+flex-shrink: 0;
 }
 
 #chat-image-btn:hover {
-  background-color: #555;
+background-color: #555;
 }
 
 .chat-message-image {
-  display: block;
-  max-width: 100%;
-  max-height: 240px;
-  border-radius: 8px;
-  margin-top: 0.35rem;
-  object-fit: contain;
+display: block;
+max-width: 100%;
+max-height: 240px;
+border-radius: 8px;
+margin-top: 0.35rem;
+object-fit: contain;
 }
 
 .chat-message-video {
-  display: block;
-  max-width: 100%;
-  max-height: 260px;
-  border-radius: 8px;
-  margin-top: 0.35rem;
-  background: #000;
+display: block;
+max-width: 100%;
+max-height: 260px;
+border-radius: 8px;
+margin-top: 0.35rem;
+background: #000;
 }
 
 .chat-message-caption {
-  margin-top: 0.5rem;
+margin-top: 0.5rem;
 }
 
 #chat-toggle-btn {
-  position: fixed;
-  bottom: 1rem;
-  left: 1rem;
-  z-index: 998;
-  padding: 0.75rem 1.5rem;
-  background-color: #000;
-  color: #fff;
-  border: none;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  font-weight: bold;
-  display: block;
-  margin-top: 0;
+position: fixed;
+bottom: 1rem;
+left: 1rem;
+z-index: 998;
+padding: 0.75rem 1.5rem;
+background-color: #000;
+color: #fff;
+border: none;
+border-radius: 0.5rem;
+cursor: pointer;
+font-weight: bold;
+display: block;
+margin-top: 0;
 }
 
 #chat-toggle-btn:hover {
-  background-color: #333;
+background-color: #333;
 }
 
 #admin-menu-btn {
-  position: fixed;
-  bottom: 1rem;
-  right: 1rem;
-  z-index: 999;
+position: fixed;
+bottom: 1rem;
+right: 1rem;
+z-index: 999;
 }
 
 #chat-minimize-btn,
 #chat-close-btn,
 #chat-online-btn {
-  background-color: #333;
-  border: none;
-  color: #fff;
-  padding: 0.25rem 0.5rem;
-  cursor: pointer;
-  border-radius: 4px;
-  font-size: 0.8rem;
+background-color: #333;
+border: none;
+color: #fff;
+padding: 0.25rem 0.5rem;
+cursor: pointer;
+border-radius: 4px;
+font-size: 0.8rem;
 }
 
 #chat-minimize-btn:hover,
 #chat-close-btn:hover,
 #chat-online-btn:hover {
-  background-color: #555;
+background-color: #555;
 }
 
 #admin-menu .admin-menu-panel {
-  background: #222;
-  padding: 1.25rem;
-  border-radius: 0.5rem;
-  color: #fff;
-  width: min(980px, calc(100vw - 2rem));
-  max-height: calc(100vh - 2rem);
-  overflow: auto;
-  box-shadow: 0 8px 32px #000a;
+background: #222;
+padding: 1.25rem;
+border-radius: 0.5rem;
+color: #fff;
+width: min(980px, calc(100vw - 2rem));
+max-height: calc(100vh - 2rem);
+overflow: auto;
+box-shadow: 0 8px 32px #000a;
 }
 
 #admin-menu .admin-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 0.75rem;
-  margin-top: 1rem;
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+gap: 0.75rem;
+margin-top: 1rem;
 }
 
 #admin-menu .admin-section-card {
-  background: #2b2b2b;
-  border: 1px solid #3c3c3c;
-  border-radius: 0.5rem;
-  padding: 0.75rem;
+background: #2b2b2b;
+border: 1px solid #3c3c3c;
+border-radius: 0.5rem;
+padding: 0.75rem;
 }
 
 #admin-menu .admin-section-title {
-  color: #ffb74d;
-  font-size: 0.9rem;
-  margin-bottom: 0.5rem;
+color: #ffb74d;
+font-size: 0.9rem;
+margin-bottom: 0.5rem;
 }
 
 #admin-menu .admin-section-card input,
 #admin-menu .admin-section-card select,
 #admin-menu .admin-section-card button {
-  width: 100%;
-  margin: 0.35rem 0;
+width: 100%;
+margin: 0.35rem 0;
 }
 
 #admin-menu .admin-button-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 0.5rem;
 }
 
 #admin-menu .admin-footer {
-  margin-top: 0.75rem;
+margin-top: 0.75rem;
 }
 
 #admin-menu .admin-footer button {
-  width: 100%;
+width: 100%;
 }
 
 @media (max-width: 500px) {
-  #chat-container {
-    width: 100%;
-    right: 0;
-    bottom: 0;
-    border-radius: 0;
-  }
+#chat-container {
+width: 100%;
+right: 0;
+bottom: 0;
+border-radius: 0;
+}
 }
 </style>
 </head>
 <body>
 <!-- Admin Menu -->
 <div id="admin-menu" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); z-index:5000; align-items:center; justify-content:center; flex-direction:column;">
-  <div class="admin-menu-panel" style="text-align:left;">
-    <h2>Admin Ban Panel</h2>
-    <input type="text" id="admin-ban-username" placeholder="Username" style="padding:0.5rem; margin:0.5rem 0; width:220px; border:none; border-radius:0.25rem;" />
-    <div style="margin-bottom:0.5rem;">
-      <label for="admin-user-list" style="color:#ffb74d;">User List:</label>
-      <select id="admin-user-list" style="width:220px; padding:0.5rem; border:none; border-radius:0.25rem; margin-top:0.25rem;" onchange="applySelectedAdminUser(this.value)">
-        <option value="">-- Select a user --</option>
-      </select>
-    </div>
-    <select id="admin-ban-reason" style="padding:0.5rem; margin:0.5rem 0; width:220px; border:none; border-radius:0.25rem;" onchange="toggleCustomReason()">
-      <option value="">Select reason</option>
-      <option value="Gooning">Gooning</option>
-      <option value="Nape Riggers">Nape Riggers</option>
-      <option value="Other">Other</option>
-    </select>
-    <input type="text" id="admin-ban-custom-reason" placeholder="Enter custom reason" style="padding:0.5rem; margin:0.5rem 0; width:220px; border:none; border-radius:0.25rem; display:none;" autocomplete="off" />
-    <script>
-      function toggleCustomReason() {
-        const reasonSelect = document.getElementById('admin-ban-reason');
-        const customReasonInput = document.getElementById('admin-ban-custom-reason');
-        if (reasonSelect.value === 'Other') {
-          customReasonInput.style.display = 'block';
-          customReasonInput.disabled = false;
-          customReasonInput.focus();
-        } else {
-          customReasonInput.style.display = 'none';
-          customReasonInput.disabled = true;
-          customReasonInput.value = '';
-        }
-      }
-      const SITE_LOGINS = {
+<div class="admin-menu-panel" style="text-align:left;">
+<h2>Admin Ban Panel</h2>
+<input type="text" id="admin-ban-username" placeholder="Username" style="padding:0.5rem; margin:0.5rem 0; width:220px; border:none; border-radius:0.25rem;" />
+<div style="margin-bottom:0.5rem;">
+<label for="admin-user-list" style="color:#ffb74d;">User List:</label>
+<select id="admin-user-list" style="width:220px; padding:0.5rem; border:none; border-radius:0.25rem; margin-top:0.25rem;" onchange="applySelectedAdminUser(this.value)">
+<option value="">-- Select a user --</option>
+</select>
+</div>
+<select id="admin-ban-reason" style="padding:0.5rem; margin:0.5rem 0; width:220px; border:none; border-radius:0.25rem;" onchange="toggleCustomReason()">
+<option value="">Select reason</option>
+<option value="Gooning">Gooning</option>
+<option value="Nape Riggers">Nape Riggers</option>
+<option value="Other">Other</option>
+</select>
+<input type="text" id="admin-ban-custom-reason" placeholder="Enter custom reason" style="padding:0.5rem; margin:0.5rem 0; width:220px; border:none; border-radius:0.25rem; display:none;" autocomplete="off" />
+<script>
+function toggleCustomReason() {
+const reasonSelect = document.getElementById('admin-ban-reason');
+const customReasonInput = document.getElementById('admin-ban-custom-reason');
+if (reasonSelect.value === 'Other') {
+customReasonInput.style.display = 'block';
+customReasonInput.disabled = false;
+customReasonInput.focus();
+} else {
+customReasonInput.style.display = 'none';
+customReasonInput.disabled = true;
+customReasonInput.value = '';
+}
+}
+const SITE_LOGINS = {
 'kaiden': 'KHDisco806',
 'jeremy_wade': 'Hal',
 'gnb_fartball': 'imaura6767',
@@ -913,7 +913,7 @@ background-color: #ff5252;
 'eddiy': 'dino591511',
 'cameron': 'camgirl123',
 'garrett': 'sperm123',
-'jeremiah', 'j!1'
+'jeremiah': 'j!1'
 };
 let siteLoginPassed = false;
 
@@ -936,45 +936,45 @@ let username = document.getElementById('site-login-username').value.trim().toLow
 const password = document.getElementById('site-login-password').value;
 const errorDiv = document.getElementById('site-login-error');
 if (!username || !password) {
-  errorDiv.textContent = 'Please enter both username and password.';
-  return;
+errorDiv.textContent = 'Please enter both username and password.';
+return;
 }
 (async () => {
-  const bannedList = (await getBannedUsernames()).map(u => u.trim().toLowerCase());
-  if (!isProtectedUsername(username) && bannedList.includes(username)) {
-    hideSiteLoginModal();
-    document.body.style.overflow = 'auto';
-    showUserBanNotification();
-    return;
-  }
-  const timedBan = await getActiveTimedBan(username);
-  if (timedBan) {
-    errorDiv.textContent = `Temporarily banned until ${timedBan.expiresAt.toLocaleString()}. Reason: ${timedBan.reason}`;
-    return;
-  }
-  if (SITE_LOGINS.hasOwnProperty(username) && SITE_LOGINS[username] === password) {
-    siteLoginPassed = true;
-    localStorage.setItem('userName', username);
-    hideSiteLoginModal();
-    if (canModerate(username)) {
-      document.getElementById('admin-menu-btn').style.display = 'block';
-    } else {
-      document.getElementById('admin-menu-btn').style.display = 'none';
-    }
-    if (!getUserName()) {
-      showNameModal();
-    } else {
-      initIPLogging();
-    }
-    
-    currentChatUser = getUserName();
-    waitForFirebase(() => {
-      initializeChat();
-      updateAdminMenuButtonVisibility();
-    });
-  } else {
-    errorDiv.textContent = 'Invalid username or password.';
-  }
+const bannedList = (await getBannedUsernames()).map(u => u.trim().toLowerCase());
+if (!isProtectedUsername(username) && bannedList.includes(username)) {
+hideSiteLoginModal();
+document.body.style.overflow = 'auto';
+showUserBanNotification();
+return;
+}
+const timedBan = await getActiveTimedBan(username);
+if (timedBan) {
+errorDiv.textContent = `Temporarily banned until ${timedBan.expiresAt.toLocaleString()}. Reason: ${timedBan.reason}`;
+return;
+}
+if (SITE_LOGINS.hasOwnProperty(username) && SITE_LOGINS[username] === password) {
+siteLoginPassed = true;
+localStorage.setItem('userName', username);
+hideSiteLoginModal();
+if (canModerate(username)) {
+document.getElementById('admin-menu-btn').style.display = 'block';
+} else {
+document.getElementById('admin-menu-btn').style.display = 'none';
+}
+if (!getUserName()) {
+showNameModal();
+} else {
+initIPLogging();
+}
+
+currentChatUser = getUserName();
+waitForFirebase(() => {
+initializeChat();
+updateAdminMenuButtonVisibility();
+});
+} else {
+errorDiv.textContent = 'Invalid username or password.';
+}
 })();
 }
 
@@ -994,79 +994,79 @@ document.getElementById('name-modal').style.display = 'none';
 initIPLogging();
 }
 
-      document.addEventListener('DOMContentLoaded', function() {
-        var userList = document.getElementById('admin-user-list');
-        if (userList && typeof SITE_LOGINS === 'object') {
-          Object.keys(SITE_LOGINS).forEach(function(username) {
-            var opt = document.createElement('option');
-            opt.value = username;
-            opt.textContent = username;
-            userList.appendChild(opt);
-          });
-        }
-      });
-    </script>
-    <div class="admin-grid">
-      <div class="admin-section-card">
-        <div class="admin-section-title">Ban Controls</div>
-        <button onclick="adminBanUser()" style="padding:0.5rem 1rem; background:#d32f2f; color:#fff; border:none; border-radius:0.25rem;">Ban Username</button>
-        <button onclick="adminUnbanUser()" style="padding:0.5rem 1rem; background:#388e3c; color:#fff; border:none; border-radius:0.25rem;">Unban Username</button>
-        <button onclick="adminClearChat()" style="padding:0.5rem 1rem; background:#111; color:#fff; border:none; border-radius:0.25rem;">Clear All Chat</button>
-      </div>
+document.addEventListener('DOMContentLoaded', function() {
+var userList = document.getElementById('admin-user-list');
+if (userList && typeof SITE_LOGINS === 'object') {
+Object.keys(SITE_LOGINS).forEach(function(username) {
+var opt = document.createElement('option');
+opt.value = username;
+opt.textContent = username;
+userList.appendChild(opt);
+});
+}
+});
+</script>
+<div class="admin-grid">
+<div class="admin-section-card">
+<div class="admin-section-title">Ban Controls</div>
+<button onclick="adminBanUser()" style="padding:0.5rem 1rem; background:#d32f2f; color:#fff; border:none; border-radius:0.25rem;">Ban Username</button>
+<button onclick="adminUnbanUser()" style="padding:0.5rem 1rem; background:#388e3c; color:#fff; border:none; border-radius:0.25rem;">Unban Username</button>
+<button onclick="adminClearChat()" style="padding:0.5rem 1rem; background:#111; color:#fff; border:none; border-radius:0.25rem;">Clear All Chat</button>
+</div>
 
-      <div class="admin-section-card">
-        <div class="admin-section-title">Mute / Unmute</div>
-        <input type="text" id="admin-mute-username" placeholder="Username to mute/unmute" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
-        <div class="admin-button-row">
-          <button onclick="adminMuteUser()" style="padding:0.5rem 1rem; background:#e65100; color:#fff; border:none; border-radius:0.25rem;">Mute</button>
-          <button onclick="adminUnmuteUser()" style="padding:0.5rem 1rem; background:#388e3c; color:#fff; border:none; border-radius:0.25rem;">Unmute</button>
-        </div>
-      </div>
+<div class="admin-section-card">
+<div class="admin-section-title">Mute / Unmute</div>
+<input type="text" id="admin-mute-username" placeholder="Username to mute/unmute" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
+<div class="admin-button-row">
+<button onclick="adminMuteUser()" style="padding:0.5rem 1rem; background:#e65100; color:#fff; border:none; border-radius:0.25rem;">Mute</button>
+<button onclick="adminUnmuteUser()" style="padding:0.5rem 1rem; background:#388e3c; color:#fff; border:none; border-radius:0.25rem;">Unmute</button>
+</div>
+</div>
 
-      <div class="admin-section-card">
-        <div class="admin-section-title">Kick / Warn</div>
-        <input type="text" id="admin-kick-username" placeholder="Username to kick" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
-        <button onclick="adminKickUser()" style="padding:0.5rem 1rem; background:#7b1fa2; color:#fff; border:none; border-radius:0.25rem;">Kick</button>
-        <input type="text" id="admin-warn-username" placeholder="Username to warn" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
-        <input type="text" id="admin-warn-reason" placeholder="Warning reason" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
-        <button onclick="adminWarnUser()" style="padding:0.5rem 1rem; background:#c2185b; color:#fff; border:none; border-radius:0.25rem;">Warn</button>
-      </div>
+<div class="admin-section-card">
+<div class="admin-section-title">Kick / Warn</div>
+<input type="text" id="admin-kick-username" placeholder="Username to kick" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
+<button onclick="adminKickUser()" style="padding:0.5rem 1rem; background:#7b1fa2; color:#fff; border:none; border-radius:0.25rem;">Kick</button>
+<input type="text" id="admin-warn-username" placeholder="Username to warn" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
+<input type="text" id="admin-warn-reason" placeholder="Warning reason" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
+<button onclick="adminWarnUser()" style="padding:0.5rem 1rem; background:#c2185b; color:#fff; border:none; border-radius:0.25rem;">Warn</button>
+</div>
 
-      <div class="admin-section-card">
-        <div class="admin-section-title">Temporary Ban</div>
-        <input type="text" id="admin-tempban-username" placeholder="Username to temp ban" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
-        <input type="number" id="admin-tempban-minutes" placeholder="Minutes (e.g. 60)" min="1" max="10080" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
-        <input type="text" id="admin-tempban-reason" placeholder="Temp ban reason" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
-        <button onclick="adminTempBanUser()" style="padding:0.5rem 1rem; background:#6a1b9a; color:#fff; border:none; border-radius:0.25rem;">Temp Ban</button>
-      </div>
+<div class="admin-section-card">
+<div class="admin-section-title">Temporary Ban</div>
+<input type="text" id="admin-tempban-username" placeholder="Username to temp ban" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
+<input type="number" id="admin-tempban-minutes" placeholder="Minutes (e.g. 60)" min="1" max="10080" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
+<input type="text" id="admin-tempban-reason" placeholder="Temp ban reason" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
+<button onclick="adminTempBanUser()" style="padding:0.5rem 1rem; background:#6a1b9a; color:#fff; border:none; border-radius:0.25rem;">Temp Ban</button>
+</div>
 
-      <div class="admin-section-card">
-        <div class="admin-section-title">Roles</div>
-        <input type="text" id="admin-role-username" placeholder="Username for role" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
-        <select id="admin-role-select" style="padding:0.5rem; border:none; border-radius:0.25rem;">
-          <option value="member">Member</option>
-          <option value="helper">Helper</option>
-          <option value="moderator">Moderator</option>
-          <option value="admin">Admin</option>
-        </select>
-        <button onclick="adminAssignRole()" style="padding:0.5rem 1rem; background:#0d47a1; color:#fff; border:none; border-radius:0.25rem;">Set Role</button>
-      </div>
+<div class="admin-section-card">
+<div class="admin-section-title">Roles</div>
+<input type="text" id="admin-role-username" placeholder="Username for role" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
+<select id="admin-role-select" style="padding:0.5rem; border:none; border-radius:0.25rem;">
+<option value="member">Member</option>
+<option value="helper">Helper</option>
+<option value="moderator">Moderator</option>
+<option value="admin">Admin</option>
+</select>
+<button onclick="adminAssignRole()" style="padding:0.5rem 1rem; background:#0d47a1; color:#fff; border:none; border-radius:0.25rem;">Set Role</button>
+</div>
 
-      <div class="admin-section-card">
-        <div class="admin-section-title">Site</div>
-        <button onclick="adminToggleReadOnlyMode()" style="padding:0.5rem 1rem; background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Toggle Read-Only Chat</button>
-        <button onclick="adminEditWordFilter()" style="padding:0.5rem 1rem; background:#5d4037; color:#fff; border:none; border-radius:0.25rem;">Edit Word Filter</button>
-        <button onclick="adminSetAnnouncement()" style="padding:0.5rem 1rem; background:#2e7d32; color:#fff; border:none; border-radius:0.25rem;">Set Announcement</button>
-        <button onclick="adminClearAnnouncement()" style="padding:0.5rem 1rem; background:#616161; color:#fff; border:none; border-radius:0.25rem;">Clear Announcement</button>
-        <button onclick="adminEditUpdateNotes()" style="padding:0.5rem 1rem; background:#1565c0; color:#fff; border:none; border-radius:0.25rem;">Edit Update Notes</button>
-      </div>
-    </div>
+<div class="admin-section-card">
+<div class="admin-section-title">Site</div>
+<button onclick="adminToggleReadOnlyMode()" style="padding:0.5rem 1rem; background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Toggle Read-Only Chat</button>
+<button onclick="adminEditWordFilter()" style="padding:0.5rem 1rem; background:#5d4037; color:#fff; border:none; border-radius:0.25rem;">Edit Word Filter</button>
+<button onclick="adminSetAnnouncement()" style="padding:0.5rem 1rem; background:#2e7d32; color:#fff; border:none; border-radius:0.25rem;">Set Announcement</button>
+<button onclick="adminClearAnnouncement()" style="padding:0.5rem 1rem; background:#616161; color:#fff; border:none; border-radius:0.25rem;">Clear Announcement</button>
+<button onclick="adminEditUpdateNotes()" style="padding:0.5rem 1rem; background:#1565c0; color:#fff; border:none; border-radius:0.25rem;">Edit Update Notes</button>
+</div>
+</div>
 
-    <div class="admin-footer">
-      <button onclick="closeAdminMenu()" style="background:#444; color:#fff; border:none; border-radius:0.25rem; padding:0.5rem 1.5rem;">Close</button>
-      <div id="admin-ban-status" style="color:#ff9800; margin-top:0.75rem; min-height:1.5em;"></div>
-    </div>
-  </div>
+<div class="admin-footer">
+<button onclick="closeAdminMenu()" style="background:#444; color:#fff; border:none; border-radius:0.25rem; padding:0.5rem 1.5rem;">Close</button>
+<div id="admin-ban-status" style="color:#ff9800; margin-top:0.75rem; min-height:1.5em;"></div>
+</div>
+</div>
 </div>
 <div id="site-login-modal" style="display:flex; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:4000; align-items:center; justify-content:center; flex-direction:column;">
 <div style="background:#222; padding:2.5rem 2rem; border-radius:0.5rem; text-align:center; color:#fff; min-width:300px; box-shadow:0 8px 32px #000a;">
@@ -1124,11 +1124,11 @@ initIPLogging();
 </div>
 </div>
 <div id="iframe-container" class="iframe-container">
-  <iframe id="game-iframe" class="game-iframe" src=""></iframe>
-  <div class="iframe-controls">
-    <button class="refresh-btn" id="refresh-btn" style="display:none;">Refresh</button>
-    <button class="close-btn" id="close-btn" style="display:none;">Close Game</button>
-  </div>
+<iframe id="game-iframe" class="game-iframe" src=""></iframe>
+<div class="iframe-controls">
+<button class="refresh-btn" id="refresh-btn" style="display:none;">Refresh</button>
+<button class="close-btn" id="close-btn" style="display:none;">Close Game</button>
+</div>
 </div>
 
 <iframe id="game-iframe-3" class="game-iframe" src=""></iframe>
@@ -1312,131 +1312,131 @@ initIPLogging();
 <!-- Live Chat -->
 <div id="chat-toggle-btn" onclick="toggleChat()">💬<span id="chat-unread-badge"></span></div>
 <div id="chat-container" style="display:none;">
-  <div id="chat-header" onmousedown="startChatDrag(event)" ontouchstart="startChatDrag(event)">
-    <h3>Live Chat</h3>
-    <div id="chat-header-actions">
-      <button id="chat-leaderboard-btn" onclick="openLeaderboardModal(event)">🏆</button>
-      <button id="chat-profile-btn" onclick="openProfileModal(event)">Profile</button>
-      <button id="chat-online-btn" onclick="toggleOnlineUsers(event)">🟢 0</button>
-      <button id="chat-minimize-btn" onclick="minimizeChat(event)">_</button>
-      <button id="chat-close-btn" onclick="closeChat(event)">✕</button>
-    </div>
-  </div>
-  <div id="pinned-message-bar">
-    <span id="pinned-message-label">PINNED</span>
-    <div id="pinned-message-text"></div>
-    <button id="pinned-message-clear-btn" onclick="clearPinnedMessage()" style="display:none; padding:0.15rem 0.45rem; font-size:0.7rem;">Clear</button>
-  </div>
-  <div id="online-users-panel"></div>
-  <div id="chat-messages"></div>
-  <div id="typing-indicator"></div>
-  <div id="reply-preview-bar">
-    <span id="reply-preview-text">Replying to...</span>
-    <button id="reply-cancel-btn" onclick="clearReply()">✕</button>
-  </div>
-  <div id="chat-input-area">
-    <input 
-      type="text" 
-      id="chat-message-input" 
-      placeholder="Type a message..." 
-      onkeypress="if(event.key==='Enter') sendMessage()"
-      oninput="onChatInput()"
-    />
-    <input type="file" id="chat-image-input" accept="image/*,video/*" style="display:none;" onchange="handleChatImageSelected(event)" />
-    <button id="chat-color-btn" onclick="openColorPicker()" style="padding:0.5rem 0.75rem; background-color:#333; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold; flex-shrink:0;">Color</button>
-    <button id="chat-image-btn" onclick="openChatImagePicmker()">Media</button>
-  </div>
+<div id="chat-header" onmousedown="startChatDrag(event)" ontouchstart="startChatDrag(event)">
+<h3>Live Chat</h3>
+<div id="chat-header-actions">
+<button id="chat-leaderboard-btn" onclick="openLeaderboardModal(event)">🏆</button>
+<button id="chat-profile-btn" onclick="openProfileModal(event)">Profile</button>
+<button id="chat-online-btn" onclick="toggleOnlineUsers(event)">🟢 0</button>
+<button id="chat-minimize-btn" onclick="minimizeChat(event)">_</button>
+<button id="chat-close-btn" onclick="closeChat(event)">✕</button>
+</div>
+</div>
+<div id="pinned-message-bar">
+<span id="pinned-message-label">PINNED</span>
+<div id="pinned-message-text"></div>
+<button id="pinned-message-clear-btn" onclick="clearPinnedMessage()" style="display:none; padding:0.15rem 0.45rem; font-size:0.7rem;">Clear</button>
+</div>
+<div id="online-users-panel"></div>
+<div id="chat-messages"></div>
+<div id="typing-indicator"></div>
+<div id="reply-preview-bar">
+<span id="reply-preview-text">Replying to...</span>
+<button id="reply-cancel-btn" onclick="clearReply()">✕</button>
+</div>
+<div id="chat-input-area">
+<input 
+type="text" 
+id="chat-message-input" 
+placeholder="Type a message..." 
+onkeypress="if(event.key==='Enter') sendMessage()"
+oninput="onChatInput()"
+/>
+<input type="file" id="chat-image-input" accept="image/*,video/*" style="display:none;" onchange="handleChatImageSelected(event)" />
+<button id="chat-color-btn" onclick="openColorPicker()" style="padding:0.5rem 0.75rem; background-color:#333; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold; flex-shrink:0;">Color</button>
+<button id="chat-image-btn" onclick="openChatImagePicmker()">Media</button>
+</div>
 
 <!-- Color Picker Modal -->
 <div id="color-picker-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:2000; align-items:center; justify-content:center;">
-  <div style="background:#222; padding:1.5rem; border-radius:0.5rem; text-align:center; color:#fff; box-shadow:0 8px 32px rgba(0,0,0,0.8);">
-    <h3 style="margin-top:0;">Choose Message Color</h3>
-    <div style="display:flex; gap:0.5rem; justify-content:center; flex-wrap:wrap;">
-      <button onclick="selectColor('#ef5350')" title="Red" style="width:50px; height:50px; background:#ef5350; border:3px solid #999; border-radius:6px; cursor:pointer; padding:0; flex-shrink:0;"></button>
-      <button onclick="selectColor('#ff9800')" title="Orange" style="width:50px; height:50px; background:#ff9800; border:3px solid #999; border-radius:6px; cursor:pointer; padding:0; flex-shrink:0;"></button>
-      <button onclick="selectColor('#fdd835')" title="Yellow" style="width:50px; height:50px; background:#fdd835; border:3px solid #999; border-radius:6px; cursor:pointer; padding:0; flex-shrink:0;"></button>
-      <button onclick="selectColor('#66bb6a')" title="Green" style="width:50px; height:50px; background:#66bb6a; border:3px solid #999; border-radius:6px; cursor:pointer; padding:0; flex-shrink:0;"></button>
-      <button onclick="selectColor('#1565c0')" title="Blue" style="width:50px; height:50px; background:#1565c0; border:3px solid #fff; border-radius:6px; cursor:pointer; padding:0; flex-shrink:0;"></button>
-      <button onclick="selectColor('#7e57c2')" title="Purple" style="width:50px; height:50px; background:#7e57c2; border:3px solid #999; border-radius:6px; cursor:pointer; padding:0; flex-shrink:0;"></button>
-      <button onclick="selectColor('#ec407a')" title="Pink" style="width:50px; height:50px; background:#ec407a; border:3px solid #999; border-radius:6px; cursor:pointer; padding:0; flex-shrink:0;"></button>
-    </div>
-    <button onclick="closeColorPicker()" style="margin-top:1rem; padding:0.5rem 1rem; background:#444; color:#fff; border:none; border-radius:4px; cursor:pointer;">Close</button>
-  </div>
+<div style="background:#222; padding:1.5rem; border-radius:0.5rem; text-align:center; color:#fff; box-shadow:0 8px 32px rgba(0,0,0,0.8);">
+<h3 style="margin-top:0;">Choose Message Color</h3>
+<div style="display:flex; gap:0.5rem; justify-content:center; flex-wrap:wrap;">
+<button onclick="selectColor('#ef5350')" title="Red" style="width:50px; height:50px; background:#ef5350; border:3px solid #999; border-radius:6px; cursor:pointer; padding:0; flex-shrink:0;"></button>
+<button onclick="selectColor('#ff9800')" title="Orange" style="width:50px; height:50px; background:#ff9800; border:3px solid #999; border-radius:6px; cursor:pointer; padding:0; flex-shrink:0;"></button>
+<button onclick="selectColor('#fdd835')" title="Yellow" style="width:50px; height:50px; background:#fdd835; border:3px solid #999; border-radius:6px; cursor:pointer; padding:0; flex-shrink:0;"></button>
+<button onclick="selectColor('#66bb6a')" title="Green" style="width:50px; height:50px; background:#66bb6a; border:3px solid #999; border-radius:6px; cursor:pointer; padding:0; flex-shrink:0;"></button>
+<button onclick="selectColor('#1565c0')" title="Blue" style="width:50px; height:50px; background:#1565c0; border:3px solid #fff; border-radius:6px; cursor:pointer; padding:0; flex-shrink:0;"></button>
+<button onclick="selectColor('#7e57c2')" title="Purple" style="width:50px; height:50px; background:#7e57c2; border:3px solid #999; border-radius:6px; cursor:pointer; padding:0; flex-shrink:0;"></button>
+<button onclick="selectColor('#ec407a')" title="Pink" style="width:50px; height:50px; background:#ec407a; border:3px solid #999; border-radius:6px; cursor:pointer; padding:0; flex-shrink:0;"></button>
+</div>
+<button onclick="closeColorPicker()" style="margin-top:1rem; padding:0.5rem 1rem; background:#444; color:#fff; border:none; border-radius:4px; cursor:pointer;">Close</button>
+</div>
 </div>
 </div>
 
 <div style="text-align: center; margin-top: 2rem; margin-bottom: 2rem;">
-  <button id="admin-menu-btn" onclick="openAdminMenu()" style="display:none; background:#d32f2f; color:#fff; border:none; border-radius:0.5rem; padding:0.75rem 1.5rem; font-size:1rem;">Admin Menu</button>
+<button id="admin-menu-btn" onclick="openAdminMenu()" style="display:none; background:#d32f2f; color:#fff; border:none; border-radius:0.5rem; padding:0.75rem 1.5rem; font-size:1rem;">Admin Menu</button>
 </div>
 
 <div id="profile-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.78); z-index:6500; align-items:center; justify-content:center;">
-  <div style="background:#222; width:min(38rem, calc(100vw - 2rem)); max-height:calc(100vh - 2rem); overflow:auto; padding:1.5rem; border-radius:0.8rem; color:#fff; box-shadow:0 8px 32px rgba(0,0,0,0.6);">
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem;">
-      <div>
-        <h2 style="margin:0;">Profile</h2>
-        <div id="profile-username" style="margin-top:0.2rem; color:#bbb;"></div>
-        <div id="profile-level" style="margin-top:0.4rem; color:#66bb6a; font-weight:bold; font-size:1.1rem;"></div>
-        <div id="profile-role" style="margin-top:0.25rem; color:#90caf9; font-size:0.82rem;"></div>
-      </div>
-      <button onclick="closeProfileModal()" style="padding:0.45rem 0.8rem;">Close</button>
-    </div>
-    <div id="profile-flags-panel" style="display:none; margin-top:0.8rem; padding:0.8rem; background:#2b2b2b; border:1px solid #3a3a3a; border-radius:0.5rem;"></div>
-    <div id="profile-stat-grid" class="profile-stat-grid"></div>
-    <div style="margin-top:1.2rem; display:flex; justify-content:space-between; align-items:center; gap:1rem;">
-      <h3 style="margin:0;">Achievements</h3>
-      <div id="profile-achievement-count" style="color:#ffca28;"></div>
-    </div>
-    <div id="achievement-list" class="achievement-list"></div>
-  </div>
+<div style="background:#222; width:min(38rem, calc(100vw - 2rem)); max-height:calc(100vh - 2rem); overflow:auto; padding:1.5rem; border-radius:0.8rem; color:#fff; box-shadow:0 8px 32px rgba(0,0,0,0.6);">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:1rem;">
+<div>
+<h2 style="margin:0;">Profile</h2>
+<div id="profile-username" style="margin-top:0.2rem; color:#bbb;"></div>
+<div id="profile-level" style="margin-top:0.4rem; color:#66bb6a; font-weight:bold; font-size:1.1rem;"></div>
+<div id="profile-role" style="margin-top:0.25rem; color:#90caf9; font-size:0.82rem;"></div>
+</div>
+<button onclick="closeProfileModal()" style="padding:0.45rem 0.8rem;">Close</button>
+</div>
+<div id="profile-flags-panel" style="display:none; margin-top:0.8rem; padding:0.8rem; background:#2b2b2b; border:1px solid #3a3a3a; border-radius:0.5rem;"></div>
+<div id="profile-stat-grid" class="profile-stat-grid"></div>
+<div style="margin-top:1.2rem; display:flex; justify-content:space-between; align-items:center; gap:1rem;">
+<h3 style="margin:0;">Achievements</h3>
+<div id="profile-achievement-count" style="color:#ffca28;"></div>
+</div>
+<div id="achievement-list" class="achievement-list"></div>
+</div>
 </div>
 
 <div id="leaderboard-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.78); z-index:6500; align-items:center; justify-content:center;">
-  <div style="background:#222; width:min(46rem, calc(100vw - 2rem)); max-height:calc(100vh - 2rem); overflow:auto; padding:1.5rem; border-radius:0.8rem; color:#fff; box-shadow:0 8px 32px rgba(0,0,0,0.6);">
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem;">
-      <h2 style="margin:0;">🏆 Leaderboard</h2>
-      <button onclick="closeLeaderboardModal()" style="padding:0.45rem 0.8rem;">Close</button>
-    </div>
-    <div style="margin-top:0.8rem; color:#bbb; font-size:0.9rem;">Top players by total score</div>
-    <div id="leaderboard-entries" style="margin-top:1rem;"></div>
-  </div>
+<div style="background:#222; width:min(46rem, calc(100vw - 2rem)); max-height:calc(100vh - 2rem); overflow:auto; padding:1.5rem; border-radius:0.8rem; color:#fff; box-shadow:0 8px 32px rgba(0,0,0,0.6);">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:1rem;">
+<h2 style="margin:0;">🏆 Leaderboard</h2>
+<button onclick="closeLeaderboardModal()" style="padding:0.45rem 0.8rem;">Close</button>
+</div>
+<div style="margin-top:0.8rem; color:#bbb; font-size:0.9rem;">Top players by total score</div>
+<div id="leaderboard-entries" style="margin-top:1rem;"></div>
+</div>
 </div>
 
 <div id="update-notes-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.78); z-index:6500; align-items:center; justify-content:center;">
-  <div style="background:#222; width:min(40rem, calc(100vw - 2rem)); max-height:calc(100vh - 2rem); overflow:auto; padding:1.5rem; border-radius:0.8rem; color:#fff; box-shadow:0 8px 32px rgba(0,0,0,0.6);">
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem;">
-      <h2 style="margin:0;">Update Notes</h2>
-      <button onclick="closeUpdateNotesModal()" style="padding:0.45rem 0.8rem;">Close</button>
-    </div>
-    <div style="margin-top:0.8rem; color:#bbb; font-size:0.95rem; line-height:1.5;">
-      <p style="margin:0 0 0.75rem 0;">Latest updates will be listed here.</p>
-      <ul id="update-notes-list" style="margin:0; padding-left:1.2rem;"></ul>
-      <div id="update-notes-meta" style="margin-top:0.75rem; color:#888; font-size:0.82rem;"></div>
-    </div>
-  </div>
+<div style="background:#222; width:min(40rem, calc(100vw - 2rem)); max-height:calc(100vh - 2rem); overflow:auto; padding:1.5rem; border-radius:0.8rem; color:#fff; box-shadow:0 8px 32px rgba(0,0,0,0.6);">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:1rem;">
+<h2 style="margin:0;">Update Notes</h2>
+<button onclick="closeUpdateNotesModal()" style="padding:0.45rem 0.8rem;">Close</button>
+</div>
+<div style="margin-top:0.8rem; color:#bbb; font-size:0.95rem; line-height:1.5;">
+<p style="margin:0 0 0.75rem 0;">Latest updates will be listed here.</p>
+<ul id="update-notes-list" style="margin:0; padding-left:1.2rem;"></ul>
+<div id="update-notes-meta" style="margin-top:0.75rem; color:#888; font-size:0.82rem;"></div>
+</div>
+</div>
 </div>
 
 <script>
 // --- In-Game Chat Overlay ---
 
 async function adminUnbanUser() {
-  if (!canAdminSettings(currentChatUser)) return;
-  const username = resolveAdminTargetUsername('admin-ban-username');
-  const statusDiv = document.getElementById('admin-ban-status');
-  if (!username) {
-    statusDiv.textContent = 'Please enter a username.';
-    return;
-  }
-  try {
-    await fetch(BAN_API_URL, {
-      method: 'POST',
-      body: new URLSearchParams({ username, banned: 'no' })
-    });
-    statusDiv.textContent = `User '${username}' has been unbanned.`;
-    document.getElementById('admin-ban-username').value = '';
-    document.getElementById('admin-ban-reason').value = '';
-  } catch (e) {
-    statusDiv.textContent = 'Failed to unban user.';
-  }
+if (!canAdminSettings(currentChatUser)) return;
+const username = resolveAdminTargetUsername('admin-ban-username');
+const statusDiv = document.getElementById('admin-ban-status');
+if (!username) {
+statusDiv.textContent = 'Please enter a username.';
+return;
+}
+try {
+await fetch(BAN_API_URL, {
+method: 'POST',
+body: new URLSearchParams({ username, banned: 'no' })
+});
+statusDiv.textContent = `User '${username}' has been unbanned.`;
+document.getElementById('admin-ban-username').value = '';
+document.getElementById('admin-ban-reason').value = '';
+} catch (e) {
+statusDiv.textContent = 'Failed to unban user.';
+}
 }
 const ADMIN_USERS = ['kaiden', ''];
 const OWNER_USERS = ['kaiden'];
@@ -1449,230 +1449,230 @@ const USER_WARNINGS_COLLECTION = 'user_warnings';
 const USER_FLAGS_COLLECTION = 'user_flags';
 const TIMED_BANS_COLLECTION = 'timed_bans';
 const DEFAULT_UPDATE_NOTES = [
-  'Added owner tag display in chat and leaderboard.',
-  'Added profile levels, achievements, and leaderboard.',
-  'Enabled clicking chat usernames to view profiles.'
+'Added owner tag display in chat and leaderboard.',
+'Added profile levels, achievements, and leaderboard.',
+'Enabled clicking chat usernames to view profiles.'
 ];
 let updateNotesCache = DEFAULT_UPDATE_NOTES.slice();
 const ACHIEVEMENTS = [
-  { id: 'first_message', label: 'First Word', description: 'Send your first chat message.', stat: 'messagesSent', goal: 1 },
-  { id: 'talkative', label: 'Talkative', description: 'Send 25 chat messages.', stat: 'messagesSent', goal: 25 },
-  { id: 'game_starter', label: 'Game Starter', description: 'Open 5 games.', stat: 'gamesOpened', goal: 5 },
-  { id: 'game_grinder', label: 'Arcade Grinder', description: 'Open 20 games.', stat: 'gamesOpened', goal: 20 },
-  { id: 'media_drop', label: 'Media Drop', description: 'Post an image or video in chat.', stat: 'mediaShared', goal: 1 },
-  { id: 'reactor', label: 'Reactor', description: 'Use 10 reactions.', stat: 'reactionsUsed', goal: 10 }
+{ id: 'first_message', label: 'First Word', description: 'Send your first chat message.', stat: 'messagesSent', goal: 1 },
+{ id: 'talkative', label: 'Talkative', description: 'Send 25 chat messages.', stat: 'messagesSent', goal: 25 },
+{ id: 'game_starter', label: 'Game Starter', description: 'Open 5 games.', stat: 'gamesOpened', goal: 5 },
+{ id: 'game_grinder', label: 'Arcade Grinder', description: 'Open 20 games.', stat: 'gamesOpened', goal: 20 },
+{ id: 'media_drop', label: 'Media Drop', description: 'Post an image or video in chat.', stat: 'mediaShared', goal: 1 },
+{ id: 'reactor', label: 'Reactor', description: 'Use 10 reactions.', stat: 'reactionsUsed', goal: 10 }
 ];
 
 function normalizeUsername(value) {
-  return (value || '').trim().toLowerCase();
+return (value || '').trim().toLowerCase();
 }
 
 function getRoleRank(role) {
-  if (role === 'owner') return 4;
-  if (role === 'admin') return 3;
-  if (role === 'moderator') return 2;
-  if (role === 'helper') return 1;
-  return 0;
+if (role === 'owner') return 4;
+if (role === 'admin') return 3;
+if (role === 'moderator') return 2;
+if (role === 'helper') return 1;
+return 0;
 }
 
 function getDefaultRoleForUser(username) {
-  const key = normalizeUsername(username);
-  if (OWNER_USERS.includes(key)) return 'owner';
-  if (ADMIN_USERS.includes(key)) return 'admin';
-  return 'member';
+const key = normalizeUsername(username);
+if (OWNER_USERS.includes(key)) return 'owner';
+if (ADMIN_USERS.includes(key)) return 'admin';
+return 'member';
 }
 
 function getUserRole(username) {
-  const key = normalizeUsername(username);
-  if (!key) return 'member';
-  return roleCache[key] || getDefaultRoleForUser(key);
+const key = normalizeUsername(username);
+if (!key) return 'member';
+return roleCache[key] || getDefaultRoleForUser(key);
 }
 
 function canModerate(username = currentChatUser) {
-  return getRoleRank(getUserRole(username)) >= 2;
+return getRoleRank(getUserRole(username)) >= 2;
 }
 
 function canAdminSettings(username = currentChatUser) {
-  return getRoleRank(getUserRole(username)) >= 3;
+return getRoleRank(getUserRole(username)) >= 3;
 }
 
 function canManageRoles(username = currentChatUser) {
-  return getUserRole(username) === 'owner';
+return getUserRole(username) === 'owner';
 }
 
 function getSelectedAdminUser() {
-  const userList = document.getElementById('admin-user-list');
-  return normalizeUsername(userList ? userList.value : '');
+const userList = document.getElementById('admin-user-list');
+return normalizeUsername(userList ? userList.value : '');
 }
 
 function applySelectedAdminUser(username) {
-  const selected = normalizeUsername(username);
-  const targetIds = [
-    'admin-ban-username',
-    'admin-mute-username',
-    'admin-kick-username',
-    'admin-warn-username',
-    'admin-tempban-username',
-    'admin-role-username'
-  ];
-  targetIds.forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.value = selected;
-  });
+const selected = normalizeUsername(username);
+const targetIds = [
+'admin-ban-username',
+'admin-mute-username',
+'admin-kick-username',
+'admin-warn-username',
+'admin-tempban-username',
+'admin-role-username'
+];
+targetIds.forEach((id) => {
+const el = document.getElementById(id);
+if (el) el.value = selected;
+});
 }
 
 function resolveAdminTargetUsername(primaryInputId) {
-  const inputEl = document.getElementById(primaryInputId);
-  const directValue = normalizeUsername(inputEl ? inputEl.value : '');
-  return directValue || getSelectedAdminUser();
+const inputEl = document.getElementById(primaryInputId);
+const directValue = normalizeUsername(inputEl ? inputEl.value : '');
+return directValue || getSelectedAdminUser();
 }
 
 function isProtectedUsername(username) {
-  return PROTECTED_USERNAMES.includes(normalizeUsername(username));
+return PROTECTED_USERNAMES.includes(normalizeUsername(username));
 }
 
 function openAdminMenu() {
-  if (!canModerate(currentChatUser)) return;
-  document.getElementById('admin-menu').style.display = 'flex';
+if (!canModerate(currentChatUser)) return;
+document.getElementById('admin-menu').style.display = 'flex';
 }
 function closeAdminMenu() {
-  document.getElementById('admin-menu').style.display = 'none';
+document.getElementById('admin-menu').style.display = 'none';
 }
 async function adminBanUser() {
-  if (!canAdminSettings(currentChatUser)) return;
-  const username = resolveAdminTargetUsername('admin-ban-username');
-  let reason = document.getElementById('admin-ban-reason').value;
-  const customReasonInput = document.getElementById('admin-ban-custom-reason');
-  if (reason === 'Other') {
-    reason = customReasonInput.value.trim();
-  }
-  const statusDiv = document.getElementById('admin-ban-status');
-  if (!username) {
-    statusDiv.textContent = 'Please enter a username.';
-    return;
-  }
-  if (isProtectedUsername(username)) {
-    const attemptedBy = normalizeUsername(currentChatUser || getUserName());
-    if (attemptedBy && !isProtectedUsername(attemptedBy)) {
-      try {
-        await fetch(BAN_API_URL, {
-          method: 'POST',
-          body: new URLSearchParams({ username: attemptedBy, reason: 'Tried to ban kaiden', banned: 'yes' })
-        });
-        await postSystemNotice(`${attemptedBy} got banned for trying to ban kaiden.`);
-      } catch (e) {}
-    }
-    statusDiv.textContent = 'kaiden is unbannable and u are a chud for trying. you are now banned. refreshing in 5 seconds.';
-    setTimeout(() => {
-      location.reload();
-    }, 5000);
-    return;
-  }
-  if (reason === '' || (document.getElementById('admin-ban-reason').value === 'Other' && reason === '')) {
-    statusDiv.textContent = 'Please enter a reason.';
-    return;
-  }
-  try {
-    await fetch(BAN_API_URL, {
-      method: 'POST',
-      body: new URLSearchParams({ username, reason, banned: 'yes' })
-    });
-    await postSystemNotice(`${username} was banned.`);
-    statusDiv.textContent = `User '${username}' has been banned.`;
-    document.getElementById('admin-ban-username').value = '';
-    document.getElementById('admin-ban-reason').value = '';
-    customReasonInput.value = '';
-    customReasonInput.style.display = 'none';
-  } catch (e) {
-    statusDiv.textContent = 'Failed to ban user.';
-  }
+if (!canAdminSettings(currentChatUser)) return;
+const username = resolveAdminTargetUsername('admin-ban-username');
+let reason = document.getElementById('admin-ban-reason').value;
+const customReasonInput = document.getElementById('admin-ban-custom-reason');
+if (reason === 'Other') {
+reason = customReasonInput.value.trim();
+}
+const statusDiv = document.getElementById('admin-ban-status');
+if (!username) {
+statusDiv.textContent = 'Please enter a username.';
+return;
+}
+if (isProtectedUsername(username)) {
+const attemptedBy = normalizeUsername(currentChatUser || getUserName());
+if (attemptedBy && !isProtectedUsername(attemptedBy)) {
+try {
+await fetch(BAN_API_URL, {
+method: 'POST',
+body: new URLSearchParams({ username: attemptedBy, reason: 'Tried to ban kaiden', banned: 'yes' })
+});
+await postSystemNotice(`${attemptedBy} got banned for trying to ban kaiden.`);
+} catch (e) {}
+}
+statusDiv.textContent = 'kaiden is unbannable and u are a chud for trying. you are now banned. refreshing in 5 seconds.';
+setTimeout(() => {
+location.reload();
+}, 5000);
+return;
+}
+if (reason === '' || (document.getElementById('admin-ban-reason').value === 'Other' && reason === '')) {
+statusDiv.textContent = 'Please enter a reason.';
+return;
+}
+try {
+await fetch(BAN_API_URL, {
+method: 'POST',
+body: new URLSearchParams({ username, reason, banned: 'yes' })
+});
+await postSystemNotice(`${username} was banned.`);
+statusDiv.textContent = `User '${username}' has been banned.`;
+document.getElementById('admin-ban-username').value = '';
+document.getElementById('admin-ban-reason').value = '';
+customReasonInput.value = '';
+customReasonInput.style.display = 'none';
+} catch (e) {
+statusDiv.textContent = 'Failed to ban user.';
+}
 }
 
 async function adminClearChat() {
-  if (!canAdminSettings(currentChatUser)) return;
-  const statusDiv = document.getElementById('admin-ban-status');
+if (!canAdminSettings(currentChatUser)) return;
+const statusDiv = document.getElementById('admin-ban-status');
 
-  if (!confirm('Delete every chat message for everyone? This cannot be undone.')) {
-    return;
-  }
+if (!confirm('Delete every chat message for everyone? This cannot be undone.')) {
+return;
+}
 
-  try {
-    if (typeof firebase === 'undefined') {
-      statusDiv.textContent = 'Firebase is not available.';
-      return;
-    }
+try {
+if (typeof firebase === 'undefined') {
+statusDiv.textContent = 'Firebase is not available.';
+return;
+}
 
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-    }
+if (!firebase.apps.length) {
+firebase.initializeApp(firebaseConfig);
+}
 
-    const db = firebase.firestore();
-    let deletedCount = 0;
+const db = firebase.firestore();
+let deletedCount = 0;
 
-    while (true) {
-      const snapshot = await db.collection('site_messages').limit(250).get();
-      if (snapshot.empty) {
-        break;
-      }
+while (true) {
+const snapshot = await db.collection('site_messages').limit(250).get();
+if (snapshot.empty) {
+break;
+}
 
-      const batch = db.batch();
-      snapshot.forEach(doc => {
-        batch.delete(doc.ref);
-        deletedCount += 1;
-      });
-      await batch.commit();
-    }
+const batch = db.batch();
+snapshot.forEach(doc => {
+batch.delete(doc.ref);
+deletedCount += 1;
+});
+await batch.commit();
+}
 
-    statusDiv.textContent = deletedCount
-      ? `Deleted ${deletedCount} chat messages.`
-      : 'Chat was already empty.';
-  } catch (e) {
-    console.error('Failed to clear chat:', e);
-    statusDiv.textContent = 'Failed to clear chat.';
-  }
+statusDiv.textContent = deletedCount
+? `Deleted ${deletedCount} chat messages.`
+: 'Chat was already empty.';
+} catch (e) {
+console.error('Failed to clear chat:', e);
+statusDiv.textContent = 'Failed to clear chat.';
+}
 }
 
 async function getBannedUsernames() {
-  try {
-    const res = await fetch(BAN_API_URL, { cache: 'no-store' });
-    const text = await res.text();
-    const lines = text.split('\n');
-    const dataLines = lines.filter((line, idx) => idx !== 0 && line.trim() !== '');
-    const banned = dataLines
-      .map(line => {
-        const parts = line.split(',');
-        if (parts.length >= 3 && parts[2].trim().toLowerCase() === 'yes') {
-          return parts[0].trim();
-        }
-        return null;
-      })
-      .filter(u => u && !isProtectedUsername(u));
-    return banned;
-  } catch (e) {
-    console.error('Ban fetch error:', e);
-    return [];
-  }
+try {
+const res = await fetch(BAN_API_URL, { cache: 'no-store' });
+const text = await res.text();
+const lines = text.split('\n');
+const dataLines = lines.filter((line, idx) => idx !== 0 && line.trim() !== '');
+const banned = dataLines
+.map(line => {
+const parts = line.split(',');
+if (parts.length >= 3 && parts[2].trim().toLowerCase() === 'yes') {
+return parts[0].trim();
+}
+return null;
+})
+.filter(u => u && !isProtectedUsername(u));
+return banned;
+} catch (e) {
+console.error('Ban fetch error:', e);
+return [];
+}
 }
 const BAN_API_URL = 'https://script.google.com/macros/s/AKfycbxn1Ql1ph2UA2LZraU8eK6gn-H1iwO6az5DIGYmQPzv8Zxgl17yYPg9_PJFLgz-y0_U/exec';
 
 async function checkBan(username, ip) {
-  try {
-    const res = await fetch(`${BAN_API_URL}?username=${encodeURIComponent(username)}&ip=${encodeURIComponent(ip)}`);
-    const status = await res.text();
-    return status === 'banned';
-  } catch (e) {
-    return false;
-  }
+try {
+const res = await fetch(`${BAN_API_URL}?username=${encodeURIComponent(username)}&ip=${encodeURIComponent(ip)}`);
+const status = await res.text();
+return status === 'banned';
+} catch (e) {
+return false;
+}
 }
 
 async function addBan(username, ip, reason = '') {
-  if (isProtectedUsername(username)) return;
-  try {
-    await fetch(BAN_API_URL, {
-      method: 'POST',
-      body: new URLSearchParams({ username, ip, reason })
-    });
-  } catch (e) {}
+if (isProtectedUsername(username)) return;
+try {
+await fetch(BAN_API_URL, {
+method: 'POST',
+body: new URLSearchParams({ username, ip, reason })
+});
+} catch (e) {}
 }
 
 function showUserBanNotification() {
@@ -1684,22 +1684,22 @@ child.style.display = 'none';
 });
 var userBanNotification = document.getElementById('user-ban-notification');
 if (userBanNotification) {
-  userBanNotification.style.display = 'block';
-  fetch(BAN_API_URL)
-    .then(res => res.text())
-    .then(text => {
-      const username = document.getElementById('site-login-username').value.trim();
-      const lines = text.split('\n');
-      let reason = '';
-      lines.forEach(line => {
-        const parts = line.split(',');
-        if (parts.length >= 3 && parts[0].trim() === username && parts[2].trim().toLowerCase() === 'yes') {
-          reason = parts[1].trim();
-        }
-      });
-      const reasonElem = document.getElementById('user-ban-reason');
-      if (reasonElem) reasonElem.textContent = reason ? `Reason: ${reason}` : '';
-    });
+userBanNotification.style.display = 'block';
+fetch(BAN_API_URL)
+.then(res => res.text())
+.then(text => {
+const username = document.getElementById('site-login-username').value.trim();
+const lines = text.split('\n');
+let reason = '';
+lines.forEach(line => {
+const parts = line.split(',');
+if (parts.length >= 3 && parts[0].trim() === username && parts[2].trim().toLowerCase() === 'yes') {
+reason = parts[1].trim();
+}
+});
+const reasonElem = document.getElementById('user-ban-reason');
+if (reasonElem) reasonElem.textContent = reason ? `Reason: ${reason}` : '';
+});
 }
 }
 
@@ -1722,10 +1722,10 @@ currentUserIP = userIP;
 userName = getUserName();
 const bannedList = (await getBannedUsernames()).map(u => u.trim().toLowerCase());
 if (!isProtectedUsername(userName) && bannedList.includes(userName)) {
-  hideSiteLoginModal();
-  document.body.style.overflow = 'auto';
-  showUserBanNotification();
-  return;
+hideSiteLoginModal();
+document.body.style.overflow = 'auto';
+showUserBanNotification();
+return;
 }
 
 if (isIPBanned(userIP)) {
@@ -1880,9 +1880,9 @@ bannedIPs.forEach(ip => {
 const item = document.createElement('div');
 item.className = 'ban-item';
 item.innerHTML = `
-          <span>${ip}</span>
-          <button onclick="unbanIP('${ip}')">Unban</button>
-      `;
+         <span>${ip}</span>
+         <button onclick="unbanIP('${ip}')">Unban</button>
+     `;
 list.appendChild(item);
 });
 }
@@ -1913,44 +1913,44 @@ showSiteLoginModal();
 
 
 const games = [
-  {name: 'Slope', url: 'https://bigfoot9999.github.io/Slope-Game/'},
-  {name: 'Tung Tung Sahur', url: 'https://files.twoplayergames.org/files/games/h1/italian-brainrot-obby-parkour-v01l/index.html'},
-  {name: 'Wikirace', url: 'https://wiki-race.com'},
-  {name: 'Escape Road', url: 'https://unblockedescaperoads.com/#game'},
-  {name: 'Escape Road 2', url: 'https://escaperoad-2.github.io/'},
-  {name: 'Duck', url: 'https://duck.theducklair.com/'},
-  {name: 'Minecraft', url: 'https://eaglercraft.ir/play/1.12.2wasm?touch=false&userscript'},
-  {name: 'worldguessr', url: 'https://www.worldguessr.com/'},
-  {name: 'Infinite Craft', url: 'https://infinite-craft.org/infinite-craft/'},
-  {name: '2v2.io', url: 'https://2v2.io'},
-  {name: 'FNAF Launcher', url: 'https://irv77.github.io/FnafLauncher'},
-  {name: 'Yoked', url: 'https://files.twoplayergames.org/files/games/o6/get-yoked/index.html'},
-  {name: '', url: ''},
-  {name: '', url: ''},
-  {name: '', url: ''},
-  {name: '', url: ''},
-  {name: '', url: ''},
-  {name: '', url: ''},
-  {name: '', url: ''},
-  {name: '', url: ''},
-  {name: '', url: ''},
-  {name: '', url: ''},
-  {name: 'Zombie', url: 'https://nzp.gay'},
-  {name: 'Calcslover', url: 'https://calcsolver.net'},
-  {name: '', url: ''},
-  {name: '', url: ''},
-  {name: 'MathGPT', url: 'https://math-gpt.org/'},
-  {name: 'Youtube (Unblock All Videos)', url: 'https://tube.rvere.com/'},
+{name: 'Slope', url: 'https://bigfoot9999.github.io/Slope-Game/'},
+{name: 'Tung Tung Sahur', url: 'https://files.twoplayergames.org/files/games/h1/italian-brainrot-obby-parkour-v01l/index.html'},
+{name: 'Wikirace', url: 'https://wiki-race.com'},
+{name: 'Escape Road', url: 'https://unblockedescaperoads.com/#game'},
+{name: 'Escape Road 2', url: 'https://escaperoad-2.github.io/'},
+{name: 'Duck', url: 'https://duck.theducklair.com/'},
+{name: 'Minecraft', url: 'https://eaglercraft.ir/play/1.12.2wasm?touch=false&userscript'},
+{name: 'worldguessr', url: 'https://www.worldguessr.com/'},
+{name: 'Infinite Craft', url: 'https://infinite-craft.org/infinite-craft/'},
+{name: '2v2.io', url: 'https://2v2.io'},
+{name: 'FNAF Launcher', url: 'https://irv77.github.io/FnafLauncher'},
+{name: 'Yoked', url: 'https://files.twoplayergames.org/files/games/o6/get-yoked/index.html'},
+{name: '', url: ''},
+{name: '', url: ''},
+{name: '', url: ''},
+{name: '', url: ''},
+{name: '', url: ''},
+{name: '', url: ''},
+{name: '', url: ''},
+{name: '', url: ''},
+{name: '', url: ''},
+{name: '', url: ''},
+{name: 'Zombie', url: 'https://nzp.gay'},
+{name: 'Calcslover', url: 'https://calcsolver.net'},
+{name: '', url: ''},
+{name: '', url: ''},
+{name: 'MathGPT', url: 'https://math-gpt.org/'},
+{name: 'Youtube (Unblock All Videos)', url: 'https://tube.rvere.com/'},
 ];
 
 document.body.style.overflow = 'hidden';
 document.body.style.overflow = 'auto';
 const gameButtons = document.getElementById('game-buttons');
 games.forEach((game, idx) => {
-  const btn = document.createElement('button');
-  btn.textContent = game.name || `Game ${idx+1}`;
-  btn.onclick = () => openGame(idx);
-  gameButtons.appendChild(btn);
+const btn = document.createElement('button');
+btn.textContent = game.name || `Game ${idx+1}`;
+btn.onclick = () => openGame(idx);
+gameButtons.appendChild(btn);
 });
 
 const iframeContainer = document.getElementById('iframe-container');
@@ -1960,29 +1960,29 @@ const closeBtn = document.getElementById('close-btn');
 let currentGameIdx = null;
 
 function openGame(idx) {
-  if (!games[idx] || !games[idx].url) return;
-  currentGameIdx = idx;
-  gameIframe.src = games[idx].url;
-  iframeContainer.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-  refreshBtn.style.display = games[idx] && games[idx].url ? 'inline-block' : 'none';
-  closeBtn.style.display = games[idx] && games[idx].url ? 'inline-block' : 'none';
-  incrementUserStat('gamesOpened');
+if (!games[idx] || !games[idx].url) return;
+currentGameIdx = idx;
+gameIframe.src = games[idx].url;
+iframeContainer.style.display = 'flex';
+document.body.style.overflow = 'hidden';
+refreshBtn.style.display = games[idx] && games[idx].url ? 'inline-block' : 'none';
+closeBtn.style.display = games[idx] && games[idx].url ? 'inline-block' : 'none';
+incrementUserStat('gamesOpened');
 }
 
 function closeGame() {
-  gameIframe.src = '';
-  iframeContainer.style.display = 'none';
-  document.body.style.overflow = 'auto';
-  currentGameIdx = null;
-  refreshBtn.style.display = 'none';
-  closeBtn.style.display = 'none';
+gameIframe.src = '';
+iframeContainer.style.display = 'none';
+document.body.style.overflow = 'auto';
+currentGameIdx = null;
+refreshBtn.style.display = 'none';
+closeBtn.style.display = 'none';
 }
 
 function refreshGame() {
-  if (currentGameIdx !== null && games[currentGameIdx]) {
-    gameIframe.src = games[currentGameIdx].url;
-  }
+if (currentGameIdx !== null && games[currentGameIdx]) {
+gameIframe.src = games[currentGameIdx].url;
+}
 }
 
 refreshBtn.onclick = refreshGame;
@@ -2037,10 +2037,10 @@ if (!ip) return;
 const item = document.createElement('div');
 item.className = 'ban-item';
 item.innerHTML = `
-           <span>${ip}</span>
-           <span>${name}</span>
-          <button onclick="banIPFromList('${ip}')">Ban</button>
-      `;
+          <span>${ip}</span>
+          <span>${name}</span>
+         <button onclick="banIPFromList('${ip}')">Ban</button>
+     `;
 list.appendChild(item);
 });
 }
@@ -2070,32 +2070,32 @@ async function banUser() {
 const userInput = document.getElementById('ban-user-input');
 const username = normalizeUsername(userInput.value);
 if (!username) {
-  alert('Please enter a username');
-  return;
+alert('Please enter a username');
+return;
 }
 if (isProtectedUsername(username)) {
-  const attemptedBy = normalizeUsername(getUserName() || currentChatUser);
-  if (attemptedBy && !isProtectedUsername(attemptedBy)) {
-    try {
-      await fetch(BAN_API_URL, {
-        method: 'POST',
-        body: new URLSearchParams({ username: attemptedBy, reason: 'Tried to ban kaiden', banned: 'yes' })
-      });
-    } catch (e) {}
-  }
-  alert('Kaiden is unbannable and u are a chud for trying. You are now banned. Refreshing in 5 seconds.');
-  setTimeout(() => {
-    location.reload();
-  }, 5000);
-  return;
+const attemptedBy = normalizeUsername(getUserName() || currentChatUser);
+if (attemptedBy && !isProtectedUsername(attemptedBy)) {
+try {
+await fetch(BAN_API_URL, {
+method: 'POST',
+body: new URLSearchParams({ username: attemptedBy, reason: 'Tried to ban kaiden', banned: 'yes' })
+});
+} catch (e) {}
+}
+alert('Kaiden is unbannable and u are a chud for trying. You are now banned. Refreshing in 5 seconds.');
+setTimeout(() => {
+location.reload();
+}, 5000);
+return;
 }
 fetch('https://api.ipify.org?format=json')
-  .then(res => res.json())
-  .then(data => {
-    addBan(username, data.ip, 'manual ban');
-    userInput.value = '';
-    alert(`User ${username} has been banned globally!`);
-  });
+.then(res => res.json())
+.then(data => {
+addBan(username, data.ip, 'manual ban');
+userInput.value = '';
+alert(`User ${username} has been banned globally!`);
+});
 }
 function unbanUser(username) {
 const bannedUsers = getBannedUsers();
@@ -2119,9 +2119,9 @@ bannedUsers.forEach(username => {
 const item = document.createElement('div');
 item.className = 'ban-item';
 item.innerHTML = `
-     <span>${username}</span>
-     <button onclick="unbanUser('${username}')">Unban</button>
-   `;
+    <span>${username}</span>
+    <button onclick="unbanUser('${username}')">Unban</button>
+  `;
 list.appendChild(item);
 });
 }
@@ -2132,18 +2132,18 @@ alert('All user bans cleared!');
 }
 
 const STATIC_BANNED_USERS = [
-  '',
-  '',
+'',
+'',
 
 ]
 
 const firebaseConfig = {
-  apiKey: "AIzaSyC7ivI30OuZuYiHQ_zm-AkvJVxmmI5rIyU",
-  authDomain: "balright-chat.firebaseapp.com",
-  projectId: "balright-chat",
-  storageBucket: "balright-chat.firebasestorage.app",
-  messagingSenderId: "506344188110",
-  appId: "1:506344188110:web:c7293b22e6fc730adb089f"
+apiKey: "AIzaSyC7ivI30OuZuYiHQ_zm-AkvJVxmmI5rIyU",
+authDomain: "balright-chat.firebaseapp.com",
+projectId: "balright-chat",
+storageBucket: "balright-chat.firebasestorage.app",
+messagingSenderId: "506344188110",
+appId: "1:506344188110:web:c7293b22e6fc730adb089f"
 };                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
 
 let chatInitialized = false;
@@ -2158,10 +2158,10 @@ let currentPinnedMessage = null;
 let roleCache = {};
 let currentProfileViewUser = '';
 let moderationSettings = {
-  readOnlyMode: false,
-  blockedWords: [],
-  announcementText: '',
-  announcementEndsAt: null
+readOnlyMode: false,
+blockedWords: [],
+announcementText: '',
+announcementEndsAt: null
 };
 const CHAT_IMAGE_MAX_WIDTH = 1280;
 const CHAT_IMAGE_MAX_HEIGHT = 1280;
@@ -2170,984 +2170,984 @@ const CHAT_IMAGE_SIZE_LIMIT = 700000;
 const CHAT_VIDEO_SIZE_LIMIT = 700000;
 
 function getStatsStore() {
-  try {
-    return JSON.parse(localStorage.getItem(USER_STATS_STORAGE_KEY) || '{}');
-  } catch (err) {
-    return {};
-  }
+try {
+return JSON.parse(localStorage.getItem(USER_STATS_STORAGE_KEY) || '{}');
+} catch (err) {
+return {};
+}
 }
 
 function saveStatsStore(store) {
-  localStorage.setItem(USER_STATS_STORAGE_KEY, JSON.stringify(store));
+localStorage.setItem(USER_STATS_STORAGE_KEY, JSON.stringify(store));
 }
 
 function getStatsUserKey() {
-  return (currentChatUser || getUserName() || '').trim().toLowerCase();
+return (currentChatUser || getUserName() || '').trim().toLowerCase();
 }
 
 function getStatsForUserKey(userKey) {
-  const key = normalizeUsername(userKey);
-  const store = getStatsStore();
-  return store[key] || {
-    gamesOpened: 0,
-    messagesSent: 0,
-    mediaShared: 0,
-    reactionsUsed: 0
-  };
+const key = normalizeUsername(userKey);
+const store = getStatsStore();
+return store[key] || {
+gamesOpened: 0,
+messagesSent: 0,
+mediaShared: 0,
+reactionsUsed: 0
+};
 }
 
 function getCurrentUserStats() {
-  return getStatsForUserKey(getStatsUserKey());
+return getStatsForUserKey(getStatsUserKey());
 }
 
 function incrementUserStat(stat, amount = 1) {
-  const key = getStatsUserKey();
-  if (!key) return;
-  const store = getStatsStore();
-  const current = store[key] || getCurrentUserStats();
-  current[stat] = (current[stat] || 0) + amount;
-  store[key] = current;
-  saveStatsStore(store);
-  renderProfileModal();
+const key = getStatsUserKey();
+if (!key) return;
+const store = getStatsStore();
+const current = store[key] || getCurrentUserStats();
+current[stat] = (current[stat] || 0) + amount;
+store[key] = current;
+saveStatsStore(store);
+renderProfileModal();
 }
 
 function getUnlockedAchievements(stats, username = '') {
-  if (normalizeUsername(username) === 'kaiden') {
-    return ACHIEVEMENTS.slice();
-  }
-  return ACHIEVEMENTS.filter(item => (stats[item.stat] || 0) >= item.goal);
+if (normalizeUsername(username) === 'kaiden') {
+return ACHIEVEMENTS.slice();
+}
+return ACHIEVEMENTS.filter(item => (stats[item.stat] || 0) >= item.goal);
 }
 
 function openProfileModal(event) {
-  if (event) event.stopPropagation();
-  renderProfileModal(getStatsUserKey());
-  document.getElementById('profile-modal').style.display = 'flex';
+if (event) event.stopPropagation();
+renderProfileModal(getStatsUserKey());
+document.getElementById('profile-modal').style.display = 'flex';
 }
 
 function openUserProfileFromChat(encodedUsername, event) {
-  if (event) event.stopPropagation();
-  const username = normalizeUsername(decodeURIComponent(encodedUsername || ''));
-  if (!username) return;
-  renderProfileModal(username);
-  document.getElementById('profile-modal').style.display = 'flex';
+if (event) event.stopPropagation();
+const username = normalizeUsername(decodeURIComponent(encodedUsername || ''));
+if (!username) return;
+renderProfileModal(username);
+document.getElementById('profile-modal').style.display = 'flex';
 }
 
 function closeProfileModal() {
-  document.getElementById('profile-modal').style.display = 'none';
+document.getElementById('profile-modal').style.display = 'none';
 }
 
 function renderProfileModal(profileUserKey = '') {
-  const usernameEl = document.getElementById('profile-username');
-  const roleEl = document.getElementById('profile-role');
-  const statsGrid = document.getElementById('profile-stat-grid');
-  const countEl = document.getElementById('profile-achievement-count');
-  const listEl = document.getElementById('achievement-list');
-  if (!usernameEl || !statsGrid || !countEl || !listEl) return;
+const usernameEl = document.getElementById('profile-username');
+const roleEl = document.getElementById('profile-role');
+const statsGrid = document.getElementById('profile-stat-grid');
+const countEl = document.getElementById('profile-achievement-count');
+const listEl = document.getElementById('achievement-list');
+if (!usernameEl || !statsGrid || !countEl || !listEl) return;
 
-  const resolvedUserKey = normalizeUsername(profileUserKey || getStatsUserKey());
-  currentProfileViewUser = resolvedUserKey;
-  const stats = getStatsForUserKey(resolvedUserKey);
-  const unlocked = getUnlockedAchievements(stats, resolvedUserKey);
-  const isKaidenProfile = resolvedUserKey === 'kaiden';
-  usernameEl.textContent = resolvedUserKey ? `@${resolvedUserKey}` : 'Not logged in';
-  if (roleEl) {
-    roleEl.textContent = resolvedUserKey ? `Role: ${getUserRole(resolvedUserKey).toUpperCase()}` : '';
-  }
-  const { level, points } = calculateUserLevel(stats, resolvedUserKey);
-  const profileLevelEl = document.getElementById('profile-level');
-  if (profileLevelEl) {
-    profileLevelEl.textContent = `LEVEL ${level} • ${points.toLocaleString()} points`;
-  }
-  countEl.textContent = `${unlocked.length}/${ACHIEVEMENTS.length} unlocked`;
-  statsGrid.innerHTML = [
-    ['Games Opened', stats.gamesOpened || 0],
-    ['Messages Sent', stats.messagesSent || 0],
-    ['Media Shared', stats.mediaShared || 0],
-    ['Reactions Used', stats.reactionsUsed || 0]
-  ].map(([label, value]) => `<div class="profile-stat-card"><div style="color:#aaa; font-size:0.75rem;">${label}</div><div style="font-size:1.3rem; font-weight:bold; margin-top:0.2rem;">${value}</div></div>`).join('');
+const resolvedUserKey = normalizeUsername(profileUserKey || getStatsUserKey());
+currentProfileViewUser = resolvedUserKey;
+const stats = getStatsForUserKey(resolvedUserKey);
+const unlocked = getUnlockedAchievements(stats, resolvedUserKey);
+const isKaidenProfile = resolvedUserKey === 'kaiden';
+usernameEl.textContent = resolvedUserKey ? `@${resolvedUserKey}` : 'Not logged in';
+if (roleEl) {
+roleEl.textContent = resolvedUserKey ? `Role: ${getUserRole(resolvedUserKey).toUpperCase()}` : '';
+}
+const { level, points } = calculateUserLevel(stats, resolvedUserKey);
+const profileLevelEl = document.getElementById('profile-level');
+if (profileLevelEl) {
+profileLevelEl.textContent = `LEVEL ${level} • ${points.toLocaleString()} points`;
+}
+countEl.textContent = `${unlocked.length}/${ACHIEVEMENTS.length} unlocked`;
+statsGrid.innerHTML = [
+['Games Opened', stats.gamesOpened || 0],
+['Messages Sent', stats.messagesSent || 0],
+['Media Shared', stats.mediaShared || 0],
+['Reactions Used', stats.reactionsUsed || 0]
+].map(([label, value]) => `<div class="profile-stat-card"><div style="color:#aaa; font-size:0.75rem;">${label}</div><div style="font-size:1.3rem; font-weight:bold; margin-top:0.2rem;">${value}</div></div>`).join('');
 
-  listEl.innerHTML = ACHIEVEMENTS.map(item => {
-    const progress = stats[item.stat] || 0;
-    const unlockedNow = isKaidenProfile || progress >= item.goal;
-    const displayProgress = isKaidenProfile ? item.goal : Math.min(progress, item.goal);
-    return `<div class="achievement-item ${unlockedNow ? 'unlocked' : ''}"><div><div style="font-weight:bold;">${item.label}</div><div style="font-size:0.78rem; color:#bbb; margin-top:0.15rem;">${item.description}</div></div><div style="white-space:nowrap; color:${unlockedNow ? '#66bb6a' : '#ffca28'}; font-weight:bold;">${displayProgress}/${item.goal}</div></div>`;
-  }).join('');
-  renderProfileFlags(resolvedUserKey);
+listEl.innerHTML = ACHIEVEMENTS.map(item => {
+const progress = stats[item.stat] || 0;
+const unlockedNow = isKaidenProfile || progress >= item.goal;
+const displayProgress = isKaidenProfile ? item.goal : Math.min(progress, item.goal);
+return `<div class="achievement-item ${unlockedNow ? 'unlocked' : ''}"><div><div style="font-weight:bold;">${item.label}</div><div style="font-size:0.78rem; color:#bbb; margin-top:0.15rem;">${item.description}</div></div><div style="white-space:nowrap; color:${unlockedNow ? '#66bb6a' : '#ffca28'}; font-weight:bold;">${displayProgress}/${item.goal}</div></div>`;
+}).join('');
+renderProfileFlags(resolvedUserKey);
 }
 
 async function renderProfileFlags(targetUserKey) {
-  const panel = document.getElementById('profile-flags-panel');
-  if (!panel) return;
+const panel = document.getElementById('profile-flags-panel');
+if (!panel) return;
 
-  if (!targetUserKey || !canModerate(currentChatUser)) {
-    panel.style.display = 'none';
-    panel.innerHTML = '';
-    return;
-  }
+if (!targetUserKey || !canModerate(currentChatUser)) {
+panel.style.display = 'none';
+panel.innerHTML = '';
+return;
+}
 
-  panel.style.display = 'block';
-  panel.innerHTML = '<div style="color:#999; font-size:0.85rem;">Loading profile flags...</div>';
+panel.style.display = 'block';
+panel.innerHTML = '<div style="color:#999; font-size:0.85rem;">Loading profile flags...</div>';
 
-  try {
-    const db = firebase.firestore();
-    const doc = await db.collection(USER_FLAGS_COLLECTION).doc(targetUserKey).get();
-    const data = doc.exists ? (doc.data() || {}) : {};
-    const trusted = !!data.trusted;
-    const offender = !!data.offender;
-    const note = data.note ? String(data.note) : '';
-    panel.innerHTML = `
-      <div style="font-weight:bold; margin-bottom:0.4rem; color:#ffca28;">Admin Flags</div>
-      <label style="display:block; margin-bottom:0.35rem;"><input id="profile-flag-trusted" type="checkbox" ${trusted ? 'checked' : ''} /> Trusted</label>
-      <label style="display:block; margin-bottom:0.35rem;"><input id="profile-flag-offender" type="checkbox" ${offender ? 'checked' : ''} /> Repeat Offender</label>
-      <textarea id="profile-flag-note" placeholder="Private admin note" style="width:100%; min-height:72px; margin-top:0.4rem; background:#1d1d1d; color:#fff; border:1px solid #444; border-radius:0.35rem; padding:0.45rem;">${escapeHtml(note)}</textarea>
-      <div style="margin-top:0.5rem;"><button onclick="saveProfileFlags()" style="padding:0.35rem 0.7rem; background:#1565c0; color:#fff; border:none; border-radius:0.25rem;">Save Flags</button></div>
-    `;
-  } catch (err) {
-    panel.innerHTML = '<div style="color:#f88; font-size:0.85rem;">Could not load profile flags.</div>';
-  }
+try {
+const db = firebase.firestore();
+const doc = await db.collection(USER_FLAGS_COLLECTION).doc(targetUserKey).get();
+const data = doc.exists ? (doc.data() || {}) : {};
+const trusted = !!data.trusted;
+const offender = !!data.offender;
+const note = data.note ? String(data.note) : '';
+panel.innerHTML = `
+     <div style="font-weight:bold; margin-bottom:0.4rem; color:#ffca28;">Admin Flags</div>
+     <label style="display:block; margin-bottom:0.35rem;"><input id="profile-flag-trusted" type="checkbox" ${trusted ? 'checked' : ''} /> Trusted</label>
+     <label style="display:block; margin-bottom:0.35rem;"><input id="profile-flag-offender" type="checkbox" ${offender ? 'checked' : ''} /> Repeat Offender</label>
+     <textarea id="profile-flag-note" placeholder="Private admin note" style="width:100%; min-height:72px; margin-top:0.4rem; background:#1d1d1d; color:#fff; border:1px solid #444; border-radius:0.35rem; padding:0.45rem;">${escapeHtml(note)}</textarea>
+     <div style="margin-top:0.5rem;"><button onclick="saveProfileFlags()" style="padding:0.35rem 0.7rem; background:#1565c0; color:#fff; border:none; border-radius:0.25rem;">Save Flags</button></div>
+   `;
+} catch (err) {
+panel.innerHTML = '<div style="color:#f88; font-size:0.85rem;">Could not load profile flags.</div>';
+}
 }
 
 async function saveProfileFlags() {
-  if (!canModerate(currentChatUser)) return;
-  const targetUser = normalizeUsername(currentProfileViewUser);
-  if (!targetUser) return;
+if (!canModerate(currentChatUser)) return;
+const targetUser = normalizeUsername(currentProfileViewUser);
+if (!targetUser) return;
 
-  const trustedEl = document.getElementById('profile-flag-trusted');
-  const offenderEl = document.getElementById('profile-flag-offender');
-  const noteEl = document.getElementById('profile-flag-note');
-  if (!trustedEl || !offenderEl || !noteEl) return;
+const trustedEl = document.getElementById('profile-flag-trusted');
+const offenderEl = document.getElementById('profile-flag-offender');
+const noteEl = document.getElementById('profile-flag-note');
+if (!trustedEl || !offenderEl || !noteEl) return;
 
-  try {
-    const db = firebase.firestore();
-    await db.collection(USER_FLAGS_COLLECTION).doc(targetUser).set({
-      trusted: !!trustedEl.checked,
-      offender: !!offenderEl.checked,
-      note: noteEl.value.trim().slice(0, 500),
-      updatedBy: currentChatUser,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-    const statusDiv = document.getElementById('admin-ban-status');
-    if (statusDiv) statusDiv.textContent = `Saved flags for ${targetUser}.`;
-  } catch (err) {
-    alert('Failed to save profile flags.');
-  }
+try {
+const db = firebase.firestore();
+await db.collection(USER_FLAGS_COLLECTION).doc(targetUser).set({
+trusted: !!trustedEl.checked,
+offender: !!offenderEl.checked,
+note: noteEl.value.trim().slice(0, 500),
+updatedBy: currentChatUser,
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+const statusDiv = document.getElementById('admin-ban-status');
+if (statusDiv) statusDiv.textContent = `Saved flags for ${targetUser}.`;
+} catch (err) {
+alert('Failed to save profile flags.');
+}
 }
 
 function calculateUserLevel(stats, username = '') {
-  if (!stats) return { level: 1, points: 0, nextLevelPoints: 100 };
-  const points = (stats.messagesSent || 0) * 1 + (stats.gamesOpened || 0) * 2 + (stats.mediaShared || 0) * 5 + (stats.reactionsUsed || 0) * 1;
-  let level = 1;
-  let nextLevelPoints = 100;
-  if (points >= 100) level = 2, nextLevelPoints = 250;
-  if (points >= 250) level = 3, nextLevelPoints = 450;
-  if (points >= 450) level = 4, nextLevelPoints = 700;
-  if (points >= 700) level = 5, nextLevelPoints = 1000;
-  if (points >= 1000) level = 6, nextLevelPoints = 1500;
-  if (points >= 1500) level = 7, nextLevelPoints = 2100;
-  if (points >= 2100) level = 8, nextLevelPoints = 2800;
-  if (points >= 2800) level = 9, nextLevelPoints = 3600;
-  if (points >= 3600) level = 10, nextLevelPoints = 4500;
-  if (points >= 4500) level = Math.floor(points / 1000) + 10;
-  return { level, points, nextLevelPoints };
+if (!stats) return { level: 1, points: 0, nextLevelPoints: 100 };
+const points = (stats.messagesSent || 0) * 1 + (stats.gamesOpened || 0) * 2 + (stats.mediaShared || 0) * 5 + (stats.reactionsUsed || 0) * 1;
+let level = 1;
+let nextLevelPoints = 100;
+if (points >= 100) level = 2, nextLevelPoints = 250;
+if (points >= 250) level = 3, nextLevelPoints = 450;
+if (points >= 450) level = 4, nextLevelPoints = 700;
+if (points >= 700) level = 5, nextLevelPoints = 1000;
+if (points >= 1000) level = 6, nextLevelPoints = 1500;
+if (points >= 1500) level = 7, nextLevelPoints = 2100;
+if (points >= 2100) level = 8, nextLevelPoints = 2800;
+if (points >= 2800) level = 9, nextLevelPoints = 3600;
+if (points >= 3600) level = 10, nextLevelPoints = 4500;
+if (points >= 4500) level = Math.floor(points / 1000) + 10;
+return { level, points, nextLevelPoints };
 }
 
 async function openLeaderboardModal(event) {
-  if (event) event.stopPropagation();
-  await loadLeaderboard();
-  document.getElementById('leaderboard-modal').style.display = 'flex';
+if (event) event.stopPropagation();
+await loadLeaderboard();
+document.getElementById('leaderboard-modal').style.display = 'flex';
 }
 
 function closeLeaderboardModal() {
-  document.getElementById('leaderboard-modal').style.display = 'none';
+document.getElementById('leaderboard-modal').style.display = 'none';
 }
 
 function openUpdateNotesModal() {
-  document.getElementById('update-notes-modal').style.display = 'flex';
-  renderUpdateNotes(updateNotesCache);
-  loadUpdateNotes();
+document.getElementById('update-notes-modal').style.display = 'flex';
+renderUpdateNotes(updateNotesCache);
+loadUpdateNotes();
 }
 
 function closeUpdateNotesModal() {
-  document.getElementById('update-notes-modal').style.display = 'none';
+document.getElementById('update-notes-modal').style.display = 'none';
 }
 
 function renderUpdateNotes(notes, updatedBy = '', updatedAt = null) {
-  const listEl = document.getElementById('update-notes-list');
-  const metaEl = document.getElementById('update-notes-meta');
-  if (!listEl || !metaEl) return;
+const listEl = document.getElementById('update-notes-list');
+const metaEl = document.getElementById('update-notes-meta');
+if (!listEl || !metaEl) return;
 
-  const finalNotes = Array.isArray(notes) && notes.length ? notes : ['No update notes yet.'];
-  listEl.innerHTML = finalNotes.map(note => `<li>${escapeHtml(note)}</li>`).join('');
+const finalNotes = Array.isArray(notes) && notes.length ? notes : ['No update notes yet.'];
+listEl.innerHTML = finalNotes.map(note => `<li>${escapeHtml(note)}</li>`).join('');
 
-  if (updatedBy || updatedAt) {
-    const timeText = updatedAt instanceof Date ? updatedAt.toLocaleString() : '';
-    metaEl.textContent = `Last updated${updatedBy ? ` by ${updatedBy}` : ''}${timeText ? ` on ${timeText}` : ''}`;
-  } else {
-    metaEl.textContent = '';
-  }
+if (updatedBy || updatedAt) {
+const timeText = updatedAt instanceof Date ? updatedAt.toLocaleString() : '';
+metaEl.textContent = `Last updated${updatedBy ? ` by ${updatedBy}` : ''}${timeText ? ` on ${timeText}` : ''}`;
+} else {
+metaEl.textContent = '';
+}
 }
 
 async function loadUpdateNotes() {
-  try {
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-    }
-    const db = firebase.firestore();
-    const doc = await db.collection('chat_meta').doc(UPDATE_NOTES_DOC_ID).get();
-    if (!doc.exists) {
-      renderUpdateNotes(updateNotesCache);
-      return;
-    }
+try {
+if (!firebase.apps.length) {
+firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.firestore();
+const doc = await db.collection('chat_meta').doc(UPDATE_NOTES_DOC_ID).get();
+if (!doc.exists) {
+renderUpdateNotes(updateNotesCache);
+return;
+}
 
-    const data = doc.data() || {};
-    const loadedNotes = Array.isArray(data.notes)
-      ? data.notes.map(n => String(n || '').trim()).filter(Boolean)
-      : [];
-    if (loadedNotes.length) {
-      updateNotesCache = loadedNotes;
-    }
+const data = doc.data() || {};
+const loadedNotes = Array.isArray(data.notes)
+? data.notes.map(n => String(n || '').trim()).filter(Boolean)
+: [];
+if (loadedNotes.length) {
+updateNotesCache = loadedNotes;
+}
 
-    const updatedBy = data.updatedBy ? String(data.updatedBy) : '';
-    const updatedAt = data.updatedAt && typeof data.updatedAt.toDate === 'function'
-      ? data.updatedAt.toDate()
-      : null;
-    renderUpdateNotes(updateNotesCache, updatedBy, updatedAt);
-  } catch (err) {
-    console.error('Failed to load update notes:', err);
-    renderUpdateNotes(updateNotesCache);
-  }
+const updatedBy = data.updatedBy ? String(data.updatedBy) : '';
+const updatedAt = data.updatedAt && typeof data.updatedAt.toDate === 'function'
+? data.updatedAt.toDate()
+: null;
+renderUpdateNotes(updateNotesCache, updatedBy, updatedAt);
+} catch (err) {
+console.error('Failed to load update notes:', err);
+renderUpdateNotes(updateNotesCache);
+}
 }
 
 async function adminEditUpdateNotes() {
-  if (!canAdminSettings(currentChatUser)) {
-    alert('Only admins can edit update notes.');
-    return;
-  }
+if (!canAdminSettings(currentChatUser)) {
+alert('Only admins can edit update notes.');
+return;
+}
 
-  await loadUpdateNotes();
-  const statusDiv = document.getElementById('admin-ban-status');
-  const existing = updateNotesCache.join('\n');
-  const input = prompt('Edit update notes (one line per note):', existing);
-  if (input === null) return;
+await loadUpdateNotes();
+const statusDiv = document.getElementById('admin-ban-status');
+const existing = updateNotesCache.join('\n');
+const input = prompt('Edit update notes (one line per note):', existing);
+if (input === null) return;
 
-  const notes = input
-    .split('\n')
-    .map(line => line.trim())
-    .filter(Boolean)
-    .slice(0, 30);
+const notes = input
+.split('\n')
+.map(line => line.trim())
+.filter(Boolean)
+.slice(0, 30);
 
-  if (!notes.length) {
-    alert('Please enter at least one note.');
-    return;
-  }
+if (!notes.length) {
+alert('Please enter at least one note.');
+return;
+}
 
-  try {
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-    }
-    const db = firebase.firestore();
-    await db.collection('chat_meta').doc(UPDATE_NOTES_DOC_ID).set({
-      notes,
-      updatedBy: currentChatUser || getUserName() || 'admin',
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
+try {
+if (!firebase.apps.length) {
+firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.firestore();
+await db.collection('chat_meta').doc(UPDATE_NOTES_DOC_ID).set({
+notes,
+updatedBy: currentChatUser || getUserName() || 'admin',
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
 
-    updateNotesCache = notes;
-    renderUpdateNotes(updateNotesCache, currentChatUser || getUserName() || 'admin', new Date());
-    if (statusDiv) {
-      statusDiv.textContent = 'Update notes saved.';
-    }
-  } catch (err) {
-    console.error('Failed to save update notes:', err);
-    if (statusDiv) {
-      statusDiv.textContent = 'Failed to save update notes.';
-    }
-  }
+updateNotesCache = notes;
+renderUpdateNotes(updateNotesCache, currentChatUser || getUserName() || 'admin', new Date());
+if (statusDiv) {
+statusDiv.textContent = 'Update notes saved.';
+}
+} catch (err) {
+console.error('Failed to save update notes:', err);
+if (statusDiv) {
+statusDiv.textContent = 'Failed to save update notes.';
+}
+}
 }
 
 function updateAdminMenuButtonVisibility() {
-  const btn = document.getElementById('admin-menu-btn');
-  if (!btn) return;
-  btn.style.display = (siteLoginPassed && canModerate(currentChatUser)) ? 'block' : 'none';
+const btn = document.getElementById('admin-menu-btn');
+if (!btn) return;
+btn.style.display = (siteLoginPassed && canModerate(currentChatUser)) ? 'block' : 'none';
 }
 
 async function loadRoleCache() {
-  try {
-    const db = firebase.firestore();
-    db.collection(USER_ROLES_COLLECTION).onSnapshot(snapshot => {
-      const next = {};
-      snapshot.forEach(doc => {
-        const role = normalizeUsername((doc.data() || {}).role || 'member');
-        if (role) next[normalizeUsername(doc.id)] = role;
-      });
-      roleCache = next;
-      updateAdminMenuButtonVisibility();
-      renderProfileModal(currentProfileViewUser || getStatsUserKey());
-      applyReadOnlyUiState();
-    });
-  } catch (err) {
-    console.error('Failed to load role cache:', err);
-  }
+try {
+const db = firebase.firestore();
+db.collection(USER_ROLES_COLLECTION).onSnapshot(snapshot => {
+const next = {};
+snapshot.forEach(doc => {
+const role = normalizeUsername((doc.data() || {}).role || 'member');
+if (role) next[normalizeUsername(doc.id)] = role;
+});
+roleCache = next;
+updateAdminMenuButtonVisibility();
+renderProfileModal(currentProfileViewUser || getStatsUserKey());
+applyReadOnlyUiState();
+});
+} catch (err) {
+console.error('Failed to load role cache:', err);
+}
 }
 
 function parseBlockedWords(rawWords) {
-  if (!Array.isArray(rawWords)) return [];
-  return rawWords
-    .map(w => String(w || '').trim().toLowerCase())
-    .filter(Boolean)
-    .slice(0, 120);
+if (!Array.isArray(rawWords)) return [];
+return rawWords
+.map(w => String(w || '').trim().toLowerCase())
+.filter(Boolean)
+.slice(0, 120);
 }
 
 function renderAnnouncementBanner() {
-  const banner = document.getElementById('site-announcement-banner');
-  if (!banner) return;
-  const text = moderationSettings.announcementText || '';
-  const endsAt = moderationSettings.announcementEndsAt;
-  const active = text && (!endsAt || endsAt.getTime() > Date.now());
-  if (!active) {
-    banner.style.display = 'none';
-    banner.textContent = '';
-    return;
-  }
-  banner.style.display = 'block';
-  banner.textContent = text;
+const banner = document.getElementById('site-announcement-banner');
+if (!banner) return;
+const text = moderationSettings.announcementText || '';
+const endsAt = moderationSettings.announcementEndsAt;
+const active = text && (!endsAt || endsAt.getTime() > Date.now());
+if (!active) {
+banner.style.display = 'none';
+banner.textContent = '';
+return;
+}
+banner.style.display = 'block';
+banner.textContent = text;
 }
 
 function applyReadOnlyUiState() {
-  const isReadOnly = moderationSettings.readOnlyMode && !canModerate(currentChatUser);
-  const input = document.getElementById('chat-message-input');
-  const mediaBtn = document.getElementById('chat-image-btn');
-  if (input) {
-    input.disabled = isReadOnly;
-    if (isReadOnly) {
-      input.placeholder = 'Chat is in read-only mode.';
-    } else if (input.placeholder === 'Chat is in read-only mode.') {
-      input.placeholder = 'Type a message...';
-    }
-  }
-  if (mediaBtn) {
-    mediaBtn.disabled = isReadOnly;
-    mediaBtn.style.opacity = isReadOnly ? '0.6' : '1';
-  }
+const isReadOnly = moderationSettings.readOnlyMode && !canModerate(currentChatUser);
+const input = document.getElementById('chat-message-input');
+const mediaBtn = document.getElementById('chat-image-btn');
+if (input) {
+input.disabled = isReadOnly;
+if (isReadOnly) {
+input.placeholder = 'Chat is in read-only mode.';
+} else if (input.placeholder === 'Chat is in read-only mode.') {
+input.placeholder = 'Type a message...';
+}
+}
+if (mediaBtn) {
+mediaBtn.disabled = isReadOnly;
+mediaBtn.style.opacity = isReadOnly ? '0.6' : '1';
+}
 }
 
 function isReadOnlyForCurrentUser() {
-  return moderationSettings.readOnlyMode && !canModerate(currentChatUser);
+return moderationSettings.readOnlyMode && !canModerate(currentChatUser);
 }
 
 function containsBlockedWord(text) {
-  if (canModerate(currentChatUser)) return false;
-  const value = normalizeUsername(text);
-  if (!value) return false;
-  return moderationSettings.blockedWords.some(word => value.includes(word));
+if (canModerate(currentChatUser)) return false;
+const value = normalizeUsername(text);
+if (!value) return false;
+return moderationSettings.blockedWords.some(word => value.includes(word));
 }
 
 async function loadModerationSettings() {
-  try {
-    const db = firebase.firestore();
-    db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).onSnapshot(doc => {
-      const data = doc.exists ? (doc.data() || {}) : {};
-      moderationSettings.readOnlyMode = !!data.readOnlyMode;
-      moderationSettings.blockedWords = parseBlockedWords(data.blockedWords || []);
-      moderationSettings.announcementText = data.announcementText ? String(data.announcementText).trim() : '';
-      moderationSettings.announcementEndsAt = data.announcementEndsAt && typeof data.announcementEndsAt.toDate === 'function'
-        ? data.announcementEndsAt.toDate()
-        : null;
-      renderAnnouncementBanner();
-      applyReadOnlyUiState();
-    });
-  } catch (err) {
-    console.error('Failed to load moderation settings:', err);
-  }
+try {
+const db = firebase.firestore();
+db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).onSnapshot(doc => {
+const data = doc.exists ? (doc.data() || {}) : {};
+moderationSettings.readOnlyMode = !!data.readOnlyMode;
+moderationSettings.blockedWords = parseBlockedWords(data.blockedWords || []);
+moderationSettings.announcementText = data.announcementText ? String(data.announcementText).trim() : '';
+moderationSettings.announcementEndsAt = data.announcementEndsAt && typeof data.announcementEndsAt.toDate === 'function'
+? data.announcementEndsAt.toDate()
+: null;
+renderAnnouncementBanner();
+applyReadOnlyUiState();
+});
+} catch (err) {
+console.error('Failed to load moderation settings:', err);
+}
 }
 
 async function adminToggleReadOnlyMode() {
-  if (!canAdminSettings(currentChatUser)) return;
-  try {
-    const db = firebase.firestore();
-    await db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).set({
-      readOnlyMode: !moderationSettings.readOnlyMode,
-      updatedBy: currentChatUser,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-    const statusDiv = document.getElementById('admin-ban-status');
-    if (statusDiv) statusDiv.textContent = `Read-only mode ${!moderationSettings.readOnlyMode ? 'enabled' : 'disabled'}.`;
-  } catch (err) {
-    alert('Failed to toggle read-only mode.');
-  }
+if (!canAdminSettings(currentChatUser)) return;
+try {
+const db = firebase.firestore();
+await db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).set({
+readOnlyMode: !moderationSettings.readOnlyMode,
+updatedBy: currentChatUser,
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+const statusDiv = document.getElementById('admin-ban-status');
+if (statusDiv) statusDiv.textContent = `Read-only mode ${!moderationSettings.readOnlyMode ? 'enabled' : 'disabled'}.`;
+} catch (err) {
+alert('Failed to toggle read-only mode.');
+}
 }
 
 async function adminEditWordFilter() {
-  if (!canAdminSettings(currentChatUser)) return;
-  const current = moderationSettings.blockedWords.join('\n');
-  const input = prompt('Blocked words (one per line):', current);
-  if (input === null) return;
-  const words = input.split('\n').map(w => w.trim().toLowerCase()).filter(Boolean).slice(0, 120);
-  try {
-    const db = firebase.firestore();
-    await db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).set({
-      blockedWords: words,
-      updatedBy: currentChatUser,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-    const statusDiv = document.getElementById('admin-ban-status');
-    if (statusDiv) statusDiv.textContent = `Updated word filter (${words.length} words).`;
-  } catch (err) {
-    alert('Failed to update word filter.');
-  }
+if (!canAdminSettings(currentChatUser)) return;
+const current = moderationSettings.blockedWords.join('\n');
+const input = prompt('Blocked words (one per line):', current);
+if (input === null) return;
+const words = input.split('\n').map(w => w.trim().toLowerCase()).filter(Boolean).slice(0, 120);
+try {
+const db = firebase.firestore();
+await db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).set({
+blockedWords: words,
+updatedBy: currentChatUser,
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+const statusDiv = document.getElementById('admin-ban-status');
+if (statusDiv) statusDiv.textContent = `Updated word filter (${words.length} words).`;
+} catch (err) {
+alert('Failed to update word filter.');
+}
 }
 
 async function adminSetAnnouncement() {
-  if (!canAdminSettings(currentChatUser)) return;
-  const text = (prompt('Announcement text:', moderationSettings.announcementText || '') || '').trim();
-  if (!text) return;
-  const minsInput = (prompt('How many minutes should it stay visible? (blank = no auto-expire)', '60') || '').trim();
-  const minutes = minsInput ? Math.max(1, Math.min(10080, parseInt(minsInput, 10) || 60)) : 0;
-  const expiresAt = minutes ? new Date(Date.now() + minutes * 60000) : null;
-  try {
-    const db = firebase.firestore();
-    await db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).set({
-      announcementText: text.slice(0, 300),
-      announcementEndsAt: expiresAt ? firebase.firestore.Timestamp.fromDate(expiresAt) : null,
-      updatedBy: currentChatUser,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-    const statusDiv = document.getElementById('admin-ban-status');
-    if (statusDiv) statusDiv.textContent = 'Announcement updated.';
-  } catch (err) {
-    alert('Failed to set announcement.');
-  }
+if (!canAdminSettings(currentChatUser)) return;
+const text = (prompt('Announcement text:', moderationSettings.announcementText || '') || '').trim();
+if (!text) return;
+const minsInput = (prompt('How many minutes should it stay visible? (blank = no auto-expire)', '60') || '').trim();
+const minutes = minsInput ? Math.max(1, Math.min(10080, parseInt(minsInput, 10) || 60)) : 0;
+const expiresAt = minutes ? new Date(Date.now() + minutes * 60000) : null;
+try {
+const db = firebase.firestore();
+await db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).set({
+announcementText: text.slice(0, 300),
+announcementEndsAt: expiresAt ? firebase.firestore.Timestamp.fromDate(expiresAt) : null,
+updatedBy: currentChatUser,
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+const statusDiv = document.getElementById('admin-ban-status');
+if (statusDiv) statusDiv.textContent = 'Announcement updated.';
+} catch (err) {
+alert('Failed to set announcement.');
+}
 }
 
 async function adminClearAnnouncement() {
-  if (!canAdminSettings(currentChatUser)) return;
-  try {
-    const db = firebase.firestore();
-    await db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).set({
-      announcementText: '',
-      announcementEndsAt: null,
-      updatedBy: currentChatUser,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-    const statusDiv = document.getElementById('admin-ban-status');
-    if (statusDiv) statusDiv.textContent = 'Announcement cleared.';
-  } catch (err) {
-    alert('Failed to clear announcement.');
-  }
+if (!canAdminSettings(currentChatUser)) return;
+try {
+const db = firebase.firestore();
+await db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).set({
+announcementText: '',
+announcementEndsAt: null,
+updatedBy: currentChatUser,
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+const statusDiv = document.getElementById('admin-ban-status');
+if (statusDiv) statusDiv.textContent = 'Announcement cleared.';
+} catch (err) {
+alert('Failed to clear announcement.');
+}
 }
 
 async function adminAssignRole() {
-  if (!canManageRoles(currentChatUser)) {
-    alert('Only the owner can assign roles.');
-    return;
-  }
-  const username = resolveAdminTargetUsername('admin-role-username');
-  const role = normalizeUsername(document.getElementById('admin-role-select').value || 'member');
-  const statusDiv = document.getElementById('admin-ban-status');
-  const allowed = ['member', 'helper', 'moderator', 'admin'];
-  if (!username) {
-    statusDiv.textContent = 'Enter a username for role assignment.';
-    return;
-  }
-  if (!allowed.includes(role)) {
-    statusDiv.textContent = 'Invalid role selected.';
-    return;
-  }
-  try {
-    const db = firebase.firestore();
-    await db.collection(USER_ROLES_COLLECTION).doc(username).set({
-      role,
-      updatedBy: currentChatUser,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-    statusDiv.textContent = `Set role of ${username} to ${role}.`;
-    document.getElementById('admin-role-username').value = '';
-  } catch (err) {
-    statusDiv.textContent = 'Failed to assign role.';
-  }
+if (!canManageRoles(currentChatUser)) {
+alert('Only the owner can assign roles.');
+return;
+}
+const username = resolveAdminTargetUsername('admin-role-username');
+const role = normalizeUsername(document.getElementById('admin-role-select').value || 'member');
+const statusDiv = document.getElementById('admin-ban-status');
+const allowed = ['member', 'helper', 'moderator', 'admin'];
+if (!username) {
+statusDiv.textContent = 'Enter a username for role assignment.';
+return;
+}
+if (!allowed.includes(role)) {
+statusDiv.textContent = 'Invalid role selected.';
+return;
+}
+try {
+const db = firebase.firestore();
+await db.collection(USER_ROLES_COLLECTION).doc(username).set({
+role,
+updatedBy: currentChatUser,
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+statusDiv.textContent = `Set role of ${username} to ${role}.`;
+document.getElementById('admin-role-username').value = '';
+} catch (err) {
+statusDiv.textContent = 'Failed to assign role.';
+}
 }
 
 async function adminWarnUser() {
-  if (!canModerate(currentChatUser)) return;
-  const username = resolveAdminTargetUsername('admin-warn-username');
-  const statusDiv = document.getElementById('admin-ban-status');
-  if (!username) {
-    statusDiv.textContent = 'Enter a username to warn.';
-    return;
-  }
-  if (isProtectedUsername(username)) {
-    statusDiv.textContent = `${username} cannot be warned.`;
-    return;
-  }
-  const reasonInput = document.getElementById('admin-warn-reason').value;
-  const reason = (reasonInput || 'Rule violation').trim().slice(0, 120);
-  try {
-    const db = firebase.firestore();
-    const ref = db.collection(USER_WARNINGS_COLLECTION).doc(username);
-    const doc = await ref.get();
-    const count = ((doc.exists ? (doc.data().count || 0) : 0) + 1);
-    const history = doc.exists && Array.isArray(doc.data().history) ? doc.data().history.slice(-19) : [];
-    history.push({ reason, by: currentChatUser, at: new Date().toISOString() });
-    await ref.set({ count, history, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-    await postSystemNotice(`${username} received warning ${count}/3.`);
-    statusDiv.textContent = `${username} warning count: ${count}/3.`;
-    document.getElementById('admin-warn-username').value = '';
-    document.getElementById('admin-warn-reason').value = '';
-    if (count >= 3) {
-      await db.collection('muted_users').doc(username).set({
-        muted: true,
-        mutedBy: currentChatUser,
-        reason: 'Auto-mute after 3 warnings',
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      await postSystemNotice(`${username} was auto-muted after 3 warnings.`);
-    }
-  } catch (err) {
-    statusDiv.textContent = 'Failed to warn user.';
-  }
+if (!canModerate(currentChatUser)) return;
+const username = resolveAdminTargetUsername('admin-warn-username');
+const statusDiv = document.getElementById('admin-ban-status');
+if (!username) {
+statusDiv.textContent = 'Enter a username to warn.';
+return;
+}
+if (isProtectedUsername(username)) {
+statusDiv.textContent = `${username} cannot be warned.`;
+return;
+}
+const reasonInput = document.getElementById('admin-warn-reason').value;
+const reason = (reasonInput || 'Rule violation').trim().slice(0, 120);
+try {
+const db = firebase.firestore();
+const ref = db.collection(USER_WARNINGS_COLLECTION).doc(username);
+const doc = await ref.get();
+const count = ((doc.exists ? (doc.data().count || 0) : 0) + 1);
+const history = doc.exists && Array.isArray(doc.data().history) ? doc.data().history.slice(-19) : [];
+history.push({ reason, by: currentChatUser, at: new Date().toISOString() });
+await ref.set({ count, history, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+await postSystemNotice(`${username} received warning ${count}/3.`);
+statusDiv.textContent = `${username} warning count: ${count}/3.`;
+document.getElementById('admin-warn-username').value = '';
+document.getElementById('admin-warn-reason').value = '';
+if (count >= 3) {
+await db.collection('muted_users').doc(username).set({
+muted: true,
+mutedBy: currentChatUser,
+reason: 'Auto-mute after 3 warnings',
+timestamp: firebase.firestore.FieldValue.serverTimestamp()
+});
+await postSystemNotice(`${username} was auto-muted after 3 warnings.`);
+}
+} catch (err) {
+statusDiv.textContent = 'Failed to warn user.';
+}
 }
 
 async function getActiveTimedBan(username) {
-  const key = normalizeUsername(username);
-  if (!key || isProtectedUsername(key)) return null;
-  try {
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-    }
-    const db = firebase.firestore();
-    const ref = db.collection(TIMED_BANS_COLLECTION).doc(key);
-    const doc = await ref.get();
-    if (!doc.exists) return null;
-    const data = doc.data() || {};
-    const expiresAt = data.expiresAt && typeof data.expiresAt.toDate === 'function' ? data.expiresAt.toDate() : null;
-    if (!expiresAt || expiresAt.getTime() <= Date.now()) {
-      await ref.delete();
-      return null;
-    }
-    return { reason: String(data.reason || 'Temporary ban'), expiresAt };
-  } catch (err) {
-    return null;
-  }
+const key = normalizeUsername(username);
+if (!key || isProtectedUsername(key)) return null;
+try {
+if (!firebase.apps.length) {
+firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.firestore();
+const ref = db.collection(TIMED_BANS_COLLECTION).doc(key);
+const doc = await ref.get();
+if (!doc.exists) return null;
+const data = doc.data() || {};
+const expiresAt = data.expiresAt && typeof data.expiresAt.toDate === 'function' ? data.expiresAt.toDate() : null;
+if (!expiresAt || expiresAt.getTime() <= Date.now()) {
+await ref.delete();
+return null;
+}
+return { reason: String(data.reason || 'Temporary ban'), expiresAt };
+} catch (err) {
+return null;
+}
 }
 
 async function adminTempBanUser() {
-  if (!canAdminSettings(currentChatUser)) return;
-  const username = resolveAdminTargetUsername('admin-tempban-username');
-  const minutes = Math.max(1, Math.min(10080, parseInt(document.getElementById('admin-tempban-minutes').value || '60', 10) || 60));
-  const reason = (document.getElementById('admin-tempban-reason').value || 'Temporary ban').trim().slice(0, 120);
-  const statusDiv = document.getElementById('admin-ban-status');
-  if (!username) {
-    statusDiv.textContent = 'Enter a username to temp ban.';
-    return;
-  }
-  if (isProtectedUsername(username)) {
-    statusDiv.textContent = `${username} cannot be temp banned.`;
-    return;
-  }
-  try {
-    const expiresAt = new Date(Date.now() + minutes * 60000);
-    const db = firebase.firestore();
-    await db.collection(TIMED_BANS_COLLECTION).doc(username).set({
-      reason,
-      minutes,
-      bannedBy: currentChatUser,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      expiresAt: firebase.firestore.Timestamp.fromDate(expiresAt)
-    }, { merge: true });
-    await db.collection('kicked_users').doc(username).set({
-      kicked: true,
-      kickedBy: currentChatUser,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    await postSystemNotice(`${username} was temporarily banned for ${minutes} minute(s).`);
-    statusDiv.textContent = `${username} temp banned for ${minutes} minutes.`;
-    document.getElementById('admin-tempban-username').value = '';
-    document.getElementById('admin-tempban-minutes').value = '';
-    document.getElementById('admin-tempban-reason').value = '';
-  } catch (err) {
-    statusDiv.textContent = 'Failed to temp ban user.';
-  }
+if (!canAdminSettings(currentChatUser)) return;
+const username = resolveAdminTargetUsername('admin-tempban-username');
+const minutes = Math.max(1, Math.min(10080, parseInt(document.getElementById('admin-tempban-minutes').value || '60', 10) || 60));
+const reason = (document.getElementById('admin-tempban-reason').value || 'Temporary ban').trim().slice(0, 120);
+const statusDiv = document.getElementById('admin-ban-status');
+if (!username) {
+statusDiv.textContent = 'Enter a username to temp ban.';
+return;
+}
+if (isProtectedUsername(username)) {
+statusDiv.textContent = `${username} cannot be temp banned.`;
+return;
+}
+try {
+const expiresAt = new Date(Date.now() + minutes * 60000);
+const db = firebase.firestore();
+await db.collection(TIMED_BANS_COLLECTION).doc(username).set({
+reason,
+minutes,
+bannedBy: currentChatUser,
+createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+expiresAt: firebase.firestore.Timestamp.fromDate(expiresAt)
+}, { merge: true });
+await db.collection('kicked_users').doc(username).set({
+kicked: true,
+kickedBy: currentChatUser,
+timestamp: firebase.firestore.FieldValue.serverTimestamp()
+});
+await postSystemNotice(`${username} was temporarily banned for ${minutes} minute(s).`);
+statusDiv.textContent = `${username} temp banned for ${minutes} minutes.`;
+document.getElementById('admin-tempban-username').value = '';
+document.getElementById('admin-tempban-minutes').value = '';
+document.getElementById('admin-tempban-reason').value = '';
+} catch (err) {
+statusDiv.textContent = 'Failed to temp ban user.';
+}
 }
 
 function listenForTimedBan() {
-  if (!chatInitialized || !currentChatUser || isProtectedUsername(currentChatUser)) return;
-  const db = firebase.firestore();
-  db.collection(TIMED_BANS_COLLECTION).doc(currentChatUser).onSnapshot((doc) => {
-    if (!doc.exists) return;
-    const data = doc.data() || {};
-    const expiresAt = data.expiresAt && typeof data.expiresAt.toDate === 'function' ? data.expiresAt.toDate() : null;
-    if (!expiresAt || expiresAt.getTime() <= Date.now()) return;
-    alert(`You are temporarily banned until ${expiresAt.toLocaleString()}. Reason: ${data.reason || 'Temporary ban'}`);
-    localStorage.removeItem('userName');
-    location.reload();
-  });
+if (!chatInitialized || !currentChatUser || isProtectedUsername(currentChatUser)) return;
+const db = firebase.firestore();
+db.collection(TIMED_BANS_COLLECTION).doc(currentChatUser).onSnapshot((doc) => {
+if (!doc.exists) return;
+const data = doc.data() || {};
+const expiresAt = data.expiresAt && typeof data.expiresAt.toDate === 'function' ? data.expiresAt.toDate() : null;
+if (!expiresAt || expiresAt.getTime() <= Date.now()) return;
+alert(`You are temporarily banned until ${expiresAt.toLocaleString()}. Reason: ${data.reason || 'Temporary ban'}`);
+localStorage.removeItem('userName');
+location.reload();
+});
 }
 
 async function loadLeaderboard() {
-  const entriesDiv = document.getElementById('leaderboard-entries');
-  if (!entriesDiv) return;
-  try {
-    const db = firebase.firestore();
-    const allStats = getStatsStore();
-    const leaderboardData = Object.entries(allStats).map(([username, stats]) => {
-      const { level, points } = calculateUserLevel(stats, username);
-      return { username, level, points };
-    }).sort((a, b) => b.points - a.points).slice(0, 20);
-    if (!leaderboardData.length) {
-      entriesDiv.innerHTML = '<div style="color:#999; padding:1rem; text-align:center;">No scores yet. Start playing to climb the leaderboard!</div>';
-      return;
-    }
-    entriesDiv.innerHTML = leaderboardData.map((entry, idx) => {
-      const rank = idx + 1;
-      const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
-      const ownerTag = entry.username === 'kaiden' ? '<span class="owner-tag">OWNER</span>' : '';
-      const levelDisplay = entry.level;
-      return `<div class="leaderboard-entry">
-        <div class="leaderboard-rank">${medal}</div>
-        <div class="leaderboard-username">${escapeHtml(entry.username)}${ownerTag}</div>
-        <div class="leaderboard-level">LVL ${levelDisplay}</div>
-        <div class="leaderboard-points">${entry.points.toLocaleString()} pts</div>
-      </div>`;
-    }).join('');
-  } catch (err) {
-    console.error('Leaderboard load failed:', err);
-    entriesDiv.innerHTML = '<div style="color:#f44; padding:1rem; text-align:center;">Failed to load leaderboard.</div>';
-  }
+const entriesDiv = document.getElementById('leaderboard-entries');
+if (!entriesDiv) return;
+try {
+const db = firebase.firestore();
+const allStats = getStatsStore();
+const leaderboardData = Object.entries(allStats).map(([username, stats]) => {
+const { level, points } = calculateUserLevel(stats, username);
+return { username, level, points };
+}).sort((a, b) => b.points - a.points).slice(0, 20);
+if (!leaderboardData.length) {
+entriesDiv.innerHTML = '<div style="color:#999; padding:1rem; text-align:center;">No scores yet. Start playing to climb the leaderboard!</div>';
+return;
+}
+entriesDiv.innerHTML = leaderboardData.map((entry, idx) => {
+const rank = idx + 1;
+const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
+const ownerTag = entry.username === 'kaiden' ? '<span class="owner-tag">OWNER</span>' : '';
+const levelDisplay = entry.level;
+return `<div class="leaderboard-entry">
+       <div class="leaderboard-rank">${medal}</div>
+       <div class="leaderboard-username">${escapeHtml(entry.username)}${ownerTag}</div>
+       <div class="leaderboard-level">LVL ${levelDisplay}</div>
+       <div class="leaderboard-points">${entry.points.toLocaleString()} pts</div>
+     </div>`;
+}).join('');
+} catch (err) {
+console.error('Leaderboard load failed:', err);
+entriesDiv.innerHTML = '<div style="color:#f44; padding:1rem; text-align:center;">Failed to load leaderboard.</div>';
+}
 }
 
 async function pinMessage(docId) {
-  if (!canModerate(currentChatUser)) return;
-  const data = window._chatDocs && window._chatDocs[docId];
-  if (!data) return;
-  const text = (data.message || '').trim() || (data.imageData ? '[image]' : '') || (data.videoData ? '[video]' : '');
-  try {
-    const db = firebase.firestore();
-    await db.collection('chat_meta').doc('pinned').set({
-      docId,
-      user: data.user || 'unknown',
-      text,
-      pinnedBy: currentChatUser,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-  } catch (err) {
-    alert('Failed to pin message.');
-  }
+if (!canModerate(currentChatUser)) return;
+const data = window._chatDocs && window._chatDocs[docId];
+if (!data) return;
+const text = (data.message || '').trim() || (data.imageData ? '[image]' : '') || (data.videoData ? '[video]' : '');
+try {
+const db = firebase.firestore();
+await db.collection('chat_meta').doc('pinned').set({
+docId,
+user: data.user || 'unknown',
+text,
+pinnedBy: currentChatUser,
+timestamp: firebase.firestore.FieldValue.serverTimestamp()
+});
+} catch (err) {
+alert('Failed to pin message.');
+}
 }
 
 async function clearPinnedMessage() {
-  if (!canModerate(currentChatUser)) return;
-  try {
-    const db = firebase.firestore();
-    await db.collection('chat_meta').doc('pinned').delete();
-  } catch (err) {
-    alert('Failed to clear pinned message.');
-  }
+if (!canModerate(currentChatUser)) return;
+try {
+const db = firebase.firestore();
+await db.collection('chat_meta').doc('pinned').delete();
+} catch (err) {
+alert('Failed to clear pinned message.');
+}
 }
 
 function renderPinnedMessage() {
-  const bar = document.getElementById('pinned-message-bar');
-  const text = document.getElementById('pinned-message-text');
-  const clearBtn = document.getElementById('pinned-message-clear-btn');
-  if (!bar || !text || !clearBtn) return;
-  if (!currentPinnedMessage || !currentPinnedMessage.text) {
-    bar.style.display = 'none';
-    return;
-  }
-  bar.style.display = 'flex';
-  text.textContent = `${currentPinnedMessage.user}: ${currentPinnedMessage.text}`;
-  clearBtn.style.display = canModerate(currentChatUser) ? 'inline-block' : 'none';
+const bar = document.getElementById('pinned-message-bar');
+const text = document.getElementById('pinned-message-text');
+const clearBtn = document.getElementById('pinned-message-clear-btn');
+if (!bar || !text || !clearBtn) return;
+if (!currentPinnedMessage || !currentPinnedMessage.text) {
+bar.style.display = 'none';
+return;
+}
+bar.style.display = 'flex';
+text.textContent = `${currentPinnedMessage.user}: ${currentPinnedMessage.text}`;
+clearBtn.style.display = canModerate(currentChatUser) ? 'inline-block' : 'none';
 }
 
 function listenForPinnedMessage() {
-  if (!chatInitialized) return;
-  const db = firebase.firestore();
-  db.collection('chat_meta').doc('pinned').onSnapshot(doc => {
-    currentPinnedMessage = doc.exists ? (doc.data() || null) : null;
-    renderPinnedMessage();
-  });
+if (!chatInitialized) return;
+const db = firebase.firestore();
+db.collection('chat_meta').doc('pinned').onSnapshot(doc => {
+currentPinnedMessage = doc.exists ? (doc.data() || null) : null;
+renderPinnedMessage();
+});
 }
 
 function waitForFirebase(callback, maxWait = 5000) {
-  const start = Date.now();
-  
-  const check = () => {
-    if (typeof firebase !== 'undefined' && firebase.app) {
-      callback();
-    } else if (Date.now() - start < maxWait) {
-      setTimeout(check, 100);
-    }
-  };
-  
-  check();
+const start = Date.now();
+
+const check = () => {
+if (typeof firebase !== 'undefined' && firebase.app) {
+callback();
+} else if (Date.now() - start < maxWait) {
+setTimeout(check, 100);
+}
+};
+
+check();
 }
 
 function setChatColor(color) {
-  currentChatColor = color;
-  localStorage.setItem('chatColor', color);
-  updateColorButtonBorders();
+currentChatColor = color;
+localStorage.setItem('chatColor', color);
+updateColorButtonBorders();
 }
 
 function selectColor(color) {
-  setChatColor(color);
-  saveColorToFirebase(color);
-  closeColorPicker();
+setChatColor(color);
+saveColorToFirebase(color);
+closeColorPicker();
 }
 
 async function saveColorToFirebase(color) {
-  if (!chatInitialized || !currentChatUser) return;
-  try {
-    const db = firebase.firestore();
-    await db.collection('user_preferences').doc(currentChatUser).set({
-      color: color,
-      updated: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-  } catch (err) {
-    console.error('Error saving color to Firestore:', err);
-  }
+if (!chatInitialized || !currentChatUser) return;
+try {
+const db = firebase.firestore();
+await db.collection('user_preferences').doc(currentChatUser).set({
+color: color,
+updated: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+} catch (err) {
+console.error('Error saving color to Firestore:', err);
+}
 }
 
 function openColorPicker() {
-  document.getElementById('color-picker-modal').style.display = 'flex';
-  updateColorButtonBorders();
+document.getElementById('color-picker-modal').style.display = 'flex';
+updateColorButtonBorders();
 }
 
 function closeColorPicker() {
-  document.getElementById('color-picker-modal').style.display = 'none';
+document.getElementById('color-picker-modal').style.display = 'none';
 }
 
 function getChatColor() {
-  const stored = localStorage.getItem('chatColor');
-  return stored || '#1565c0';
+const stored = localStorage.getItem('chatColor');
+return stored || '#1565c0';
 }
 
 async function loadColorFromFirebase() {
-  if (!chatInitialized || !currentChatUser) return;
-  try {
-    const db = firebase.firestore();
-    const doc = await db.collection('user_preferences').doc(currentChatUser).get();
-    if (doc.exists && doc.data().color) {
-      currentChatColor = doc.data().color;
-      localStorage.setItem('chatColor', currentChatColor);
-    } else {
-      currentChatColor = getChatColor();
-    }
-  } catch (err) {
-    console.error('Error loading color from Firestore:', err);
-    currentChatColor = getChatColor();
-  }
+if (!chatInitialized || !currentChatUser) return;
+try {
+const db = firebase.firestore();
+const doc = await db.collection('user_preferences').doc(currentChatUser).get();
+if (doc.exists && doc.data().color) {
+currentChatColor = doc.data().color;
+localStorage.setItem('chatColor', currentChatColor);
+} else {
+currentChatColor = getChatColor();
+}
+} catch (err) {
+console.error('Error loading color from Firestore:', err);
+currentChatColor = getChatColor();
+}
 }
 
 function updateColorButtonBorders() {
-  const buttons = document.querySelectorAll('#color-picker-modal button[onclick*="selectColor"]');
-  buttons.forEach(btn => {
-    const btnColor = btn.style.background;
-    if (btnColor === currentChatColor || rgbToHex(btnColor) === currentChatColor) {
-      btn.style.borderColor = '#fff';
-      btn.style.borderWidth = '4px';
-    } else {
-      btn.style.borderColor = '#999';
-      btn.style.borderWidth = '3px';
-    }
-  });
+const buttons = document.querySelectorAll('#color-picker-modal button[onclick*="selectColor"]');
+buttons.forEach(btn => {
+const btnColor = btn.style.background;
+if (btnColor === currentChatColor || rgbToHex(btnColor) === currentChatColor) {
+btn.style.borderColor = '#fff';
+btn.style.borderWidth = '4px';
+} else {
+btn.style.borderColor = '#999';
+btn.style.borderWidth = '3px';
+}
+});
 }
 
 function rgbToHex(rgb) {
-  if (rgb.startsWith('#')) return rgb;
-  const match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
-  if (!match) return rgb;
-  const r = parseInt(match[1]).toString(16).padStart(2, '0');
-  const g = parseInt(match[2]).toString(16).padStart(2, '0');
-  const b = parseInt(match[3]).toString(16).padStart(2, '0');
-  return `#${r}${g}${b}`;
+if (rgb.startsWith('#')) return rgb;
+const match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+if (!match) return rgb;
+const r = parseInt(match[1]).toString(16).padStart(2, '0');
+const g = parseInt(match[2]).toString(16).padStart(2, '0');
+const b = parseInt(match[3]).toString(16).padStart(2, '0');
+return `#${r}${g}${b}`;
 }
 
 async function initializeChat() {
-  if (chatInitialized) return;
-  
-  try {
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
-    }
-    chatInitialized = true;
-    
-    await loadColorFromFirebase();
-    updateColorButtonBorders();
-    
-    loadChatMessages();
-    registerOnlinePresence();
-    loadOnlineUsers();
-    loadTypingUsers();
-    loadRoleCache();
-    loadModerationSettings();
-    listenForKick();
-    listenForTimedBan();
-    listenForPinnedMessage();
-    await backfillLegacyMessageStatsForCurrentUser();
-    showChatButton();
-    updateAdminMenuButtonVisibility();
-    renderProfileModal();
-  } catch (err) {
-    console.error("Firebase initialization error:", err);
-  }
+if (chatInitialized) return;
+
+try {
+if (!firebase.apps.length) {
+firebase.initializeApp(firebaseConfig);
+}
+chatInitialized = true;
+
+await loadColorFromFirebase();
+updateColorButtonBorders();
+
+loadChatMessages();
+registerOnlinePresence();
+loadOnlineUsers();
+loadTypingUsers();
+loadRoleCache();
+loadModerationSettings();
+listenForKick();
+listenForTimedBan();
+listenForPinnedMessage();
+await backfillLegacyMessageStatsForCurrentUser();
+showChatButton();
+updateAdminMenuButtonVisibility();
+renderProfileModal();
+} catch (err) {
+console.error("Firebase initialization error:", err);
+}
 }
 
 async function backfillLegacyMessageStatsForCurrentUser() {
-  const userKey = getStatsUserKey();
-  if (!userKey) return;
+const userKey = getStatsUserKey();
+if (!userKey) return;
 
-  try {
-    const db = firebase.firestore();
-    const snapshot = await db.collection('site_messages').get();
+try {
+const db = firebase.firestore();
+const snapshot = await db.collection('site_messages').get();
 
-    let messageCount = 0;
-    let mediaCount = 0;
+let messageCount = 0;
+let mediaCount = 0;
 
-    snapshot.forEach((doc) => {
-      const data = doc.data() || {};
-      const author = normalizeUsername(data.user || '');
-      if (!author || author !== userKey || data.system) return;
+snapshot.forEach((doc) => {
+const data = doc.data() || {};
+const author = normalizeUsername(data.user || '');
+if (!author || author !== userKey || data.system) return;
 
-      messageCount += 1;
-      if (data.imageData || data.videoData) {
-        mediaCount += 1;
-      }
-    });
+messageCount += 1;
+if (data.imageData || data.videoData) {
+mediaCount += 1;
+}
+});
 
-    const store = getStatsStore();
-    const current = store[userKey] || getCurrentUserStats();
-    let changed = false;
+const store = getStatsStore();
+const current = store[userKey] || getCurrentUserStats();
+let changed = false;
 
-    if ((current.messagesSent || 0) < messageCount) {
-      current.messagesSent = messageCount;
-      changed = true;
-    }
-    if ((current.mediaShared || 0) < mediaCount) {
-      current.mediaShared = mediaCount;
-      changed = true;
-    }
+if ((current.messagesSent || 0) < messageCount) {
+current.messagesSent = messageCount;
+changed = true;
+}
+if ((current.mediaShared || 0) < mediaCount) {
+current.mediaShared = mediaCount;
+changed = true;
+}
 
-    if (changed) {
-      store[userKey] = current;
-      saveStatsStore(store);
-    }
-  } catch (err) {
-    console.error('Failed to backfill legacy message stats:', err);
-  }
+if (changed) {
+store[userKey] = current;
+saveStatsStore(store);
+}
+} catch (err) {
+console.error('Failed to backfill legacy message stats:', err);
+}
 }
 
 function showChatButton() {
-  if (siteLoginPassed) {
-    document.getElementById('chat-toggle-btn').style.display = 'block';
-  }
+if (siteLoginPassed) {
+document.getElementById('chat-toggle-btn').style.display = 'block';
+}
 }
 
 function toggleChat() {
-  const container = document.getElementById('chat-container');
-  if (container.style.display === 'none') {
-    container.style.display = 'flex';
-    if (!container.dataset.positioned) {
-      container.style.right = '0';
-      container.style.bottom = '0';
-      container.style.left = 'auto';
-      container.style.top = 'auto';
-    }
-    document.getElementById('chat-message-input').focus();
-    chatUnreadCount = 0;
-    updateUnreadBadge();
-  } else {
-    container.style.display = 'none';
-    document.getElementById('chat-toggle-btn').style.display = 'block';
-  }
+const container = document.getElementById('chat-container');
+if (container.style.display === 'none') {
+container.style.display = 'flex';
+if (!container.dataset.positioned) {
+container.style.right = '0';
+container.style.bottom = '0';
+container.style.left = 'auto';
+container.style.top = 'auto';
+}
+document.getElementById('chat-message-input').focus();
+chatUnreadCount = 0;
+updateUnreadBadge();
+} else {
+container.style.display = 'none';
+document.getElementById('chat-toggle-btn').style.display = 'block';
+}
 }
 
 function minimizeChat(event) {
-  if (event) {
-    event.stopPropagation();
-  }
-  const container = document.getElementById('chat-container');
-  const isMinimized = container.classList.contains('minimized');
-  
-  if (isMinimized) {
-    container.classList.remove('minimized');
-    document.getElementById('chat-messages').style.display = 'flex';
-    document.getElementById('chat-input-area').style.display = 'flex';
-    document.getElementById('reply-preview-bar').style.display =
-      currentReplyTo ? 'flex' : 'none';
-    document.getElementById('typing-indicator').style.display = '';
-    chatUnreadCount = 0;
-    updateUnreadBadge();
-  } else {
-    container.classList.add('minimized');
-    document.getElementById('chat-messages').style.display = 'none';
-    document.getElementById('chat-input-area').style.display = 'none';
-    document.getElementById('reply-preview-bar').style.display = 'none';
-    document.getElementById('typing-indicator').style.display = 'none';
-    document.getElementById('online-users-panel').style.display = 'none';
-  }
+if (event) {
+event.stopPropagation();
+}
+const container = document.getElementById('chat-container');
+const isMinimized = container.classList.contains('minimized');
+
+if (isMinimized) {
+container.classList.remove('minimized');
+document.getElementById('chat-messages').style.display = 'flex';
+document.getElementById('chat-input-area').style.display = 'flex';
+document.getElementById('reply-preview-bar').style.display =
+currentReplyTo ? 'flex' : 'none';
+document.getElementById('typing-indicator').style.display = '';
+chatUnreadCount = 0;
+updateUnreadBadge();
+} else {
+container.classList.add('minimized');
+document.getElementById('chat-messages').style.display = 'none';
+document.getElementById('chat-input-area').style.display = 'none';
+document.getElementById('reply-preview-bar').style.display = 'none';
+document.getElementById('typing-indicator').style.display = 'none';
+document.getElementById('online-users-panel').style.display = 'none';
+}
 }
 
 function closeChat(event) {
-  if (event) {
-    event.stopPropagation();
-  }
-  const container = document.getElementById('chat-container');
-  container.style.display = 'none';
-  document.getElementById('chat-toggle-btn').style.display = 'block';
+if (event) {
+event.stopPropagation();
+}
+const container = document.getElementById('chat-container');
+container.style.display = 'none';
+document.getElementById('chat-toggle-btn').style.display = 'block';
 }
 
 function openChatImagePicker() {
-  const imageInput = document.getElementById('chat-image-input');
-  imageInput.value = '';
-  imageInput.click();
+const imageInput = document.getElementById('chat-image-input');
+imageInput.value = '';
+imageInput.click();
 }
 
 function startChatDrag(event) {
-  const target = event.target;
-  if (target.closest('#chat-minimize-btn') || target.closest('#chat-close-btn') || target.closest('#chat-online-btn') || target.closest('#chat-profile-btn') || target.closest('#chat-voice-btn')) {
-    return;
-  }
+const target = event.target;
+if (target.closest('#chat-minimize-btn') || target.closest('#chat-close-btn') || target.closest('#chat-online-btn') || target.closest('#chat-profile-btn') || target.closest('#chat-voice-btn')) {
+return;
+}
 
-  const container = document.getElementById('chat-container');
-  const rect = container.getBoundingClientRect();
-  const point = event.touches ? event.touches[0] : event;
+const container = document.getElementById('chat-container');
+const rect = container.getBoundingClientRect();
+const point = event.touches ? event.touches[0] : event;
 
-  isChatDragging = true;
-  chatDragOffsetX = point.clientX - rect.left;
-  chatDragOffsetY = point.clientY - rect.top;
-  container.style.left = `${rect.left}px`;
-  container.style.top = `${rect.top}px`;
-  container.style.right = 'auto';
-  container.style.bottom = 'auto';
-  container.dataset.positioned = 'true';
-  document.body.style.userSelect = 'none';
+isChatDragging = true;
+chatDragOffsetX = point.clientX - rect.left;
+chatDragOffsetY = point.clientY - rect.top;
+container.style.left = `${rect.left}px`;
+container.style.top = `${rect.top}px`;
+container.style.right = 'auto';
+container.style.bottom = 'auto';
+container.dataset.positioned = 'true';
+document.body.style.userSelect = 'none';
 
-  event.preventDefault();
+event.preventDefault();
 }
 
 function dragChat(event) {
-  if (!isChatDragging) {
-    return;
-  }
+if (!isChatDragging) {
+return;
+}
 
-  const container = document.getElementById('chat-container');
-  const point = event.touches ? event.touches[0] : event;
-  const maxLeft = window.innerWidth - container.offsetWidth;
-  const maxTop = window.innerHeight - container.offsetHeight;
-  const nextLeft = Math.min(Math.max(0, point.clientX - chatDragOffsetX), Math.max(0, maxLeft));
-  const nextTop = Math.min(Math.max(0, point.clientY - chatDragOffsetY), Math.max(0, maxTop));
+const container = document.getElementById('chat-container');
+const point = event.touches ? event.touches[0] : event;
+const maxLeft = window.innerWidth - container.offsetWidth;
+const maxTop = window.innerHeight - container.offsetHeight;
+const nextLeft = Math.min(Math.max(0, point.clientX - chatDragOffsetX), Math.max(0, maxLeft));
+const nextTop = Math.min(Math.max(0, point.clientY - chatDragOffsetY), Math.max(0, maxTop));
 
-  container.style.left = `${nextLeft}px`;
-  container.style.top = `${nextTop}px`;
-  event.preventDefault();
+container.style.left = `${nextLeft}px`;
+container.style.top = `${nextTop}px`;
+event.preventDefault();
 }
 
 function stopChatDrag() {
-  if (!isChatDragging) {
-    return;
-  }
+if (!isChatDragging) {
+return;
+}
 
-  isChatDragging = false;
-  document.body.style.userSelect = '';
+isChatDragging = false;
+document.body.style.userSelect = '';
 }
 
 document.addEventListener('mousemove', dragChat);
@@ -3156,756 +3156,756 @@ document.addEventListener('touchmove', dragChat, { passive: false });
 document.addEventListener('touchend', stopChatDrag);
 
 async function loadChatMessages() {
-  if (!chatInitialized) return;
-  
-  try {
-    const db = firebase.firestore();
-    const messagesRef = db.collection('site_messages')
-      .orderBy('timestamp', 'asc')
-      .limit(100);
-    
-    let prevDocCount = 0;
-    let snapshotReady = false;
+if (!chatInitialized) return;
 
-    messagesRef.onSnapshot(snapshot => {
-      const messagesDiv = document.getElementById('chat-messages');
+try {
+const db = firebase.firestore();
+const messagesRef = db.collection('site_messages')
+.orderBy('timestamp', 'asc')
+.limit(100);
 
-      const newDocCount = snapshot.size;
-      const hasNewMessage = snapshotReady && newDocCount > prevDocCount;
-      const wasAtBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop - messagesDiv.clientHeight < 60;
-      snapshotReady = true;
-      prevDocCount = newDocCount;
-      const scrollPos = messagesDiv.scrollTop;
-      const chatContainer = document.getElementById('chat-container');
-      const isChatOpen = chatContainer.style.display !== 'none' && !chatContainer.classList.contains('minimized');
-      if (hasNewMessage && !isChatOpen) {
-        chatUnreadCount++;
-        updateUnreadBadge();
-      }
+let prevDocCount = 0;
+let snapshotReady = false;
 
-      messagesDiv.innerHTML = '';
-      const isAdmin = canModerate(currentChatUser);
-      window._chatDocs = {};
+messagesRef.onSnapshot(snapshot => {
+const messagesDiv = document.getElementById('chat-messages');
 
-      snapshot.forEach(doc => {
-        const docId = doc.id;
-        const data = doc.data();
-        window._chatDocs[docId] = data;
+const newDocCount = snapshot.size;
+const hasNewMessage = snapshotReady && newDocCount > prevDocCount;
+const wasAtBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop - messagesDiv.clientHeight < 60;
+snapshotReady = true;
+prevDocCount = newDocCount;
+const scrollPos = messagesDiv.scrollTop;
+const chatContainer = document.getElementById('chat-container');
+const isChatOpen = chatContainer.style.display !== 'none' && !chatContainer.classList.contains('minimized');
+if (hasNewMessage && !isChatOpen) {
+chatUnreadCount++;
+updateUnreadBadge();
+}
 
-        const messageDiv = document.createElement('div');
-        const isOwn = data.user === currentChatUser;
-        const isSystem = data.system === true;
-        const hasImage = typeof data.imageData === 'string' && data.imageData !== '';
-        const hasVideo = typeof data.videoData === 'string' && data.videoData !== '';
-        const safeCaption = data.message ? escapeHtml(data.message) : '';
-        const messageColor = data.color || (isSystem ? '#2f2f2f' : (isOwn ? '#1565c0' : '#5f6368'));
-        const timeStr = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleString([], {month:'short', day:'numeric', hour: '2-digit', minute:'2-digit'}) : '';
+messagesDiv.innerHTML = '';
+const isAdmin = canModerate(currentChatUser);
+window._chatDocs = {};
 
-        const replyHtml = data.replyTo ? `
-          <div class="chat-message-reply-quote">
-            <strong>${escapeHtml(data.replyTo.user || '')}</strong>: ${escapeHtml((data.replyTo.text || '').slice(0, 80))}
-          </div>` : '';
+snapshot.forEach(doc => {
+const docId = doc.id;
+const data = doc.data();
+window._chatDocs[docId] = data;
 
-        const reactions = data.reactions || {};
-        const reactionsHtml = isSystem ? '' : Object.entries(reactions).map(([emoji, users]) => {
-          if (!users.length) return '';
-          const hasReacted = users.includes(currentChatUser);
-          const userList = users.map(u => escapeHtml(u)).join(', ');
-          return `<span class="reaction-pill ${hasReacted ? 'reacted' : ''}" onclick="toggleReaction('${docId}','${emoji}')" title="${userList}">${emoji} ${users.length}<span class="reaction-tooltip">${userList}</span></span>`;
-        }).join('');
+const messageDiv = document.createElement('div');
+const isOwn = data.user === currentChatUser;
+const isSystem = data.system === true;
+const hasImage = typeof data.imageData === 'string' && data.imageData !== '';
+const hasVideo = typeof data.videoData === 'string' && data.videoData !== '';
+const safeCaption = data.message ? escapeHtml(data.message) : '';
+const messageColor = data.color || (isSystem ? '#2f2f2f' : (isOwn ? '#1565c0' : '#5f6368'));
+const timeStr = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleString([], {month:'short', day:'numeric', hour: '2-digit', minute:'2-digit'}) : '';
 
-        const imageReactions = Array.isArray(data.reactionImages) ? data.reactionImages : [];
-        const imageReactionsHtml = isSystem ? '' : imageReactions.map((item) => {
-          const url = (item && typeof item.url === 'string') ? item.url : '';
-          const users = (item && Array.isArray(item.users)) ? item.users : [];
-          if (!url || !users.length) return '';
-          const hasReacted = users.includes(currentChatUser);
-          const userList = users.map(u => escapeHtml(u)).join(', ');
-          const safeUrl = escapeHtml(url);
-          const encodedUrl = encodeURIComponent(url);
-          return `<span class="reaction-pill ${hasReacted ? 'reacted' : ''}" onclick="toggleImageReaction('${docId}','${encodedUrl}')" title="${userList}"><img class="reaction-image-thumb" src="${safeUrl}" alt="reaction" />${users.length}<span class="reaction-tooltip">${userList}</span></span>`;
-        }).join('');
+const replyHtml = data.replyTo ? `
+         <div class="chat-message-reply-quote">
+           <strong>${escapeHtml(data.replyTo.user || '')}</strong>: ${escapeHtml((data.replyTo.text || '').slice(0, 80))}
+         </div>` : '';
 
-        const replyBtn = isSystem ? '' : `<button class="chat-action-btn" onclick="setReplyTo('${docId}')">↩ Reply</button>`;
-        const reactBtns = isSystem ? '' : ['❤️','😂','😢','🔥'].map(e => `<button class="chat-action-btn" onclick="toggleReaction('${docId}','${e}')">${e}</button>`).join('');
-        const imageReactBtn = isSystem ? '' : `<button class="chat-action-btn" onclick="promptImageReaction('${docId}')">🖼 Img</button>`;
-        const deleteBtn = isAdmin ? `<button class="chat-action-btn" style="color:#ff8a80;" onclick="adminDeleteMessage('${docId}')">🗑 Delete</button>` : '';
-        const pinBtn = isAdmin && !isSystem ? `<button class="chat-action-btn" style="color:#ffca28;" onclick="pinMessage('${docId}')">📌 Pin</button>` : '';
+const reactions = data.reactions || {};
+const reactionsHtml = isSystem ? '' : Object.entries(reactions).map(([emoji, users]) => {
+if (!users.length) return '';
+const hasReacted = users.includes(currentChatUser);
+const userList = users.map(u => escapeHtml(u)).join(', ');
+return `<span class="reaction-pill ${hasReacted ? 'reacted' : ''}" onclick="toggleReaction('${docId}','${emoji}')" title="${userList}">${emoji} ${users.length}<span class="reaction-tooltip">${userList}</span></span>`;
+}).join('');
 
-        messageDiv.className = `chat-message ${isSystem ? 'system' : (isOwn ? 'own' : 'other')}`;
-        messageDiv.style.backgroundColor = messageColor;
-        const ownerTag = !isSystem && data.user === 'kaiden' ? '<span class="owner-tag">OWNER</span>' : '';
-        const profileTarget = encodeURIComponent(normalizeUsername(data.user || 'unknown'));
-        messageDiv.innerHTML = `
-          ${replyHtml}
-          ${isSystem ? '' : `<div class="chat-message-user chat-user-link" onclick="openUserProfileFromChat('${profileTarget}', event)">${escapeHtml(data.user || 'unknown')}${ownerTag}</div>`}
-          ${hasImage ? `<img class="chat-message-image" src="${data.imageData}" alt="Chat image" />` : ''}
-          ${hasVideo ? `<video class="chat-message-video" src="${data.videoData}" controls preload="metadata"></video>` : ''}
-          ${safeCaption ? `<div class="chat-message-caption">${safeCaption}</div>` : ''}
-          ${!isSystem && timeStr ? `<div class="chat-message-time">${timeStr}</div>` : ''}
-          ${(reactionsHtml || imageReactionsHtml) ? `<div class="chat-reactions">${reactionsHtml}${imageReactionsHtml}</div>` : ''}
-          ${(isSystem && isAdmin) || !isSystem ? `<div class="chat-message-actions">${replyBtn}${reactBtns}${imageReactBtn}${pinBtn}${deleteBtn}</div>` : ''}
-        `;
-        messagesDiv.appendChild(messageDiv);
-      });
+const imageReactions = Array.isArray(data.reactionImages) ? data.reactionImages : [];
+const imageReactionsHtml = isSystem ? '' : imageReactions.map((item) => {
+const url = (item && typeof item.url === 'string') ? item.url : '';
+const users = (item && Array.isArray(item.users)) ? item.users : [];
+if (!url || !users.length) return '';
+const hasReacted = users.includes(currentChatUser);
+const userList = users.map(u => escapeHtml(u)).join(', ');
+const safeUrl = escapeHtml(url);
+const encodedUrl = encodeURIComponent(url);
+return `<span class="reaction-pill ${hasReacted ? 'reacted' : ''}" onclick="toggleImageReaction('${docId}','${encodedUrl}')" title="${userList}"><img class="reaction-image-thumb" src="${safeUrl}" alt="reaction" />${users.length}<span class="reaction-tooltip">${userList}</span></span>`;
+}).join('');
 
-      if (hasNewMessage || wasAtBottom) {
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-      } else {
-        messagesDiv.scrollTop = scrollPos;
-      }
-    });
-  } catch (err) {
-    console.error("Error loading messages:", err);
-  }
+const replyBtn = isSystem ? '' : `<button class="chat-action-btn" onclick="setReplyTo('${docId}')">↩ Reply</button>`;
+const reactBtns = isSystem ? '' : ['❤️','😂','😢','🔥'].map(e => `<button class="chat-action-btn" onclick="toggleReaction('${docId}','${e}')">${e}</button>`).join('');
+const imageReactBtn = isSystem ? '' : `<button class="chat-action-btn" onclick="promptImageReaction('${docId}')">🖼 Img</button>`;
+const deleteBtn = isAdmin ? `<button class="chat-action-btn" style="color:#ff8a80;" onclick="adminDeleteMessage('${docId}')">🗑 Delete</button>` : '';
+const pinBtn = isAdmin && !isSystem ? `<button class="chat-action-btn" style="color:#ffca28;" onclick="pinMessage('${docId}')">📌 Pin</button>` : '';
+
+messageDiv.className = `chat-message ${isSystem ? 'system' : (isOwn ? 'own' : 'other')}`;
+messageDiv.style.backgroundColor = messageColor;
+const ownerTag = !isSystem && data.user === 'kaiden' ? '<span class="owner-tag">OWNER</span>' : '';
+const profileTarget = encodeURIComponent(normalizeUsername(data.user || 'unknown'));
+messageDiv.innerHTML = `
+         ${replyHtml}
+         ${isSystem ? '' : `<div class="chat-message-user chat-user-link" onclick="openUserProfileFromChat('${profileTarget}', event)">${escapeHtml(data.user || 'unknown')}${ownerTag}</div>`}
+         ${hasImage ? `<img class="chat-message-image" src="${data.imageData}" alt="Chat image" />` : ''}
+         ${hasVideo ? `<video class="chat-message-video" src="${data.videoData}" controls preload="metadata"></video>` : ''}
+         ${safeCaption ? `<div class="chat-message-caption">${safeCaption}</div>` : ''}
+         ${!isSystem && timeStr ? `<div class="chat-message-time">${timeStr}</div>` : ''}
+         ${(reactionsHtml || imageReactionsHtml) ? `<div class="chat-reactions">${reactionsHtml}${imageReactionsHtml}</div>` : ''}
+         ${(isSystem && isAdmin) || !isSystem ? `<div class="chat-message-actions">${replyBtn}${reactBtns}${imageReactBtn}${pinBtn}${deleteBtn}</div>` : ''}
+       `;
+messagesDiv.appendChild(messageDiv);
+});
+
+if (hasNewMessage || wasAtBottom) {
+messagesDiv.scrollTop = messagesDiv.scrollHeight;
+} else {
+messagesDiv.scrollTop = scrollPos;
+}
+});
+} catch (err) {
+console.error("Error loading messages:", err);
+}
 }
 
 async function sendMessage() {
-  const input = document.getElementById('chat-message-input');
-  const message = input.value.trim();
-  
-  if (!message) return;
-  if (!chatInitialized) {
-    alert('Chat not initialized. Please refresh the page.');
-    return;
-  }
+const input = document.getElementById('chat-message-input');
+const message = input.value.trim();
 
-  if (isReadOnlyForCurrentUser()) {
-    alert('Chat is currently read-only.');
-    return;
-  }
+if (!message) return;
+if (!chatInitialized) {
+alert('Chat not initialized. Please refresh the page.');
+return;
+}
 
-  const timedBan = await getActiveTimedBan(currentChatUser);
-  if (timedBan) {
-    alert(`You are temporarily banned until ${timedBan.expiresAt.toLocaleString()}.`);
-    return;
-  }
+if (isReadOnlyForCurrentUser()) {
+alert('Chat is currently read-only.');
+return;
+}
 
-  if (containsBlockedWord(message)) {
-    alert('Message blocked by word filter.');
-    return;
-  }
+const timedBan = await getActiveTimedBan(currentChatUser);
+if (timedBan) {
+alert(`You are temporarily banned until ${timedBan.expiresAt.toLocaleString()}.`);
+return;
+}
 
-  if (await isUserMuted(currentChatUser)) {
-    alert('You are currently muted and cannot send messages.');
-    return;
-  }
-  
-  try {
-    let resolvedMediaUrl = '';
-    if (isValidReactionImageUrl(message)) {
-      resolvedMediaUrl = await resolveReactionImageUrl(message);
-    }
+if (containsBlockedWord(message)) {
+alert('Message blocked by word filter.');
+return;
+}
 
-    const db = firebase.firestore();
-    const msgData = {
-      user: currentChatUser,
-      message: resolvedMediaUrl ? '' : message,
-      color: currentChatColor,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    };
-    if (resolvedMediaUrl) {
-      msgData.imageData = resolvedMediaUrl;
-    }
-    if (currentReplyTo) {
-      msgData.replyTo = { user: currentReplyTo.user, text: currentReplyTo.text };
-    }
-    await db.collection('site_messages').add(msgData);
-    incrementUserStat('messagesSent');
-    
-    input.value = '';
-    input.focus();
-    clearReply();
-    if (chatInitialized && currentChatUser) {
-      clearTimeout(typingTimeout);
-      firebase.firestore().collection('typing_status').doc(currentChatUser).set({ typing: false, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
-    }
-  } catch (err) {
-    console.error("Error sending message:", err);
-    alert('Failed to send message: ' + err.message);
-  }
+if (await isUserMuted(currentChatUser)) {
+alert('You are currently muted and cannot send messages.');
+return;
+}
+
+try {
+let resolvedMediaUrl = '';
+if (isValidReactionImageUrl(message)) {
+resolvedMediaUrl = await resolveReactionImageUrl(message);
+}
+
+const db = firebase.firestore();
+const msgData = {
+user: currentChatUser,
+message: resolvedMediaUrl ? '' : message,
+color: currentChatColor,
+timestamp: firebase.firestore.FieldValue.serverTimestamp()
+};
+if (resolvedMediaUrl) {
+msgData.imageData = resolvedMediaUrl;
+}
+if (currentReplyTo) {
+msgData.replyTo = { user: currentReplyTo.user, text: currentReplyTo.text };
+}
+await db.collection('site_messages').add(msgData);
+incrementUserStat('messagesSent');
+
+input.value = '';
+input.focus();
+clearReply();
+if (chatInitialized && currentChatUser) {
+clearTimeout(typingTimeout);
+firebase.firestore().collection('typing_status').doc(currentChatUser).set({ typing: false, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+}
+} catch (err) {
+console.error("Error sending message:", err);
+alert('Failed to send message: ' + err.message);
+}
 }
 
 async function handleChatImageSelected(event) {
-  const file = event.target.files && event.target.files[0];
-  const captionInput = document.getElementById('chat-message-input');
-  const caption = captionInput.value.trim();
+const file = event.target.files && event.target.files[0];
+const captionInput = document.getElementById('chat-message-input');
+const caption = captionInput.value.trim();
 
-  if (!file) {
-    return;
-  }
+if (!file) {
+return;
+}
 
-  if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
-    alert('Please choose an image or video file.');
-    return;
-  }
+if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+alert('Please choose an image or video file.');
+return;
+}
 
-  if (!chatInitialized) {
-    alert('Chat not initialized. Please refresh the page.');
-    return;
-  }
+if (!chatInitialized) {
+alert('Chat not initialized. Please refresh the page.');
+return;
+}
 
-  if (isReadOnlyForCurrentUser()) {
-    alert('Chat is currently read-only.');
-    return;
-  }
+if (isReadOnlyForCurrentUser()) {
+alert('Chat is currently read-only.');
+return;
+}
 
-  const timedBan = await getActiveTimedBan(currentChatUser);
-  if (timedBan) {
-    alert(`You are temporarily banned until ${timedBan.expiresAt.toLocaleString()}.`);
-    return;
-  }
+const timedBan = await getActiveTimedBan(currentChatUser);
+if (timedBan) {
+alert(`You are temporarily banned until ${timedBan.expiresAt.toLocaleString()}.`);
+return;
+}
 
-  if (containsBlockedWord(caption)) {
-    alert('Caption blocked by word filter.');
-    return;
-  }
+if (containsBlockedWord(caption)) {
+alert('Caption blocked by word filter.');
+return;
+}
 
-  if (await isUserMuted(currentChatUser)) {
-    alert('You are currently muted and cannot send messages.');
-    return;
-  }
+if (await isUserMuted(currentChatUser)) {
+alert('You are currently muted and cannot send messages.');
+return;
+}
 
-  try {
-    let imageData = '';
-    let videoData = '';
+try {
+let imageData = '';
+let videoData = '';
 
-    if (file.type.startsWith('image/')) {
-      imageData = await compressChatImage(file);
-    } else {
-      videoData = await readChatVideoAsDataUrl(file);
-    }
+if (file.type.startsWith('image/')) {
+imageData = await compressChatImage(file);
+} else {
+videoData = await readChatVideoAsDataUrl(file);
+}
 
-    const db = firebase.firestore();
-    const msgData = {
-      user: currentChatUser,
-      message: caption,
-      color: currentChatColor,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    };
-    if (imageData) msgData.imageData = imageData;
-    if (videoData) msgData.videoData = videoData;
-    if (currentReplyTo) {
-      msgData.replyTo = { user: currentReplyTo.user, text: currentReplyTo.text };
-    }
-    await db.collection('site_messages').add(msgData);
-    incrementUserStat('messagesSent');
-    incrementUserStat('mediaShared');
+const db = firebase.firestore();
+const msgData = {
+user: currentChatUser,
+message: caption,
+color: currentChatColor,
+timestamp: firebase.firestore.FieldValue.serverTimestamp()
+};
+if (imageData) msgData.imageData = imageData;
+if (videoData) msgData.videoData = videoData;
+if (currentReplyTo) {
+msgData.replyTo = { user: currentReplyTo.user, text: currentReplyTo.text };
+}
+await db.collection('site_messages').add(msgData);
+incrementUserStat('messagesSent');
+incrementUserStat('mediaShared');
 
-    captionInput.value = '';
-    captionInput.focus();
-    clearReply();
-    if (chatInitialized && currentChatUser) {
-      clearTimeout(typingTimeout);
-      firebase.firestore().collection('typing_status').doc(currentChatUser).set({ typing: false, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
-    }
-  } catch (err) {
-    console.error('Error sending image:', err);
-    alert(err.message || 'Failed to send image.');
-  }
+captionInput.value = '';
+captionInput.focus();
+clearReply();
+if (chatInitialized && currentChatUser) {
+clearTimeout(typingTimeout);
+firebase.firestore().collection('typing_status').doc(currentChatUser).set({ typing: false, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+}
+} catch (err) {
+console.error('Error sending image:', err);
+alert(err.message || 'Failed to send image.');
+}
 }
 
 function readChatVideoAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    if (!file || !file.type.startsWith('video/')) {
-      reject(new Error('Please choose a video file.'));
-      return;
-    }
+return new Promise((resolve, reject) => {
+if (!file || !file.type.startsWith('video/')) {
+reject(new Error('Please choose a video file.'));
+return;
+}
 
-    if (file.size > CHAT_VIDEO_SIZE_LIMIT) {
-      reject(new Error('Video is too large. Keep it under about 700 KB.'));
-      return;
-    }
+if (file.size > CHAT_VIDEO_SIZE_LIMIT) {
+reject(new Error('Video is too large. Keep it under about 700 KB.'));
+return;
+}
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = typeof reader.result === 'string' ? reader.result : '';
-      if (!dataUrl) {
-        reject(new Error('Could not read video.'));
-        return;
-      }
-      if (dataUrl.length > CHAT_VIDEO_SIZE_LIMIT * 1.5) {
-        reject(new Error('Video is too large after encoding. Use a shorter/smaller clip.'));
-        return;
-      }
-      resolve(dataUrl);
-    };
-    reader.onerror = () => reject(new Error('Could not load video file.'));
-    reader.readAsDataURL(file);
-  });
+const reader = new FileReader();
+reader.onload = () => {
+const dataUrl = typeof reader.result === 'string' ? reader.result : '';
+if (!dataUrl) {
+reject(new Error('Could not read video.'));
+return;
+}
+if (dataUrl.length > CHAT_VIDEO_SIZE_LIMIT * 1.5) {
+reject(new Error('Video is too large after encoding. Use a shorter/smaller clip.'));
+return;
+}
+resolve(dataUrl);
+};
+reader.onerror = () => reject(new Error('Could not load video file.'));
+reader.readAsDataURL(file);
+});
 }
 
 function compressChatImage(file) {
-  return new Promise((resolve, reject) => {
-    if (file && file.type === 'image/gif') {
-      if (file.size > CHAT_IMAGE_SIZE_LIMIT) {
-        reject(new Error('GIF is too large. Keep it under about 700 KB.'));
-        return;
-      }
-      const gifReader = new FileReader();
-      gifReader.onload = () => {
-        const dataUrl = typeof gifReader.result === 'string' ? gifReader.result : '';
-        if (!dataUrl) {
-          reject(new Error('Could not read GIF file.'));
-          return;
-        }
-        if (dataUrl.length > CHAT_IMAGE_SIZE_LIMIT * 1.5) {
-          reject(new Error('GIF is too large after encoding. Use a smaller GIF.'));
-          return;
-        }
-        resolve(dataUrl);
-      };
-      gifReader.onerror = () => reject(new Error('Could not load GIF file.'));
-      gifReader.readAsDataURL(file);
-      return;
-    }
+return new Promise((resolve, reject) => {
+if (file && file.type === 'image/gif') {
+if (file.size > CHAT_IMAGE_SIZE_LIMIT) {
+reject(new Error('GIF is too large. Keep it under about 700 KB.'));
+return;
+}
+const gifReader = new FileReader();
+gifReader.onload = () => {
+const dataUrl = typeof gifReader.result === 'string' ? gifReader.result : '';
+if (!dataUrl) {
+reject(new Error('Could not read GIF file.'));
+return;
+}
+if (dataUrl.length > CHAT_IMAGE_SIZE_LIMIT * 1.5) {
+reject(new Error('GIF is too large after encoding. Use a smaller GIF.'));
+return;
+}
+resolve(dataUrl);
+};
+gifReader.onerror = () => reject(new Error('Could not load GIF file.'));
+gifReader.readAsDataURL(file);
+return;
+}
 
-    const reader = new FileReader();
+const reader = new FileReader();
 
-    reader.onload = () => {
-      const image = new Image();
-      image.onload = () => {
-        let width = image.width;
-        let height = image.height;
-        const scale = Math.min(
-          1,
-          CHAT_IMAGE_MAX_WIDTH / width,
-          CHAT_IMAGE_MAX_HEIGHT / height
-        );
+reader.onload = () => {
+const image = new Image();
+image.onload = () => {
+let width = image.width;
+let height = image.height;
+const scale = Math.min(
+1,
+CHAT_IMAGE_MAX_WIDTH / width,
+CHAT_IMAGE_MAX_HEIGHT / height
+);
 
-        width = Math.max(1, Math.round(width * scale));
-        height = Math.max(1, Math.round(height * scale));
+width = Math.max(1, Math.round(width * scale));
+height = Math.max(1, Math.round(height * scale));
 
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const context = canvas.getContext('2d');
+const canvas = document.createElement('canvas');
+canvas.width = width;
+canvas.height = height;
+const context = canvas.getContext('2d');
 
-        if (!context) {
-          reject(new Error('Could not process image.'));
-          return;
-        }
+if (!context) {
+reject(new Error('Could not process image.'));
+return;
+}
 
-        context.drawImage(image, 0, 0, width, height);
+context.drawImage(image, 0, 0, width, height);
 
-        let dataUrl = canvas.toDataURL('image/jpeg', CHAT_IMAGE_QUALITY);
-        if (dataUrl.length > CHAT_IMAGE_SIZE_LIMIT) {
-          dataUrl = canvas.toDataURL('image/jpeg', 0.65);
-        }
+let dataUrl = canvas.toDataURL('image/jpeg', CHAT_IMAGE_QUALITY);
+if (dataUrl.length > CHAT_IMAGE_SIZE_LIMIT) {
+dataUrl = canvas.toDataURL('image/jpeg', 0.65);
+}
 
-        if (dataUrl.length > CHAT_IMAGE_SIZE_LIMIT) {
-          reject(new Error('Image is too large. Choose a smaller image.'));
-          return;
-        }
+if (dataUrl.length > CHAT_IMAGE_SIZE_LIMIT) {
+reject(new Error('Image is too large. Choose a smaller image.'));
+return;
+}
 
-        resolve(dataUrl);
-      };
+resolve(dataUrl);
+};
 
-      image.onerror = () => reject(new Error('Could not read image.'));
-      image.src = reader.result;
-    };
+image.onerror = () => reject(new Error('Could not read image.'));
+image.src = reader.result;
+};
 
-    reader.onerror = () => reject(new Error('Could not load file.'));
-    reader.readAsDataURL(file);
-  });
+reader.onerror = () => reject(new Error('Could not load file.'));
+reader.readAsDataURL(file);
+});
 }
 
 function escapeHtml(text) {
-  const map = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;'
-  };
-  return text.replace(/[&<>"']/g, m => map[m]);
+const map = {
+'&': '&amp;',
+'<': '&lt;',
+'>': '&gt;',
+'"': '&quot;',
+"'": '&#039;'
+};
+return text.replace(/[&<>"']/g, m => map[m]);
 }
 
 let currentReplyTo = null;
 
 function setReplyTo(docId) {
-  const data = window._chatDocs && window._chatDocs[docId];
-  if (!data) return;
-  currentReplyTo = { user: data.user || 'unknown', text: data.message || '' };
-  document.getElementById('reply-preview-bar').style.display = 'flex';
-  document.getElementById('reply-preview-text').textContent =
-    `Replying to ${currentReplyTo.user}: ${currentReplyTo.text.slice(0, 60)}`;
-  document.getElementById('chat-message-input').focus();
+const data = window._chatDocs && window._chatDocs[docId];
+if (!data) return;
+currentReplyTo = { user: data.user || 'unknown', text: data.message || '' };
+document.getElementById('reply-preview-bar').style.display = 'flex';
+document.getElementById('reply-preview-text').textContent =
+`Replying to ${currentReplyTo.user}: ${currentReplyTo.text.slice(0, 60)}`;
+document.getElementById('chat-message-input').focus();
 }
 
 function clearReply() {
-  currentReplyTo = null;
-  document.getElementById('reply-preview-bar').style.display = 'none';
-  document.getElementById('reply-preview-text').textContent = '';
+currentReplyTo = null;
+document.getElementById('reply-preview-bar').style.display = 'none';
+document.getElementById('reply-preview-text').textContent = '';
 }
 
 async function toggleReaction(docId, emoji) {
-  if (!chatInitialized) return;
-  try {
-    const db = firebase.firestore();
-    const ref = db.collection('site_messages').doc(docId);
-    const docSnap = await ref.get();
-    if (!docSnap.exists) return;
-    const reactions = docSnap.data().reactions || {};
-    const users = reactions[emoji] || [];
-    if (users.includes(currentChatUser)) {
-      await ref.update({ [`reactions.${emoji}`]: firebase.firestore.FieldValue.arrayRemove(currentChatUser) });
-    } else {
-      await ref.update({ [`reactions.${emoji}`]: firebase.firestore.FieldValue.arrayUnion(currentChatUser) });
-      incrementUserStat('reactionsUsed');
-    }
-  } catch (err) {
-    console.error('Error toggling reaction:', err);
-  }
+if (!chatInitialized) return;
+try {
+const db = firebase.firestore();
+const ref = db.collection('site_messages').doc(docId);
+const docSnap = await ref.get();
+if (!docSnap.exists) return;
+const reactions = docSnap.data().reactions || {};
+const users = reactions[emoji] || [];
+if (users.includes(currentChatUser)) {
+await ref.update({ [`reactions.${emoji}`]: firebase.firestore.FieldValue.arrayRemove(currentChatUser) });
+} else {
+await ref.update({ [`reactions.${emoji}`]: firebase.firestore.FieldValue.arrayUnion(currentChatUser) });
+incrementUserStat('reactionsUsed');
+}
+} catch (err) {
+console.error('Error toggling reaction:', err);
+}
 }
 
 function normalizeReactionImageUrl(url) {
-  return (url || '').trim();
+return (url || '').trim();
 }
 
 function isValidReactionImageUrl(url) {
-  const lower = url.toLowerCase();
-  return lower.startsWith('https://') || lower.startsWith('http://') || lower.startsWith('data:image/');
+const lower = url.toLowerCase();
+return lower.startsWith('https://') || lower.startsWith('http://') || lower.startsWith('data:image/');
 }
 
 function isDirectImageUrl(url) {
-  if (!url || url.startsWith('data:image/')) return true;
-  const clean = url.split('?')[0].toLowerCase();
-  return clean.endsWith('.gif') || clean.endsWith('.webp') || clean.endsWith('.png') || clean.endsWith('.jpg') || clean.endsWith('.jpeg') || clean.endsWith('.avif');
+if (!url || url.startsWith('data:image/')) return true;
+const clean = url.split('?')[0].toLowerCase();
+return clean.endsWith('.gif') || clean.endsWith('.webp') || clean.endsWith('.png') || clean.endsWith('.jpg') || clean.endsWith('.jpeg') || clean.endsWith('.avif');
 }
 
 function extractGiphyIdFromUrl(url) {
-  try {
-    const parsed = new URL(url);
-    const host = parsed.hostname.toLowerCase();
-    if (!host.includes('giphy.com')) return '';
-    const parts = parsed.pathname.split('-').filter(Boolean);
-    if (!parts.length) return '';
-    const id = parts[parts.length - 1].replace(/\//g, '').trim();
-    return /^[a-zA-Z0-9]+$/.test(id) ? id : '';
-  } catch (e) {
-    return '';
-  }
+try {
+const parsed = new URL(url);
+const host = parsed.hostname.toLowerCase();
+if (!host.includes('giphy.com')) return '';
+const parts = parsed.pathname.split('-').filter(Boolean);
+if (!parts.length) return '';
+const id = parts[parts.length - 1].replace(/\//g, '').trim();
+return /^[a-zA-Z0-9]+$/.test(id) ? id : '';
+} catch (e) {
+return '';
+}
 }
 
 async function resolveReactionImageUrl(url) {
-  const normalized = normalizeReactionImageUrl(url);
-  if (!normalized || !isValidReactionImageUrl(normalized)) return '';
-  if (normalized.startsWith('data:image/')) return normalized;
+const normalized = normalizeReactionImageUrl(url);
+if (!normalized || !isValidReactionImageUrl(normalized)) return '';
+if (normalized.startsWith('data:image/')) return normalized;
 
-  let parsed;
-  try {
-    parsed = new URL(normalized);
-  } catch (e) {
-    return '';
-  }
+let parsed;
+try {
+parsed = new URL(normalized);
+} catch (e) {
+return '';
+}
 
-  const host = parsed.hostname.toLowerCase();
-  if (isDirectImageUrl(normalized)) return normalized;
+const host = parsed.hostname.toLowerCase();
+if (isDirectImageUrl(normalized)) return normalized;
 
-  const giphyId = extractGiphyIdFromUrl(normalized);
-  if (giphyId) {
-    return `https://media.giphy.com/media/${giphyId}/giphy.gif`;
-  }
+const giphyId = extractGiphyIdFromUrl(normalized);
+if (giphyId) {
+return `https://media.giphy.com/media/${giphyId}/giphy.gif`;
+}
 
-  try {
-    if (host.includes('tenor.com') && !host.includes('media.tenor.com')) {
-      const res = await fetch(`https://tenor.com/oembed?url=${encodeURIComponent(normalized)}`);
-      const data = await res.json();
-      const candidates = [data.url, data.thumbnail_url]
-        .map(v => normalizeReactionImageUrl(v || ''))
-        .filter(Boolean);
-      const direct = candidates.find(v => isValidReactionImageUrl(v) && isDirectImageUrl(v));
-      if (direct) return direct;
-    }
+try {
+if (host.includes('tenor.com') && !host.includes('media.tenor.com')) {
+const res = await fetch(`https://tenor.com/oembed?url=${encodeURIComponent(normalized)}`);
+const data = await res.json();
+const candidates = [data.url, data.thumbnail_url]
+.map(v => normalizeReactionImageUrl(v || ''))
+.filter(Boolean);
+const direct = candidates.find(v => isValidReactionImageUrl(v) && isDirectImageUrl(v));
+if (direct) return direct;
+}
 
-    if (host.includes('giphy.com') && !host.includes('media.giphy.com')) {
-      const res = await fetch(`https://giphy.com/services/oembed?url=${encodeURIComponent(normalized)}`);
-      const data = await res.json();
-      const candidates = [data.url, data.thumbnail_url]
-        .map(v => normalizeReactionImageUrl(v || ''))
-        .filter(Boolean);
-      const direct = candidates.find(v => isValidReactionImageUrl(v) && isDirectImageUrl(v));
-      if (direct) return direct;
-    }
-  } catch (e) {}
+if (host.includes('giphy.com') && !host.includes('media.giphy.com')) {
+const res = await fetch(`https://giphy.com/services/oembed?url=${encodeURIComponent(normalized)}`);
+const data = await res.json();
+const candidates = [data.url, data.thumbnail_url]
+.map(v => normalizeReactionImageUrl(v || ''))
+.filter(Boolean);
+const direct = candidates.find(v => isValidReactionImageUrl(v) && isDirectImageUrl(v));
+if (direct) return direct;
+}
+} catch (e) {}
 
-  return '';
+return '';
 }
 
 async function promptImageReaction(docId) {
-  if (!chatInitialized) return;
-  const inputUrl = normalizeReactionImageUrl(prompt('Paste image or GIF URL (Tenor, Giphy, direct links):'));
-  if (!inputUrl) return;
-  if (!isValidReactionImageUrl(inputUrl)) {
-    alert('Use a valid image URL (http/https or data:image).');
-    return;
-  }
-  const imageUrl = await resolveReactionImageUrl(inputUrl);
-  if (!imageUrl) {
-    alert('Could not resolve that link to a direct image/GIF. Try a direct .gif/.webp image URL, or a standard Giphy/Tenor share link.');
-    return;
-  }
-  toggleImageReaction(docId, encodeURIComponent(imageUrl));
+if (!chatInitialized) return;
+const inputUrl = normalizeReactionImageUrl(prompt('Paste image or GIF URL (Tenor, Giphy, direct links):'));
+if (!inputUrl) return;
+if (!isValidReactionImageUrl(inputUrl)) {
+alert('Use a valid image URL (http/https or data:image).');
+return;
+}
+const imageUrl = await resolveReactionImageUrl(inputUrl);
+if (!imageUrl) {
+alert('Could not resolve that link to a direct image/GIF. Try a direct .gif/.webp image URL, or a standard Giphy/Tenor share link.');
+return;
+}
+toggleImageReaction(docId, encodeURIComponent(imageUrl));
 }
 
 async function toggleImageReaction(docId, encodedImageUrl) {
-  if (!chatInitialized) return;
-  try {
-    const imageUrl = normalizeReactionImageUrl(decodeURIComponent(encodedImageUrl || ''));
-    if (!imageUrl || !isValidReactionImageUrl(imageUrl)) return;
-    const db = firebase.firestore();
-    const ref = db.collection('site_messages').doc(docId);
-    const docSnap = await ref.get();
-    if (!docSnap.exists) return;
+if (!chatInitialized) return;
+try {
+const imageUrl = normalizeReactionImageUrl(decodeURIComponent(encodedImageUrl || ''));
+if (!imageUrl || !isValidReactionImageUrl(imageUrl)) return;
+const db = firebase.firestore();
+const ref = db.collection('site_messages').doc(docId);
+const docSnap = await ref.get();
+if (!docSnap.exists) return;
 
-    const data = docSnap.data() || {};
-    const reactionImages = Array.isArray(data.reactionImages) ? [...data.reactionImages] : [];
-    const idx = reactionImages.findIndex(r => r && typeof r.url === 'string' && r.url === imageUrl);
+const data = docSnap.data() || {};
+const reactionImages = Array.isArray(data.reactionImages) ? [...data.reactionImages] : [];
+const idx = reactionImages.findIndex(r => r && typeof r.url === 'string' && r.url === imageUrl);
 
-    if (idx === -1) {
-      reactionImages.push({ url: imageUrl, users: [currentChatUser] });
-      incrementUserStat('reactionsUsed');
-    } else {
-      const existing = reactionImages[idx] || {};
-      const users = Array.isArray(existing.users) ? [...existing.users] : [];
-      const userIndex = users.indexOf(currentChatUser);
-      if (userIndex >= 0) {
-        users.splice(userIndex, 1);
-      } else {
-        users.push(currentChatUser);
-        incrementUserStat('reactionsUsed');
-      }
-      if (users.length === 0) {
-        reactionImages.splice(idx, 1);
-      } else {
-        reactionImages[idx] = { url: imageUrl, users };
-      }
-    }
+if (idx === -1) {
+reactionImages.push({ url: imageUrl, users: [currentChatUser] });
+incrementUserStat('reactionsUsed');
+} else {
+const existing = reactionImages[idx] || {};
+const users = Array.isArray(existing.users) ? [...existing.users] : [];
+const userIndex = users.indexOf(currentChatUser);
+if (userIndex >= 0) {
+users.splice(userIndex, 1);
+} else {
+users.push(currentChatUser);
+incrementUserStat('reactionsUsed');
+}
+if (users.length === 0) {
+reactionImages.splice(idx, 1);
+} else {
+reactionImages[idx] = { url: imageUrl, users };
+}
+}
 
-    await ref.update({ reactionImages });
-  } catch (err) {
-    console.error('Error toggling image reaction:', err);
-  }
+await ref.update({ reactionImages });
+} catch (err) {
+console.error('Error toggling image reaction:', err);
+}
 }
 
 async function registerOnlinePresence() {
-  if (!chatInitialized || !currentChatUser) return;
-  try {
-    const db = firebase.firestore();
-    const ref = db.collection('user_presence').doc(currentChatUser);
-    await ref.set({ online: true, lastSeen: firebase.firestore.FieldValue.serverTimestamp() });
-    setInterval(async () => {
-      await ref.set({ online: true, lastSeen: firebase.firestore.FieldValue.serverTimestamp() });
-    }, 15000);
-    window.addEventListener('beforeunload', () => {
-      ref.set({ online: false, lastSeen: firebase.firestore.FieldValue.serverTimestamp() });
-    });
-  } catch (err) {
-    console.error('Error registering presence:', err);
-  }
+if (!chatInitialized || !currentChatUser) return;
+try {
+const db = firebase.firestore();
+const ref = db.collection('user_presence').doc(currentChatUser);
+await ref.set({ online: true, lastSeen: firebase.firestore.FieldValue.serverTimestamp() });
+setInterval(async () => {
+await ref.set({ online: true, lastSeen: firebase.firestore.FieldValue.serverTimestamp() });
+}, 15000);
+window.addEventListener('beforeunload', () => {
+ref.set({ online: false, lastSeen: firebase.firestore.FieldValue.serverTimestamp() });
+});
+} catch (err) {
+console.error('Error registering presence:', err);
+}
 }
 
 function loadOnlineUsers() {
-  if (!chatInitialized) return;
-  const db = firebase.firestore();
-  db.collection('user_presence').onSnapshot(snapshot => {
-    const now = Date.now();
-    const onlineUsers = [];
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      if (data.online && data.lastSeen) {
-        const lastSeen = data.lastSeen.toDate ? data.lastSeen.toDate().getTime() : 0;
-        if (now - lastSeen < 45000) onlineUsers.push(doc.id);
-      }
-    });
-    window._onlineUsers = onlineUsers;
-    const btn = document.getElementById('chat-online-btn');
-    if (btn) btn.textContent = `🟢 ${onlineUsers.length}`;
-    const panel = document.getElementById('online-users-panel');
-    if (panel && panel.style.display !== 'none') renderOnlineUsers(onlineUsers);
-  });
+if (!chatInitialized) return;
+const db = firebase.firestore();
+db.collection('user_presence').onSnapshot(snapshot => {
+const now = Date.now();
+const onlineUsers = [];
+snapshot.forEach(doc => {
+const data = doc.data();
+if (data.online && data.lastSeen) {
+const lastSeen = data.lastSeen.toDate ? data.lastSeen.toDate().getTime() : 0;
+if (now - lastSeen < 45000) onlineUsers.push(doc.id);
+}
+});
+window._onlineUsers = onlineUsers;
+const btn = document.getElementById('chat-online-btn');
+if (btn) btn.textContent = `🟢 ${onlineUsers.length}`;
+const panel = document.getElementById('online-users-panel');
+if (panel && panel.style.display !== 'none') renderOnlineUsers(onlineUsers);
+});
 }
 
 function toggleOnlineUsers(event) {
-  if (event) event.stopPropagation();
-  const panel = document.getElementById('online-users-panel');
-  if (panel.style.display === 'none') {
-    panel.style.display = 'block';
-    renderOnlineUsers(window._onlineUsers || []);
-  } else {
-    panel.style.display = 'none';
-  }
+if (event) event.stopPropagation();
+const panel = document.getElementById('online-users-panel');
+if (panel.style.display === 'none') {
+panel.style.display = 'block';
+renderOnlineUsers(window._onlineUsers || []);
+} else {
+panel.style.display = 'none';
+}
 }
 
 function renderOnlineUsers(users) {
-  const panel = document.getElementById('online-users-panel');
-  if (!panel) return;
-  panel.innerHTML = `<div class="online-count">${users.length} online</div>` +
-    users.map(u => `<div class="online-user-item">🟢 ${escapeHtml(u)}</div>`).join('');
+const panel = document.getElementById('online-users-panel');
+if (!panel) return;
+panel.innerHTML = `<div class="online-count">${users.length} online</div>` +
+users.map(u => `<div class="online-user-item">🟢 ${escapeHtml(u)}</div>`).join('');
 }
 
 async function adminDeleteMessage(docId) {
-  if (!canModerate(currentChatUser)) return;
-  try {
-    const db = firebase.firestore();
-    await db.collection('site_messages').doc(docId).delete();
-  } catch (err) {
-    console.error('Error deleting message:', err);
-    alert('Failed to delete message.');
-  }
+if (!canModerate(currentChatUser)) return;
+try {
+const db = firebase.firestore();
+await db.collection('site_messages').doc(docId).delete();
+} catch (err) {
+console.error('Error deleting message:', err);
+alert('Failed to delete message.');
+}
 }
 
 async function adminMuteUser() {
-  if (!canModerate(currentChatUser)) return;
-  const username = resolveAdminTargetUsername('admin-mute-username');
-  const statusDiv = document.getElementById('admin-ban-status');
-  if (!username) { statusDiv.textContent = 'Enter a username to mute.'; return; }
-  if (isProtectedUsername(username)) { statusDiv.textContent = `${username} cannot be muted.`; return; }
-  try {
-    const db = firebase.firestore();
-    await db.collection('muted_users').doc(username).set({
-      muted: true,
-      mutedBy: currentChatUser,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    await postSystemNotice(`${username} was muted.`);
-    statusDiv.textContent = `${username} has been muted.`;
-    document.getElementById('admin-mute-username').value = '';
-  } catch (err) {
-    statusDiv.textContent = 'Failed to mute user.';
-  }
+if (!canModerate(currentChatUser)) return;
+const username = resolveAdminTargetUsername('admin-mute-username');
+const statusDiv = document.getElementById('admin-ban-status');
+if (!username) { statusDiv.textContent = 'Enter a username to mute.'; return; }
+if (isProtectedUsername(username)) { statusDiv.textContent = `${username} cannot be muted.`; return; }
+try {
+const db = firebase.firestore();
+await db.collection('muted_users').doc(username).set({
+muted: true,
+mutedBy: currentChatUser,
+timestamp: firebase.firestore.FieldValue.serverTimestamp()
+});
+await postSystemNotice(`${username} was muted.`);
+statusDiv.textContent = `${username} has been muted.`;
+document.getElementById('admin-mute-username').value = '';
+} catch (err) {
+statusDiv.textContent = 'Failed to mute user.';
+}
 }
 
 async function adminUnmuteUser() {
-  if (!canModerate(currentChatUser)) return;
-  const username = resolveAdminTargetUsername('admin-mute-username');
-  const statusDiv = document.getElementById('admin-ban-status');
-  if (!username) { statusDiv.textContent = 'Enter a username to unmute.'; return; }
-  try {
-    const db = firebase.firestore();
-    await db.collection('muted_users').doc(username).delete();
-    await postSystemNotice(`${username} was unmuted.`);
-    statusDiv.textContent = `${username} has been unmuted.`;
-    document.getElementById('admin-mute-username').value = '';
-  } catch (err) {
-    statusDiv.textContent = 'Failed to unmute user.';
-  }
+if (!canModerate(currentChatUser)) return;
+const username = resolveAdminTargetUsername('admin-mute-username');
+const statusDiv = document.getElementById('admin-ban-status');
+if (!username) { statusDiv.textContent = 'Enter a username to unmute.'; return; }
+try {
+const db = firebase.firestore();
+await db.collection('muted_users').doc(username).delete();
+await postSystemNotice(`${username} was unmuted.`);
+statusDiv.textContent = `${username} has been unmuted.`;
+document.getElementById('admin-mute-username').value = '';
+} catch (err) {
+statusDiv.textContent = 'Failed to unmute user.';
+}
 }
 
 async function isUserMuted(username) {
-  if (isProtectedUsername(username)) return false;
-  try {
-    const db = firebase.firestore();
-    const doc = await db.collection('muted_users').doc(username).get();
-    return doc.exists && doc.data().muted === true;
-  } catch (err) {
-    return false;
-  }
+if (isProtectedUsername(username)) return false;
+try {
+const db = firebase.firestore();
+const doc = await db.collection('muted_users').doc(username).get();
+return doc.exists && doc.data().muted === true;
+} catch (err) {
+return false;
+}
 }
 
 async function postSystemNotice(text) {
-  if (!text || !chatInitialized) return;
-  try {
-    const db = firebase.firestore();
-    await db.collection('site_messages').add({
-      user: 'system',
-      message: text,
-      color: '#2f2f2f',
-      system: true,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-  } catch (err) {}
+if (!text || !chatInitialized) return;
+try {
+const db = firebase.firestore();
+await db.collection('site_messages').add({
+user: 'system',
+message: text,
+color: '#2f2f2f',
+system: true,
+timestamp: firebase.firestore.FieldValue.serverTimestamp()
+});
+} catch (err) {}
 }
 
 function updateUnreadBadge() {
-  const badge = document.getElementById('chat-unread-badge');
-  if (!badge) return;
-  if (chatUnreadCount > 0) {
-    badge.textContent = chatUnreadCount > 99 ? '99+' : chatUnreadCount;
-    badge.style.display = 'inline-block';
-  } else {
-    badge.style.display = 'none';
-  }
+const badge = document.getElementById('chat-unread-badge');
+if (!badge) return;
+if (chatUnreadCount > 0) {
+badge.textContent = chatUnreadCount > 99 ? '99+' : chatUnreadCount;
+badge.style.display = 'inline-block';
+} else {
+badge.style.display = 'none';
+}
 }
 
 function onChatInput() {
-  if (!chatInitialized || !currentChatUser) return;
-  if (isReadOnlyForCurrentUser()) return;
-  const db = firebase.firestore();
-  db.collection('typing_status').doc(currentChatUser).set({
-    typing: true,
-    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-  });
-  clearTimeout(typingTimeout);
-  typingTimeout = setTimeout(() => {
-    db.collection('typing_status').doc(currentChatUser).set({
-      typing: false,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-  }, 5000);
+if (!chatInitialized || !currentChatUser) return;
+if (isReadOnlyForCurrentUser()) return;
+const db = firebase.firestore();
+db.collection('typing_status').doc(currentChatUser).set({
+typing: true,
+timestamp: firebase.firestore.FieldValue.serverTimestamp()
+});
+clearTimeout(typingTimeout);
+typingTimeout = setTimeout(() => {
+db.collection('typing_status').doc(currentChatUser).set({
+typing: false,
+timestamp: firebase.firestore.FieldValue.serverTimestamp()
+});
+}, 5000);
 }
 
 function loadTypingUsers() {
-  if (!chatInitialized) return;
-  const db = firebase.firestore();
-  db.collection('typing_status').onSnapshot(snapshot => {
-    const now = Date.now();
-    const typers = [];
-    snapshot.forEach(doc => {
-      if (doc.id === currentChatUser) return;
-      const data = doc.data();
-      if (data.typing && data.timestamp) {
-        const ts = data.timestamp.toDate ? data.timestamp.toDate().getTime() : 0;
-        if (now - ts < 5000) typers.push(doc.id);
-      }
-    });
-    const indicator = document.getElementById('typing-indicator');
-    if (!indicator) return;
-    if (typers.length === 0) {
-      indicator.textContent = '';
-    } else if (typers.length === 1) {
-      indicator.textContent = `${typers[0]} is typing...`;
-    } else {
-      indicator.textContent = `${typers.slice(0, -1).join(', ')} and ${typers[typers.length - 1]} are typing...`;
-    }
-  });
+if (!chatInitialized) return;
+const db = firebase.firestore();
+db.collection('typing_status').onSnapshot(snapshot => {
+const now = Date.now();
+const typers = [];
+snapshot.forEach(doc => {
+if (doc.id === currentChatUser) return;
+const data = doc.data();
+if (data.typing && data.timestamp) {
+const ts = data.timestamp.toDate ? data.timestamp.toDate().getTime() : 0;
+if (now - ts < 5000) typers.push(doc.id);
+}
+});
+const indicator = document.getElementById('typing-indicator');
+if (!indicator) return;
+if (typers.length === 0) {
+indicator.textContent = '';
+} else if (typers.length === 1) {
+indicator.textContent = `${typers[0]} is typing...`;
+} else {
+indicator.textContent = `${typers.slice(0, -1).join(', ')} and ${typers[typers.length - 1]} are typing...`;
+}
+});
 }
 
 async function adminKickUser() {
-  if (!canModerate(currentChatUser)) return;
-  const username = resolveAdminTargetUsername('admin-kick-username');
-  const statusDiv = document.getElementById('admin-ban-status');
-  if (!username) { statusDiv.textContent = 'Enter a username to kick.'; return; }
-  if (isProtectedUsername(username)) { statusDiv.textContent = `${username} cannot be kicked.`; return; }
-  try {
-    const db = firebase.firestore();
-    await db.collection('kicked_users').doc(username).set({
-      kicked: true,
-      kickedBy: currentChatUser,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    statusDiv.textContent = `${username} has been kicked.`;
-    document.getElementById('admin-kick-username').value = '';
-    setTimeout(async () => {
-      await db.collection('kicked_users').doc(username).delete();
-    }, 10000);
-  } catch (err) {
-    statusDiv.textContent = 'Failed to kick user.';
-  }
+if (!canModerate(currentChatUser)) return;
+const username = resolveAdminTargetUsername('admin-kick-username');
+const statusDiv = document.getElementById('admin-ban-status');
+if (!username) { statusDiv.textContent = 'Enter a username to kick.'; return; }
+if (isProtectedUsername(username)) { statusDiv.textContent = `${username} cannot be kicked.`; return; }
+try {
+const db = firebase.firestore();
+await db.collection('kicked_users').doc(username).set({
+kicked: true,
+kickedBy: currentChatUser,
+timestamp: firebase.firestore.FieldValue.serverTimestamp()
+});
+statusDiv.textContent = `${username} has been kicked.`;
+document.getElementById('admin-kick-username').value = '';
+setTimeout(async () => {
+await db.collection('kicked_users').doc(username).delete();
+}, 10000);
+} catch (err) {
+statusDiv.textContent = 'Failed to kick user.';
+}
 }
 
 function listenForKick() {
-  if (!chatInitialized || !currentChatUser) return;
-  if (isProtectedUsername(currentChatUser)) return;
-  const db = firebase.firestore();
-  db.collection('kicked_users').doc(currentChatUser).onSnapshot(doc => {
-    if (doc.exists && doc.data().kicked === true) {
-      alert('You have been kicked from the chat by an admin.');
-      localStorage.removeItem('userName');
-      location.reload();
-    }
-  });
+if (!chatInitialized || !currentChatUser) return;
+if (isProtectedUsername(currentChatUser)) return;
+const db = firebase.firestore();
+db.collection('kicked_users').doc(currentChatUser).onSnapshot(doc => {
+if (doc.exists && doc.data().kicked === true) {
+alert('You have been kicked from the chat by an admin.');
+localStorage.removeItem('userName');
+location.reload();
+}
+});
 }
 
 </script>
