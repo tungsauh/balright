@@ -256,6 +256,17 @@ font-family: Arial, sans-serif;
 height: auto;
 }
 
+#chat-container.fullscreen {
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+width: 100% !important;
+height: 100% !important;
+border-radius: 0;
+z-index: 9999;
+}
+
 #chat-header {
 background: #000;
 color: #fff;
@@ -1427,6 +1438,7 @@ userList.appendChild(opt);
 <button id="chat-leaderboard-btn" onclick="openLeaderboardModal(event)">🏆</button>
 <button id="chat-profile-btn" onclick="openProfileModal(event)">Profile</button>
 <button id="chat-online-btn" onclick="toggleOnlineUsers(event)">🟢 0</button>
+<button id="chat-fullscreen-btn" onclick="toggleChatFullscreen(event)" title="Fullscreen">⛶</button>
 <button id="chat-minimize-btn" onclick="minimizeChat(event)">_</button>
 <button id="chat-close-btn" onclick="closeChat(event)">✕</button>
 </div>
@@ -3245,6 +3257,10 @@ if (event) {
 event.stopPropagation();
 }
 const container = document.getElementById('chat-container');
+if (container.classList.contains('fullscreen')) {
+toggleChatFullscreen(null);
+return;
+}
 const isMinimized = container.classList.contains('minimized');
 
 if (isMinimized) {
@@ -3265,6 +3281,32 @@ document.getElementById('typing-indicator').style.display = 'none';
 document.getElementById('online-users-panel').style.display = 'none';
 }
 }
+
+function toggleChatFullscreen(event) {
+if (event) {
+event.stopPropagation();
+}
+const container = document.getElementById('chat-container');
+const btn = document.getElementById('chat-fullscreen-btn');
+const isFullscreen = container.classList.contains('fullscreen');
+if (isFullscreen) {
+container.classList.remove('fullscreen');
+container.style.width = '';
+container.style.height = '';
+container.style.top = '';
+container.style.left = '';
+btn.title = 'Fullscreen';
+btn.textContent = '⛶';
+} else {
+container.classList.remove('minimized');
+container.classList.add('fullscreen');
+document.getElementById('chat-messages').style.display = 'flex';
+document.getElementById('chat-input-area').style.display = 'flex';
+btn.title = 'Exit Fullscreen';
+btn.textContent = '⊡';
+}
+}
+
 
 function closeChat(event) {
 if (event) {
@@ -3401,7 +3443,7 @@ try {
 
 function startChatDrag(event) {
 const target = event.target;
-if (target.closest('#chat-minimize-btn') || target.closest('#chat-close-btn') || target.closest('#chat-online-btn') || target.closest('#chat-profile-btn') || target.closest('#chat-voice-btn')) {
+if (target.closest('#chat-minimize-btn') || target.closest('#chat-close-btn') || target.closest('#chat-online-btn') || target.closest('#chat-profile-btn') || target.closest('#chat-voice-btn') || target.closest('#chat-fullscreen-btn')) {
 return;
 }
 
