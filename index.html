@@ -2339,13 +2339,13 @@ let chatUnreadCount = 0;
 let typingTimeout = null;
 let currentPinnedMessage = null;
 let roleCache = {};
+let mutedUsersCache = new Set();
 let currentProfileViewUser = '';
 let moderationSettings = {
 readOnlyMode: false,
 blockedWords: [],
 announcementText: '',
-announcementEndsAt: null,
-mutedUsers: []
+announcementEndsAt: null
 };
 const CHAT_IMAGE_MAX_WIDTH = 1280;
 const CHAT_IMAGE_MAX_HEIGHT = 1280;
@@ -2761,7 +2761,6 @@ db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).onSnapshot(doc => {
 const data = doc.exists ? (doc.data() || {}) : {};
 moderationSettings.readOnlyMode = !!data.readOnlyMode;
 moderationSettings.blockedWords = parseBlockedWords(data.blockedWords || []);
-moderationSettings.mutedUsers = Array.isArray(data.mutedUsers) ? data.mutedUsers.map(u => (u || '').toLowerCase().trim()).filter(Boolean) : [];
 moderationSettings.announcementText = data.announcementText ? String(data.announcementText).trim() : '';
 moderationSettings.announcementEndsAt = data.announcementEndsAt && typeof data.announcementEndsAt.toDate === 'function'
 ? data.announcementEndsAt.toDate()
@@ -2907,11 +2906,12 @@ statusDiv.textContent = `${username} warning count: ${count}/3.`;
 document.getElementById('admin-warn-username').value = '';
 document.getElementById('admin-warn-reason').value = '';
 if (count >= 3) {
-await db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).set({
-mutedUsers: firebase.firestore.FieldValue.arrayUnion(username),
-updatedBy: currentChatUser,
-updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-}, { merge: true });
+await db.collection('muted_users').doc(username).set({
+muted: true,
+mutedBy: currentChatUser,
+reason: 'Auto-mute after 3 warnings',
+timestamp: firebase.firestore.FieldValue.serverTimestamp()
+});
 await postSystemNotice(`${username} was auto-muted after 3 warnings.`);
 }
 } catch (err) {
@@ -3197,6 +3197,7 @@ loadOnlineUsers();
 loadTypingUsers();
 loadRoleCache();
 loadModerationSettings();
+listenForMutedUsers();
 listenForKick();
 listenForTimedBan();
 listenForPinnedMessage();
@@ -4144,11 +4145,11 @@ if (!username) { statusDiv.textContent = 'Enter a username to mute.'; return; }
 if (isProtectedUsername(username)) { statusDiv.textContent = `${username} cannot be muted.`; return; }
 try {
 const db = firebase.firestore();
-await db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).set({
-mutedUsers: firebase.firestore.FieldValue.arrayUnion(username),
-updatedBy: currentChatUser,
-updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-}, { merge: true });
+await db.collection('muted_users').doc(username).set({
+muted: true,
+mutedBy: currentChatUser,
+timestamp: firebase.firestore.FieldValue.serverTimestamp()
+});
 await postSystemNotice(`${username} was muted.`);
 statusDiv.textContent = `${username} has been muted.`;
 document.getElementById('admin-mute-username').value = '';
@@ -4164,11 +4165,7 @@ const statusDiv = document.getElementById('admin-ban-status');
 if (!username) { statusDiv.textContent = 'Enter a username to unmute.'; return; }
 try {
 const db = firebase.firestore();
-await db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).set({
-mutedUsers: firebase.firestore.FieldValue.arrayRemove(username),
-updatedBy: currentChatUser,
-updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-}, { merge: true });
+await db.collection('muted_users').doc(username).delete();
 await postSystemNotice(`${username} was unmuted.`);
 statusDiv.textContent = `${username} has been unmuted.`;
 document.getElementById('admin-mute-username').value = '';
@@ -4177,10 +4174,21 @@ statusDiv.textContent = 'Failed to unmute user.';
 }
 }
 
+function listenForMutedUsers() {
+if (!chatInitialized) return;
+const db = firebase.firestore();
+db.collection('muted_users').onSnapshot(snapshot => {
+mutedUsersCache = new Set();
+snapshot.forEach(doc => {
+if (doc.data().muted === true) mutedUsersCache.add(doc.id);
+});
+});
+}
+
 async function isUserMuted(username) {
 if (isProtectedUsername(username)) return false;
 const key = normalizeUsername(username);
-return key ? moderationSettings.mutedUsers.includes(key) : false;
+return key ? mutedUsersCache.has(key) : false;
 }
 
 async function postSystemNotice(text) {
