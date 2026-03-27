@@ -425,6 +425,19 @@ text-transform: uppercase;
 letter-spacing: 0.5px;
 }
 
+.b-tag {
+display: inline-block;
+background: #8b5cf6;
+color: #fff;
+font-size: 0.65rem;
+font-weight: bold;
+padding: 0.15rem 0.4rem;
+border-radius: 0.25rem;
+margin-left: 0.4rem;
+text-transform: uppercase;
+letter-spacing: 0.5px;
+}
+
 .party-action-row {
 display: flex;
 justify-content: center;
@@ -450,14 +463,14 @@ font-size: 0.9rem;
 }
 
 .chat-message.own {
-background-color: #1565c0;
+background-color: #1e2124;
 color: #fff;
 align-self: flex-end;
 max-width: 80%;
 }
 
 .chat-message.other {
-background-color: #5f6368;
+background-color: #1e2124;
 color: #fff;
 align-self: flex-start;
 max-width: 80%;
@@ -509,7 +522,6 @@ padding: 0.05rem 0.35rem;
 font-weight: bold;
 font-size: 0.85rem;
 margin-bottom: 0.25rem;
-opacity: 0.9;
 }
 
 .chat-user-link {
@@ -866,6 +878,101 @@ right: 0;
 bottom: 0;
 border-radius: 0;
 }
+}
+
+#media-modal {
+position: fixed;
+top: 0;
+left: 0;
+width: 100vw;
+height: 100vh;
+background: rgba(0,0,0,0.6);
+z-index: 3000;
+display: none;
+align-items: center;
+justify-content: center;
+}
+
+.media-modal-box {
+background: #222;
+border-radius: 0.6rem;
+padding: 1.25rem;
+width: min(420px, calc(100vw - 2rem));
+max-height: calc(100vh - 4rem);
+display: flex;
+flex-direction: column;
+box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+color: #fff;
+}
+
+.media-modal-tabs {
+display: flex;
+gap: 0.5rem;
+margin-bottom: 0.85rem;
+}
+
+.media-tab-btn {
+flex: 1;
+padding: 0.45rem 0.75rem;
+background: #333;
+color: #ccc;
+border: none;
+border-radius: 4px;
+cursor: pointer;
+font-size: 0.9rem;
+font-weight: bold;
+}
+
+.media-tab-btn.active {
+background: #5865f2;
+color: #fff;
+}
+
+.media-tab-btn:hover:not(.active) {
+background: #444;
+}
+
+.media-tab-content {
+flex: 1;
+overflow-y: auto;
+}
+
+.gif-search-input {
+width: 100%;
+padding: 0.5rem 0.65rem;
+border: 1px solid #444;
+border-radius: 4px;
+background: #1f1f1f;
+color: #fff;
+font-size: 0.9rem;
+box-sizing: border-box;
+margin-bottom: 0.65rem;
+}
+
+.gif-search-input::placeholder {
+color: #888;
+}
+
+.gif-grid {
+display: grid;
+grid-template-columns: repeat(3, 1fr);
+gap: 4px;
+max-height: 300px;
+overflow-y: auto;
+}
+
+.gif-thumb {
+width: 100%;
+aspect-ratio: 1;
+object-fit: cover;
+border-radius: 4px;
+cursor: pointer;
+display: block;
+}
+
+.gif-thumb:hover {
+opacity: 0.8;
+outline: 2px solid #5865f2;
 }
 </style>
 </head>
@@ -1346,7 +1453,7 @@ oninput="onChatInput()"
 />
 <input type="file" id="chat-image-input" accept="image/*,video/*" style="display:none;" onchange="handleChatImageSelected(event)" />
 <button id="chat-color-btn" onclick="openColorPicker()" style="padding:0.5rem 0.75rem; background-color:#333; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold; flex-shrink:0;">Color</button>
-<button id="chat-image-btn" onclick="openChatImagePicmker()">Media</button>
+<button id="chat-image-btn" onclick="openMediaModal()">Media</button>
 </div>
 
 <!-- Color Picker Modal -->
@@ -1364,6 +1471,27 @@ oninput="onChatInput()"
 </div>
 <button onclick="closeColorPicker()" style="margin-top:1rem; padding:0.5rem 1rem; background:#444; color:#fff; border:none; border-radius:4px; cursor:pointer;">Close</button>
 </div>
+</div>
+
+<!-- Media Picker Modal -->
+<div id="media-modal" onclick="if(event.target===this)closeMediaModal()">
+  <div class="media-modal-box">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+      <h3 style="margin:0;">Media</h3>
+      <button onclick="closeMediaModal()" style="background:#444; color:#fff; border:none; border-radius:4px; padding:0.3rem 0.6rem; cursor:pointer; font-size:1rem;">✕</button>
+    </div>
+    <div class="media-modal-tabs">
+      <button class="media-tab-btn active" id="tab-upload-btn" onclick="switchMediaTab('upload')">📎 Upload</button>
+      <button class="media-tab-btn" id="tab-gif-btn" onclick="switchMediaTab('gif')">GIF</button>
+    </div>
+    <div id="media-tab-upload" class="media-tab-content" style="display:flex; align-items:center; justify-content:center; padding:1.5rem 0;">
+      <button onclick="document.getElementById('chat-image-input').value='';document.getElementById('chat-image-input').click();closeMediaModal();" style="padding:0.6rem 1.25rem; background:#5865f2; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:0.95rem; font-weight:bold;">📎 Choose Image / Video</button>
+    </div>
+    <div id="media-tab-gif" class="media-tab-content" style="display:none;">
+      <input type="text" id="gif-search-input" class="gif-search-input" placeholder="Search GIFs…" oninput="onGifSearchInput()" />
+      <div id="gif-grid" class="gif-grid"></div>
+    </div>
+  </div>
 </div>
 </div>
 
@@ -1444,6 +1572,7 @@ const ADMIN_USERS = ['kaiden', ''];
 const OWNER_USERS = ['kaiden'];
 const PROTECTED_USERNAMES = ['kaiden'];
 const USER_STATS_STORAGE_KEY = 'site_user_stats_v1';
+const USER_STATS_COLLECTION = 'user_stats';
 const UPDATE_NOTES_DOC_ID = 'update_notes';
 const MOD_SETTINGS_DOC_ID = 'mod_settings';
 const USER_ROLES_COLLECTION = 'user_roles';
@@ -2170,6 +2299,8 @@ const CHAT_IMAGE_MAX_HEIGHT = 1280;
 const CHAT_IMAGE_QUALITY = 0.82;
 const CHAT_IMAGE_SIZE_LIMIT = 700000;
 const CHAT_VIDEO_SIZE_LIMIT = 700000;
+const GIPHY_API_KEY = 'YOUR_GIPHY_API_KEY'; // Replace with your Giphy API key from https://developers.giphy.com
+// Note: API keys in client-side code are visible to users. Restrict your Giphy key by domain in the Giphy developer console.
 
 function getStatsStore() {
 try {
@@ -2181,6 +2312,13 @@ return {};
 
 function saveStatsStore(store) {
 localStorage.setItem(USER_STATS_STORAGE_KEY, JSON.stringify(store));
+}
+
+function pushUserStatsToFirestore(userKey, stats) {
+try {
+const db = firebase.firestore();
+db.collection(USER_STATS_COLLECTION).doc(userKey).set(stats, { merge: true }).catch(() => {});
+} catch (e) {}
 }
 
 function getStatsUserKey() {
@@ -2210,6 +2348,7 @@ const current = store[key] || getCurrentUserStats();
 current[stat] = (current[stat] || 0) + amount;
 store[key] = current;
 saveStatsStore(store);
+pushUserStatsToFirestore(key, current);
 renderProfileModal();
 }
 
@@ -2790,7 +2929,9 @@ const entriesDiv = document.getElementById('leaderboard-entries');
 if (!entriesDiv) return;
 try {
 const db = firebase.firestore();
-const allStats = getStatsStore();
+const snapshot = await db.collection(USER_STATS_COLLECTION).get();
+const allStats = {};
+snapshot.forEach(doc => { allStats[doc.id] = doc.data(); });
 const leaderboardData = Object.entries(allStats).map(([username, stats]) => {
 const { level, points } = calculateUserLevel(stats, username);
 return { username, level, points };
@@ -2803,10 +2944,11 @@ entriesDiv.innerHTML = leaderboardData.map((entry, idx) => {
 const rank = idx + 1;
 const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
 const ownerTag = entry.username === 'kaiden' ? '<span class="owner-tag">OWNER</span>' : '';
+const bTag = entry.username === 'lukas' ? '<span class="b-tag">BITCH</span>' : '';
 const levelDisplay = entry.level;
 return `<div class="leaderboard-entry">
        <div class="leaderboard-rank">${medal}</div>
-       <div class="leaderboard-username">${escapeHtml(entry.username)}${ownerTag}</div>
+       <div class="leaderboard-username">${escapeHtml(entry.username)}${ownerTag}${bTag}</div>
        <div class="leaderboard-level">LVL ${levelDisplay}</div>
        <div class="leaderboard-points">${entry.points.toLocaleString()} pts</div>
      </div>`;
@@ -3031,6 +3173,7 @@ changed = true;
 if (changed) {
 store[userKey] = current;
 saveStatsStore(store);
+pushUserStatsToFirestore(userKey, current);
 }
 } catch (err) {
 console.error('Failed to backfill legacy message stats:', err);
@@ -3101,6 +3244,124 @@ function openChatImagePicker() {
 const imageInput = document.getElementById('chat-image-input');
 imageInput.value = '';
 imageInput.click();
+}
+
+function openMediaModal() {
+const modal = document.getElementById('media-modal');
+modal.style.display = 'flex';
+switchMediaTab('upload');
+}
+
+function closeMediaModal() {
+document.getElementById('media-modal').style.display = 'none';
+}
+
+function switchMediaTab(tab) {
+document.getElementById('media-tab-upload').style.display = tab === 'upload' ? 'flex' : 'none';
+document.getElementById('media-tab-gif').style.display = tab === 'gif' ? '' : 'none';
+document.getElementById('tab-upload-btn').classList.toggle('active', tab === 'upload');
+document.getElementById('tab-gif-btn').classList.toggle('active', tab === 'gif');
+if (tab === 'gif') {
+  const input = document.getElementById('gif-search-input');
+  if (!input.value) searchGiphyGifs('trending');
+  setTimeout(() => input.focus(), 50);
+}
+}
+
+let gifSearchTimer = null;
+function onGifSearchInput() {
+clearTimeout(gifSearchTimer);
+const query = document.getElementById('gif-search-input').value.trim();
+gifSearchTimer = setTimeout(() => searchGiphyGifs(query || 'trending'), 400);
+}
+
+let _gifResults = [];
+async function searchGiphyGifs(query) {
+const grid = document.getElementById('gif-grid');
+grid.innerHTML = '<div style="color:#999;padding:1rem;text-align:center;grid-column:1/-1;">Loading…</div>';
+try {
+  const isTrending = !query || query === 'trending';
+  const endpoint = isTrending
+    ? `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=24&rating=g`
+    : `https://api.giphy.com/v1/gifs/search?q=${encodeURIComponent(query)}&api_key=${GIPHY_API_KEY}&limit=24&rating=g`;
+  const res = await fetch(endpoint);
+  if (!res.ok) throw new Error('Giphy API error: ' + res.status + ' - ' + res.statusText);
+  const json = await res.json();
+  _gifResults = json.data || [];
+  renderGifGrid(_gifResults);
+} catch (err) {
+  console.error('GIF search error:', err);
+  grid.innerHTML = '<div style="color:#f66;padding:1rem;text-align:center;grid-column:1/-1;">Failed to load GIFs.</div>';
+}
+}
+
+function renderGifGrid(gifs) {
+const grid = document.getElementById('gif-grid');
+if (!gifs.length) {
+  grid.innerHTML = '<div style="color:#999;padding:1rem;text-align:center;grid-column:1/-1;">No GIFs found.</div>';
+  return;
+}
+grid.innerHTML = gifs.map((gif, i) => {
+  const images = gif.images || {};
+  const thumbUrl = (images.fixed_height_small && images.fixed_height_small.url) ||
+                   (images.fixed_height && images.fixed_height.url) || '';
+  if (!thumbUrl) return '';
+  const safeThumb = escapeHtml(thumbUrl);
+  return `<img class="gif-thumb" src="${safeThumb}" alt="GIF" loading="lazy" onclick="sendGifFromIndex(${i})" />`;
+}).join('');
+}
+
+function sendGifFromIndex(i) {
+const gif = _gifResults[i];
+if (!gif) return;
+const images = gif.images || {};
+const gifUrl = (images.original && images.original.url) ||
+               (images.fixed_height && images.fixed_height.url) || '';
+if (!gifUrl) return;
+sendGifMessage(gifUrl);
+}
+
+function isTrustedGifUrl(url) {
+try {
+  const parsed = new URL(url);
+  if (parsed.protocol !== 'https:') return false;
+  // Allow media.giphy.com and Giphy's numbered CDN subdomains (e.g. media0.giphy.com, media1.giphy.com)
+  return parsed.hostname === 'media.giphy.com' ||
+    /^media\d+\.giphy\.com$/.test(parsed.hostname);
+} catch (_) {
+  return false;
+}
+}
+
+async function sendGifMessage(gifUrl) {
+if (!chatInitialized) { alert('Chat not initialized. Please refresh the page.'); return; }
+if (isReadOnlyForCurrentUser()) { alert('Chat is currently read-only.'); return; }
+const timedBan = await getActiveTimedBan(currentChatUser);
+if (timedBan) { alert(`You are temporarily banned until ${timedBan.expiresAt.toLocaleString()}.`); return; }
+if (await isUserMuted(currentChatUser)) { alert('You are currently muted and cannot send messages.'); return; }
+if (!isTrustedGifUrl(gifUrl)) { console.warn('Rejected untrusted GIF URL:', gifUrl); return; }
+closeMediaModal();
+try {
+  const db = firebase.firestore();
+  const msgData = {
+    user: currentChatUser,
+    message: '',
+    type: 'gif',
+    gifUrl: gifUrl,
+    color: currentChatColor,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  if (currentReplyTo) {
+    msgData.replyTo = { user: currentReplyTo.user, text: currentReplyTo.text };
+  }
+  await db.collection('site_messages').add(msgData);
+  incrementUserStat('messagesSent');
+  incrementUserStat('mediaShared');
+  clearReply();
+} catch (err) {
+  console.error('Error sending GIF:', err);
+  alert(err.message || 'Failed to send GIF.');
+}
 }
 
 function startChatDrag(event) {
@@ -3199,6 +3460,7 @@ const isOwn = data.user === currentChatUser;
 const isSystem = data.system === true;
 const hasImage = typeof data.imageData === 'string' && data.imageData !== '';
 const hasVideo = typeof data.videoData === 'string' && data.videoData !== '';
+const hasGif = data.type === 'gif' && data.gifUrl && isTrustedGifUrl(data.gifUrl);
 const safeCaption = data.message ? escapeHtml(data.message) : '';
 const messageColor = data.color || (isSystem ? '#2f2f2f' : (isOwn ? '#1565c0' : '#5f6368'));
 const timeStr = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleString([], {month:'short', day:'numeric', hour: '2-digit', minute:'2-digit'}) : '';
@@ -3235,14 +3497,16 @@ const deleteBtn = isAdmin ? `<button class="chat-action-btn" style="color:#ff8a8
 const pinBtn = isAdmin && !isSystem ? `<button class="chat-action-btn" style="color:#ffca28;" onclick="pinMessage('${docId}')">📌 Pin</button>` : '';
 
 messageDiv.className = `chat-message ${isSystem ? 'system' : (isOwn ? 'own' : 'other')}`;
-messageDiv.style.backgroundColor = messageColor;
 const ownerTag = !isSystem && data.user === 'kaiden' ? '<span class="owner-tag">OWNER</span>' : '';
+const bTag = !isSystem && data.user === 'lukas' ? '<span class="b-tag">BITCH</span>' : '';
 const profileTarget = encodeURIComponent(normalizeUsername(data.user || 'unknown'));
+const nameColor = isSystem ? '' : (/^#[0-9a-fA-F]{3,8}$/.test(messageColor) ? messageColor : (isOwn ? '#1565c0' : '#5f6368'));
 messageDiv.innerHTML = `
          ${replyHtml}
-         ${isSystem ? '' : `<div class="chat-message-user chat-user-link" onclick="openUserProfileFromChat('${profileTarget}', event)">${escapeHtml(data.user || 'unknown')}${ownerTag}</div>`}
+         ${isSystem ? '' : `<div class="chat-message-user chat-user-link" style="color:${nameColor}" onclick="openUserProfileFromChat('${profileTarget}', event)">${escapeHtml(data.user || 'unknown')}${ownerTag}${bTag}</div>`}
          ${hasImage ? `<img class="chat-message-image" src="${data.imageData}" alt="Chat image" />` : ''}
          ${hasVideo ? `<video class="chat-message-video" src="${data.videoData}" controls preload="metadata"></video>` : ''}
+         ${hasGif ? `<img class="chat-message-image" src="${escapeHtml(data.gifUrl)}" alt="GIF" />` : ''}
          ${safeCaption ? `<div class="chat-message-caption">${safeCaption}</div>` : ''}
          ${!isSystem && timeStr ? `<div class="chat-message-time">${timeStr}</div>` : ''}
          ${(reactionsHtml || imageReactionsHtml) ? `<div class="chat-reactions">${reactionsHtml}${imageReactionsHtml}</div>` : ''}
@@ -3611,16 +3875,6 @@ return `https://media.giphy.com/media/${giphyId}/giphy.gif`;
 }
 
 try {
-if (host.includes('tenor.com') && !host.includes('media.tenor.com')) {
-const res = await fetch(`https://tenor.com/oembed?url=${encodeURIComponent(normalized)}`);
-const data = await res.json();
-const candidates = [data.url, data.thumbnail_url]
-.map(v => normalizeReactionImageUrl(v || ''))
-.filter(Boolean);
-const direct = candidates.find(v => isValidReactionImageUrl(v) && isDirectImageUrl(v));
-if (direct) return direct;
-}
-
 if (host.includes('giphy.com') && !host.includes('media.giphy.com')) {
 const res = await fetch(`https://giphy.com/services/oembed?url=${encodeURIComponent(normalized)}`);
 const data = await res.json();
@@ -3637,7 +3891,7 @@ return '';
 
 async function promptImageReaction(docId) {
 if (!chatInitialized) return;
-const inputUrl = normalizeReactionImageUrl(prompt('Paste image or GIF URL (Tenor, Giphy, direct links):'));
+const inputUrl = normalizeReactionImageUrl(prompt('Paste image or GIF URL (Giphy, direct links):'));
 if (!inputUrl) return;
 if (!isValidReactionImageUrl(inputUrl)) {
 alert('Use a valid image URL (http/https or data:image).');
@@ -3645,7 +3899,7 @@ return;
 }
 const imageUrl = await resolveReactionImageUrl(inputUrl);
 if (!imageUrl) {
-alert('Could not resolve that link to a direct image/GIF. Try a direct .gif/.webp image URL, or a standard Giphy/Tenor share link.');
+alert('Could not resolve that link to a direct image/GIF. Try a direct .gif/.webp image URL, or a standard Giphy share link.');
 return;
 }
 toggleImageReaction(docId, encodeURIComponent(imageUrl));
