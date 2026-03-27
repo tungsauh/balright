@@ -3159,6 +3159,23 @@ if (!userKey) return;
 
 try {
 const db = firebase.firestore();
+
+// Restore stats from Firestore first so a localStorage wipe doesn't lose data.
+// Merge by taking the max of each field so neither source loses progress.
+try {
+const fsDoc = await db.collection(USER_STATS_COLLECTION).doc(userKey).get();
+if (fsDoc.exists) {
+const fsData = fsDoc.data() || {};
+const store = getStatsStore();
+const local = store[userKey] || {};
+const STAT_FIELDS = ['gamesOpened', 'messagesSent', 'mediaShared', 'reactionsUsed'];
+const merged = {};
+STAT_FIELDS.forEach(f => { merged[f] = Math.max(local[f] || 0, fsData[f] || 0); });
+store[userKey] = merged;
+saveStatsStore(store);
+}
+} catch (e) {}
+
 const snapshot = await db.collection('site_messages').get();
 
 let messageCount = 0;
