@@ -1045,7 +1045,7 @@ userList.appendChild(opt);
 <input type="text" id="admin-role-username" placeholder="Username for role" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
 <select id="admin-role-select" style="padding:0.5rem; border:none; border-radius:0.25rem;">
 <option value="cameronsbitch">Camerons's Bitch</option>
-<option value="chud">Chud(Do Not Give Admin)</option>
+<option value="chud(Dontgiveadmin)">Chud(Do Not Give Admin)</option>
 <option value="member">Member</option>
 <option value="helper">Helper</option>
 <option value="moderator">Moderator</option>
@@ -2646,7 +2646,7 @@ return;
 const username = resolveAdminTargetUsername('admin-role-username');
 const role = normalizeUsername(document.getElementById('admin-role-select').value || 'member');
 const statusDiv = document.getElementById('admin-ban-status');
-const allowed = ['cameronsbitch','chud','member', 'helper', 'moderator', 'admin'];
+const allowed = ['cameronsbitch','chud(Dontgiveadmin)','member', 'helper', 'moderator', 'admin'];
 if (!username) {
 statusDiv.textContent = 'Enter a username for role assignment.';
 return;
