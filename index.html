@@ -2108,12 +2108,12 @@ const games = [
 {name: '2v2.io', url: 'https://2v2.io'},
 {name: 'FNAF Launcher', url: 'https://irv77.github.io/FnafLauncher'},
 {name: 'Yoked', url: 'https://files.twoplayergames.org/files/games/o6/get-yoked/index.html'},
-{name: '', url: ''},
-{name: '', url: ''},
-{name: '', url: ''},
-{name: '', url: ''},
-{name: '', url: ''},
-{name: '', url: ''},
+{name: 'proxy', url: 'https://mathcalulator.b-cdn.net/games/game/?id=brotato'},
+{name: 'gamer', url: 'https://hope.takh.ee/g.html'},
+{name: 'gamers', url: 'https://forest.cautinvestitor.ro.cdn.cloudflare.net/'},
+{name: 'proxy', url: 'https://s3.amazonaws.com/lucidestatic/index.html#/'},
+{name: 'Beanwew', url: 'https://418x3tk5.beanweb.qzz.io.cdn.cloudflare.net/'},
+{name: 'Fernis', url: 'https://storage.googleapis.com/fernisbest/index.html'},
 {name: '', url: ''},
 {name: '', url: ''},
 {name: '', url: ''},
@@ -2339,6 +2339,7 @@ let chatUnreadCount = 0;
 let typingTimeout = null;
 let currentPinnedMessage = null;
 let roleCache = {};
+let mutedUsersCache = new Set();
 let currentProfileViewUser = '';
 let moderationSettings = {
 readOnlyMode: false,
@@ -3016,7 +3017,7 @@ const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : 
 const ownerTag = entry.username === 'kaiden' ? '<span class="owner-tag">OWNER</span>' : '';
 const bTag = entry.username === 'luca' ? '<span class="b-tag">BITCH</span>' : '';
 const coolGuyTag = entry.username === 'jeremy_wade' ? '<span class="cool-guy-tag">COOL GUY</span>' : '';
-const dnaTag = entry.username === 'jeremiah' ? '<span class="dna-tag">DONT GIVE ADMIN</span>' : '';
+const dnaTag = entry.username === 'jeremiahh' ? '<span class="dna-tag">DONT GIVE ADMIN</span>' : '';
 const femBoyTag = entry.username === 'goon_sauce' ? '<span class="femboy-tag">FEMBOY</span>' : '';
 const levelDisplay = entry.level;
 return `<div class="leaderboard-entry">
@@ -3196,6 +3197,7 @@ loadOnlineUsers();
 loadTypingUsers();
 loadRoleCache();
 loadModerationSettings();
+listenForMutedUsers();
 listenForKick();
 listenForTimedBan();
 listenForPinnedMessage();
@@ -4092,7 +4094,7 @@ db.collection('user_presence').onSnapshot(snapshot => {
 const now = Date.now();
 const onlineUsers = [];
 snapshot.forEach(doc => {
-const data = doc.data();
+const data = doc.data({ serverTimestamps: 'estimate' });
 if (data.online && data.lastSeen) {
 const lastSeen = data.lastSeen.toDate ? data.lastSeen.toDate().getTime() : 0;
 if (now - lastSeen < 45000) onlineUsers.push(doc.id);
@@ -4172,15 +4174,21 @@ statusDiv.textContent = 'Failed to unmute user.';
 }
 }
 
+function listenForMutedUsers() {
+if (!chatInitialized) return;
+const db = firebase.firestore();
+db.collection('muted_users').onSnapshot(snapshot => {
+mutedUsersCache = new Set();
+snapshot.forEach(doc => {
+if (doc.data().muted === true) mutedUsersCache.add(doc.id);
+});
+});
+}
+
 async function isUserMuted(username) {
 if (isProtectedUsername(username)) return false;
-try {
-const db = firebase.firestore();
-const doc = await db.collection('muted_users').doc(username).get();
-return doc.exists && doc.data().muted === true;
-} catch (err) {
-return false;
-}
+const key = normalizeUsername(username);
+return key ? mutedUsersCache.has(key) : false;
 }
 
 async function postSystemNotice(text) {
@@ -4278,11 +4286,12 @@ function listenForKick() {
 if (!chatInitialized || !currentChatUser) return;
 if (isProtectedUsername(currentChatUser)) return;
 const db = firebase.firestore();
-db.collection('kicked_users').doc(currentChatUser).onSnapshot(doc => {
+const kickRef = db.collection('kicked_users').doc(currentChatUser);
+kickRef.onSnapshot(doc => {
 if (doc.exists && doc.data().kicked === true) {
 alert('You have been kicked from the chat by an admin.');
 localStorage.removeItem('userName');
-location.reload();
+kickRef.delete().catch(() => {}).finally(() => { location.reload(); });
 }
 });
 }
