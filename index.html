@@ -3619,8 +3619,8 @@ const pinBtn = isAdmin && !isSystem ? `<button class="chat-action-btn" style="co
 messageDiv.className = `chat-message ${isSystem ? 'system' : (isOwn ? 'own' : 'other')}`;
 const ownerTag = !isSystem && data.user === 'kaiden' ? '<span class="owner-tag">OWNER</span>' : '';
 const bTag = !isSystem && data.user === 'luca' ? '<span class="b-tag">BITCH</span>' : '';
-const coolGuyTag = !isSystem && data.user === 'fact_check' ? '<span class="cool-guy-tag">COOL GUY</span>' : '';
-const dnaTag = !isSystem && data.user === 'jeremiah' ? '<span class="dna-tag">DONT GIVE ADMIN</span>' : '';
+const coolGuyTag = !isSystem && data.user === 'jeremy_wade' ? '<span class="cool-guy-tag">COOL GUY</span>' : '';
+const dnaTag = !isSystem && data.user === 'jeremiahh' ? '<span class="dna-tag">DONT GIVE ADMIN</span>' : '';
 const femBoyTag = !isSystem && data.user === 'goon_sauce' ? '<span class="femboy-tag">FEMBOY</span>' : '';
 const profileTarget = encodeURIComponent(normalizeUsername(data.user || 'unknown'));
 const nameColor = isSystem ? '' : (/^#[0-9a-fA-F]{3,8}$/.test(messageColor) ? messageColor : (isOwn ? '#1565c0' : '#5f6368'));
