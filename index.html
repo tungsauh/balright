@@ -8,27 +8,355 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
 body {
-background-color: #333333;
-font-family: Arial, sans-serif;
-display: flex;
-flex-direction: column;
-align-items: center;
-justify-content: center;
+background: #000;
+font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+display: block;
 min-height: 100vh;
 margin: 0;
+color: #fff;
+overflow-x: hidden;
 }
 
 h1 {
 color: #ffffff;
-font-size: 2rem;         
-margin-bottom: 1.875rem; 
+font-size: clamp(2.4rem, 4vw, 4rem);
+margin: 0;
+letter-spacing: 0.01em;
 }
 
 .button-container {
 display: grid;
-grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
-gap: 0.9375rem;          
-max-width: 37.5rem;     
+grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+gap: 1rem;
+width: min(1280px, calc(100vw - 2rem));
+margin: 1.2rem auto 0 auto;
+}
+
+#store-shell {
+width: min(1280px, calc(100vw - 2rem));
+margin: 1.4rem auto 2rem auto;
+}
+
+.store-hero {
+display: block;
+}
+
+.store-hero-panel,
+.store-feature-card {
+background: linear-gradient(180deg, rgba(20, 32, 49, 0.94), rgba(15, 24, 34, 0.98));
+border: 1px solid rgba(94, 132, 171, 0.22);
+border-radius: 1rem;
+box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+overflow: hidden;
+}
+
+.store-hero-panel {
+padding: 1.4rem;
+display: flex;
+flex-direction: column;
+justify-content: space-between;
+min-height: 280px;
+}
+
+.store-eyebrow {
+font-size: 0.78rem;
+letter-spacing: 0.16em;
+text-transform: uppercase;
+color: #7eb7ff;
+font-weight: 700;
+}
+
+.store-hero-copy {
+max-width: 42rem;
+margin-top: 0.75rem;
+color: #c4d3e3;
+font-size: 1rem;
+line-height: 1.65;
+}
+
+.store-hero-actions {
+display: flex;
+gap: 0.75rem;
+flex-wrap: wrap;
+margin-top: 1.25rem;
+}
+
+.store-hero-button-secondary {
+background: #000;
+border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.store-feature-card {
+position: relative;
+min-height: 280px;
+display: flex;
+flex-direction: column;
+justify-content: flex-end;
+}
+
+.store-feature-thumb {
+position: absolute;
+inset: 0;
+background-size: cover;
+background-position: center;
+filter: saturate(1.08);
+}
+
+.store-feature-overlay {
+position: absolute;
+inset: 0;
+background: linear-gradient(180deg, rgba(5, 10, 18, 0.12), rgba(5, 10, 18, 0.72));
+}
+
+.store-feature-content {
+position: relative;
+padding: 1.25rem;
+z-index: 1;
+}
+
+.store-feature-label {
+font-size: 0.72rem;
+letter-spacing: 0.14em;
+text-transform: uppercase;
+color: #a9d4ff;
+font-weight: 700;
+}
+
+.store-feature-title {
+margin-top: 0.5rem;
+font-size: 1.5rem;
+font-weight: 700;
+}
+
+.store-feature-description {
+margin-top: 0.4rem;
+font-size: 0.92rem;
+color: #dce7f2;
+max-width: 24rem;
+line-height: 1.45;
+}
+
+.store-section-header {
+margin-top: 1.4rem;
+display: flex;
+justify-content: space-between;
+align-items: end;
+gap: 1rem;
+flex-wrap: wrap;
+}
+
+.store-section-title {
+font-size: 1.3rem;
+font-weight: 700;
+}
+
+.store-section-subtitle,
+.store-library-meta {
+font-size: 0.86rem;
+color: #9db2c9;
+}
+
+.game-store-card {
+background: linear-gradient(180deg, rgba(18, 29, 44, 0.96), rgba(13, 21, 32, 0.98));
+border: 1px solid rgba(110, 147, 184, 0.18);
+border-radius: 0.95rem;
+overflow: hidden;
+display: flex;
+flex-direction: column;
+min-height: 100%;
+box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
+transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.game-store-card:hover {
+transform: translateY(-4px);
+box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28);
+border-color: rgba(147, 193, 240, 0.32);
+}
+
+.game-store-thumb {
+position: relative;
+aspect-ratio: 16 / 9;
+background-size: cover;
+background-position: center;
+border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.game-store-thumb::after {
+content: '';
+position: absolute;
+inset: 0;
+background: linear-gradient(180deg, rgba(6, 12, 18, 0.1), rgba(6, 12, 18, 0.58));
+}
+
+.game-store-thumb-top,
+.game-store-thumb-bottom {
+position: absolute;
+left: 0;
+right: 0;
+z-index: 1;
+display: flex;
+justify-content: space-between;
+align-items: center;
+padding: 0.75rem;
+gap: 0.5rem;
+}
+
+.game-store-thumb-top {
+top: 0;
+}
+
+.game-store-thumb-bottom {
+bottom: 0;
+align-items: flex-end;
+}
+
+.game-store-chip,
+.thumbnail-poll-chip,
+.game-thumb-win-badge {
+display: inline-flex;
+align-items: center;
+padding: 0.2rem 0.5rem;
+border-radius: 999px;
+font-size: 0.68rem;
+font-weight: 700;
+letter-spacing: 0.04em;
+text-transform: uppercase;
+}
+
+.game-store-chip {
+background: rgba(9, 19, 30, 0.74);
+color: #d8e7f8;
+border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.thumbnail-poll-chip {
+background: rgba(21, 101, 192, 0.82);
+color: #fff;
+}
+
+.thumbnail-poll-chip.is-live {
+background: rgba(239, 108, 0, 0.88);
+}
+
+.game-thumb-win-badge {
+background: rgba(67, 160, 71, 0.88);
+color: #fff;
+}
+
+.game-store-content {
+padding: 1rem;
+display: flex;
+flex-direction: column;
+gap: 0.65rem;
+flex: 1;
+}
+
+.game-store-title-row {
+display: flex;
+justify-content: space-between;
+align-items: start;
+gap: 0.6rem;
+}
+
+.game-store-title {
+font-size: 1.02rem;
+font-weight: 700;
+margin: 0;
+}
+
+.game-store-description {
+margin: 0;
+font-size: 0.85rem;
+line-height: 1.5;
+color: #bbcad9;
+}
+
+.game-store-meta-row {
+display: flex;
+justify-content: space-between;
+align-items: center;
+gap: 0.75rem;
+flex-wrap: wrap;
+font-size: 0.75rem;
+color: #86a1bb;
+}
+
+.game-store-footer {
+display: flex;
+gap: 0.55rem;
+flex-wrap: wrap;
+margin-top: auto;
+}
+
+.game-store-footer button {
+flex: 1;
+min-width: 120px;
+padding: 0.72rem 0.85rem;
+font-size: 0.82rem;
+}
+
+.game-store-footer .secondary-button {
+background: #000;
+color: #d7e6f7;
+border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.thumbnail-vote-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+gap: 0.85rem;
+margin-top: 1rem;
+}
+
+.thumbnail-vote-card {
+background: #171f28;
+border: 1px solid #304455;
+border-radius: 0.8rem;
+overflow: hidden;
+display: flex;
+flex-direction: column;
+}
+
+.thumbnail-vote-image {
+aspect-ratio: 16 / 9;
+background-size: cover;
+background-position: center;
+}
+
+.thumbnail-vote-content {
+padding: 0.8rem;
+display: flex;
+flex-direction: column;
+gap: 0.45rem;
+}
+
+.thumbnail-vote-meta {
+font-size: 0.76rem;
+color: #a8bfda;
+}
+
+.thumbnail-vote-card button {
+padding: 0.65rem 0.8rem;
+font-size: 0.8rem;
+}
+
+.store-empty-thumb {
+display: flex;
+align-items: center;
+justify-content: center;
+height: 100%;
+font-size: 1rem;
+font-weight: 700;
+color: #fff;
+}
+
+.store-page-actions {
+margin-top: 1rem;
+display: flex;
+gap: 0.75rem;
+flex-wrap: wrap;
+justify-content: flex-start;
 }
 
 button {
@@ -90,6 +418,12 @@ font-size: 0.45rem;
 background-color: #555;
 }
 
+@media (max-width: 900px) {
+.store-hero {
+grid-template-columns: 1fr;
+}
+}
+
 
 #ip-notification {
 position: fixed;
@@ -105,6 +439,552 @@ z-index: 9999;
 box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 max-width: 90%;
 animation: slideDown 0.3s ease-out;
+}
+
+#global-alert-notification {
+position: fixed;
+top: 1rem;
+left: 50%;
+transform: translateX(-50%);
+background-color: #1a1a1a;
+color: #fff;
+padding: 1rem 1.5rem;
+border-radius: 0.5rem;
+border-left: 4px solid #42a5f5;
+z-index: 10000;
+box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+max-width: 90%;
+animation: slideDown 0.3s ease-out;
+}
+
+#dm-notification {
+position: fixed;
+top: 1rem;
+right: 1rem;
+background: #0f3057;
+color: #fff;
+padding: 0.9rem 1rem;
+border-radius: 0.5rem;
+box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+z-index: 10001;
+display: none;
+border-left: 4px solid #4fc3f7;
+max-width: min(360px, calc(100vw - 2rem));
+animation: slideDown 0.25s ease-out;
+}
+
+#chat-friends-btn {
+position: relative;
+}
+
+#dm-unread-badge {
+position: absolute;
+top: -0.4rem;
+right: -0.45rem;
+min-width: 1.1rem;
+height: 1.1rem;
+padding: 0 0.22rem;
+border-radius: 999px;
+background: #d32f2f;
+color: #fff;
+font-size: 0.68rem;
+font-weight: bold;
+display: none;
+align-items: center;
+justify-content: center;
+line-height: 1;
+}
+
+#chat-timeout-status {
+display: none;
+padding: 0.45rem 0.75rem;
+background: #151515;
+border-top: 1px solid #2d2d2d;
+border-bottom: 1px solid #2d2d2d;
+color: #ffcc80;
+font-size: 0.78rem;
+}
+
+.chat-message-meta-row {
+display: flex;
+align-items: center;
+gap: 0.4rem;
+flex-wrap: wrap;
+margin-top: 0.22rem;
+}
+
+.chat-edited-marker {
+font-size: 0.62rem;
+opacity: 0.68;
+font-style: italic;
+}
+
+.chat-room-toolbar {
+display: flex;
+flex-direction: column;
+align-items: stretch;
+gap: 0.75rem;
+padding: 0.45rem 0.75rem;
+background: #171717;
+border-bottom: 1px solid #2b2b2b;
+flex-wrap: wrap;
+}
+
+.chat-room-toolbar-header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 0.75rem;
+flex-wrap: wrap;
+}
+
+.chat-room-toolbar-content {
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 0.75rem;
+flex-wrap: wrap;
+}
+
+.chat-room-toolbar.is-collapsed .chat-room-toolbar-content {
+display: none;
+}
+
+.chat-room-toggle {
+padding: 0.35rem 0.75rem;
+background: #101010;
+color: #e3edf7;
+border: 1px solid #343434;
+border-radius: 999px;
+font-size: 0.76rem;
+font-weight: 700;
+cursor: pointer;
+}
+
+.chat-room-select {
+background: #0f0f0f;
+color: #fff;
+border: 1px solid #3b3b3b;
+border-radius: 0.35rem;
+padding: 0.38rem 0.6rem;
+font-size: 0.78rem;
+}
+
+.chat-room-summary {
+font-size: 0.76rem;
+color: #9e9e9e;
+}
+
+.chat-room-badge {
+display: inline-flex;
+align-items: center;
+padding: 0.12rem 0.4rem;
+border-radius: 999px;
+background: #263238;
+color: #b3e5fc;
+font-size: 0.68rem;
+font-weight: bold;
+text-transform: uppercase;
+letter-spacing: 0.04em;
+}
+
+.chat-link-preview {
+margin-top: 0.45rem;
+padding: 0.7rem 0.8rem;
+border: 1px solid #2e4450;
+border-left: 4px solid #42a5f5;
+border-radius: 0.55rem;
+background: rgba(19, 35, 46, 0.75);
+display: flex;
+flex-direction: column;
+gap: 0.25rem;
+}
+
+.chat-link-preview-title {
+color: #fff;
+font-size: 0.84rem;
+font-weight: bold;
+word-break: break-word;
+}
+
+.chat-link-preview-meta {
+font-size: 0.72rem;
+color: #90caf9;
+text-transform: lowercase;
+}
+
+.chat-link-preview-url {
+font-size: 0.74rem;
+color: #b0bec5;
+word-break: break-all;
+}
+
+.chat-message-text a {
+color: #81d4fa;
+text-decoration: underline;
+word-break: break-all;
+}
+
+.analytics-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+gap: 0.55rem;
+margin-top: 0.7rem;
+}
+
+.analytics-card {
+padding: 0.65rem;
+border: 1px solid #2f3b40;
+border-radius: 0.45rem;
+background: #12181b;
+}
+
+.analytics-card-label {
+font-size: 0.72rem;
+color: #90a4ae;
+text-transform: uppercase;
+letter-spacing: 0.05em;
+}
+
+.analytics-card-value {
+margin-top: 0.2rem;
+font-size: 1.1rem;
+color: #fff;
+font-weight: bold;
+}
+
+.analytics-sublist {
+margin-top: 0.8rem;
+display: flex;
+flex-direction: column;
+gap: 0.35rem;
+font-size: 0.8rem;
+color: #cfd8dc;
+}
+
+#admin-menu .admin-section-card.is-hidden-by-role {
+display: none;
+}
+
+.overlay-modal {
+display: none;
+position: fixed;
+top: 0;
+left: 0;
+width: 100vw;
+height: 100vh;
+background: rgba(0, 0, 0, 0.78);
+z-index: 7100;
+align-items: center;
+justify-content: center;
+padding: 1rem;
+box-sizing: border-box;
+}
+
+.overlay-panel {
+background: #222;
+width: min(34rem, calc(100vw - 2rem));
+max-height: calc(100vh - 2rem);
+overflow: auto;
+padding: 1.25rem;
+border-radius: 0.8rem;
+color: #fff;
+box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+.overlay-header {
+display: flex;
+justify-content: space-between;
+align-items: center;
+gap: 1rem;
+margin-bottom: 0.85rem;
+}
+
+.overlay-header h2,
+.overlay-header h3 {
+margin: 0;
+}
+
+.overlay-subtle {
+color: #a0a0a0;
+font-size: 0.86rem;
+line-height: 1.45;
+}
+
+.overlay-field {
+display: flex;
+flex-direction: column;
+gap: 0.35rem;
+margin-top: 0.85rem;
+}
+
+.overlay-field label {
+color: #ddd;
+font-size: 0.82rem;
+}
+
+.overlay-field input,
+.overlay-field select,
+.overlay-field textarea {
+width: 100%;
+background: #1a1a1a;
+color: #fff;
+border: 1px solid #444;
+border-radius: 0.45rem;
+padding: 0.65rem 0.75rem;
+box-sizing: border-box;
+font: inherit;
+}
+
+.overlay-field textarea {
+resize: vertical;
+min-height: 7rem;
+}
+
+.overlay-actions {
+display: flex;
+justify-content: flex-end;
+gap: 0.6rem;
+margin-top: 1rem;
+flex-wrap: wrap;
+}
+
+.overlay-status {
+margin-top: 0.75rem;
+min-height: 1.2rem;
+font-size: 0.82rem;
+color: #ffb74d;
+}
+
+.message-preview-card {
+margin-top: 0.75rem;
+padding: 0.8rem;
+border: 1px solid #343434;
+border-radius: 0.6rem;
+background: #171717;
+}
+
+.message-preview-user {
+font-size: 0.8rem;
+color: #90caf9;
+font-weight: bold;
+margin-bottom: 0.35rem;
+}
+
+.message-preview-text {
+color: #e0e0e0;
+font-size: 0.9rem;
+line-height: 1.45;
+word-break: break-word;
+}
+
+.dm-shell {
+display: flex;
+min-height: 26rem;
+max-height: calc(100vh - 2rem);
+}
+
+.dm-sidebar {
+width: 15.5rem;
+border-right: 1px solid #333;
+display: flex;
+flex-direction: column;
+background: #1b1b1b;
+border-top-left-radius: 0.8rem;
+border-bottom-left-radius: 0.8rem;
+}
+
+.dm-sidebar-header {
+padding: 1rem;
+border-bottom: 1px solid #333;
+}
+
+.dm-sidebar-title {
+font-weight: bold;
+font-size: 0.95rem;
+}
+
+.dm-sidebar-subtitle {
+margin-top: 0.25rem;
+font-size: 0.78rem;
+color: #999;
+}
+
+.dm-conversation-list {
+display: flex;
+flex-direction: column;
+overflow-y: auto;
+}
+
+.dm-conversation-item {
+display: flex;
+align-items: center;
+gap: 0.65rem;
+padding: 0.75rem 0.9rem;
+border: none;
+border-bottom: 1px solid #2b2b2b;
+background: transparent;
+color: #fff;
+text-align: left;
+width: 100%;
+border-radius: 0;
+transition: background-color 0.2s ease;
+}
+
+.dm-conversation-item:hover,
+.dm-conversation-item.is-active {
+background: #263238;
+color: #fff;
+}
+
+.dm-conversation-avatar {
+width: 2rem;
+height: 2rem;
+border-radius: 999px;
+display: flex;
+align-items: center;
+justify-content: center;
+background: #0d47a1;
+font-size: 0.82rem;
+font-weight: bold;
+flex: 0 0 auto;
+}
+
+.dm-conversation-content {
+min-width: 0;
+flex: 1;
+display: flex;
+flex-direction: column;
+gap: 0.18rem;
+}
+
+.dm-conversation-top {
+display: flex;
+justify-content: space-between;
+align-items: center;
+gap: 0.5rem;
+}
+
+.dm-conversation-name {
+font-size: 0.88rem;
+font-weight: bold;
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+}
+
+.dm-conversation-time {
+font-size: 0.72rem;
+color: #8e8e8e;
+flex: 0 0 auto;
+}
+
+.dm-conversation-preview {
+font-size: 0.78rem;
+color: #b0b0b0;
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+}
+
+.dm-conversation-item.has-unread .dm-conversation-name,
+.dm-conversation-item.has-unread .dm-conversation-preview {
+color: #fff;
+}
+
+.dm-conversation-unread {
+min-width: 1.2rem;
+height: 1.2rem;
+padding: 0 0.3rem;
+border-radius: 999px;
+background: #d32f2f;
+color: #fff;
+font-size: 0.68rem;
+font-weight: bold;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+flex: 0 0 auto;
+}
+
+.dm-pane {
+flex: 1;
+display: flex;
+flex-direction: column;
+min-width: 0;
+}
+
+.dm-empty-state {
+padding: 1rem;
+color: #999;
+font-size: 0.85rem;
+}
+
+.modal-history-list {
+display: flex;
+flex-direction: column;
+gap: 0.7rem;
+margin-top: 0.8rem;
+}
+
+.modal-history-item {
+padding: 0.8rem;
+border: 1px solid #343434;
+border-radius: 0.6rem;
+background: #171717;
+}
+
+.modal-history-meta {
+font-size: 0.76rem;
+color: #9e9e9e;
+margin-bottom: 0.35rem;
+}
+
+.friends-inbox-section {
+margin-top: 1rem;
+padding: 0.75rem;
+background: #1b1b1b;
+border-radius: 0.5rem;
+border: 1px solid #2d2d2d;
+}
+
+.friends-inbox-header {
+display: flex;
+justify-content: space-between;
+align-items: center;
+gap: 1rem;
+margin-bottom: 0.55rem;
+}
+
+.friends-inbox-title {
+font-weight: bold;
+color: #4fc3f7;
+font-size: 0.92rem;
+}
+
+.friends-inbox-list {
+display: flex;
+flex-direction: column;
+}
+
+@media (max-width: 780px) {
+.dm-shell {
+flex-direction: column;
+min-height: 0;
+}
+
+.dm-sidebar {
+width: 100%;
+border-right: none;
+border-bottom: 1px solid #333;
+border-top-right-radius: 0.8rem;
+border-bottom-left-radius: 0;
+max-height: 13rem;
+}
+
+.dm-conversation-list {
+max-height: 10rem;
+}
 }
 
 @keyframes slideDown {
@@ -240,8 +1120,8 @@ background-color: #ff5252;
 position: fixed;
 bottom: 0;
 right: 0;
-width: 350px;
-height: 500px;
+width: min(460px, calc(100vw - 1rem));
+height: min(640px, calc(100vh - 1rem));
 background-color: #000;
 border: 2px solid #000;
 border-radius: 10px 10px 0 0;
@@ -267,6 +1147,107 @@ border-radius: 0;
 z-index: 9999;
 }
 
+#chat-container.fullscreen #chat-header {
+padding: 1rem;
+}
+
+#chat-container.fullscreen #chat-header h3 {
+font-size: 1.05rem;
+}
+
+#chat-container.fullscreen #chat-header-actions button,
+#chat-container.fullscreen #chat-leaderboard-btn,
+#chat-container.fullscreen #chat-profile-btn,
+#chat-container.fullscreen #chat-online-btn,
+#chat-container.fullscreen #chat-fullscreen-btn,
+#chat-container.fullscreen #chat-minimize-btn,
+#chat-container.fullscreen #chat-close-btn {
+font-size: 0.9rem;
+padding: 0.45rem 0.65rem;
+}
+
+#chat-container.fullscreen #pinned-message-bar,
+#chat-container.fullscreen #online-users-panel,
+#chat-container.fullscreen #typing-indicator,
+#chat-container.fullscreen #reply-preview-bar {
+font-size: 0.82rem;
+}
+
+#chat-container.fullscreen #chat-messages {
+padding: 1.1rem;
+gap: 0.9rem;
+}
+
+#chat-container.fullscreen .chat-message {
+padding: 0.9rem;
+font-size: 0.98rem;
+border-radius: 10px;
+}
+
+#chat-container.fullscreen .chat-message.own,
+#chat-container.fullscreen .chat-message.other {
+width: fit-content;
+max-width: min(88%, 920px);
+box-sizing: border-box;
+}
+
+#chat-container.fullscreen .chat-message-user {
+font-size: 0.95rem;
+margin-bottom: 0.3rem;
+}
+
+#chat-container.fullscreen .chat-message-time,
+#chat-container.fullscreen .chat-message.system .chat-message-time,
+#chat-container.fullscreen .chat-message.system .chat-message-caption,
+#chat-container.fullscreen .chat-action-btn,
+#chat-container.fullscreen .chat-message-reply-quote,
+#chat-container.fullscreen .reaction-pill,
+#chat-container.fullscreen .reaction-tooltip,
+#chat-container.fullscreen #online-users-panel .online-user-item,
+#chat-container.fullscreen #online-users-panel .online-count,
+#chat-container.fullscreen #reply-cancel-btn {
+font-size: 0.78rem;
+}
+
+#chat-container.fullscreen .chat-action-btn,
+#chat-container.fullscreen #reply-cancel-btn {
+padding: 0.18rem 0.45rem;
+}
+
+#chat-container.fullscreen .reaction-image-thumb {
+width: 160px;
+height: 160px;
+}
+
+#chat-container.fullscreen .chat-message-image {
+width: auto;
+max-width: 100%;
+max-height: 340px;
+}
+
+#chat-container.fullscreen .chat-message-video {
+width: auto;
+max-width: 100%;
+max-height: 360px;
+}
+
+#chat-container.fullscreen #chat-input-area {
+padding: 0.85rem;
+gap: 0.65rem;
+}
+
+#chat-container.fullscreen #chat-message-input {
+font-size: 0.98rem;
+padding: 0.7rem 0.85rem;
+}
+
+#chat-container.fullscreen #chat-color-btn,
+#chat-container.fullscreen #chat-image-btn,
+#chat-container.fullscreen #chat-send-btn {
+font-size: 0.9rem;
+padding: 0.55rem 0.75rem;
+}
+
 #chat-header {
 background: #000;
 color: #fff;
@@ -274,7 +1255,9 @@ padding: 1rem;
 border-bottom: 2px solid #000;
 display: flex;
 justify-content: space-between;
-align-items: center;
+align-items: flex-start;
+gap: 0.75rem;
+flex-wrap: wrap;
 border-radius: 8px 8px 0 0;
 cursor: move;
 }
@@ -283,12 +1266,28 @@ cursor: move;
 margin: 0;
 font-size: 1rem;
 user-select: none;
+flex-shrink: 0;
 }
 
 #chat-header-actions {
 display: flex;
 align-items: center;
 gap: 0.5rem;
+flex-wrap: wrap;
+justify-content: flex-end;
+margin-left: auto;
+}
+
+#chat-header-actions button,
+#chat-leaderboard-btn,
+#chat-friends-btn,
+#chat-profile-btn,
+#chat-online-btn,
+#chat-fullscreen-btn,
+#chat-minimize-btn,
+#chat-close-btn {
+flex-shrink: 0;
+white-space: nowrap;
 }
 
 #pinned-message-bar {
@@ -405,6 +1404,11 @@ color: #ddd;
 overflow: hidden;
 text-overflow: ellipsis;
 white-space: nowrap;
+cursor: pointer;
+}
+
+.leaderboard-username:hover {
+text-decoration: underline;
 }
 
 .leaderboard-level {
@@ -436,9 +1440,8 @@ text-transform: uppercase;
 letter-spacing: 0.5px;
 }
 
-.b-tag {
+.custom-tag {
 display: inline-block;
-background: #8b5cf6;
 color: #fff;
 font-size: 0.65rem;
 font-weight: bold;
@@ -447,6 +1450,26 @@ border-radius: 0.25rem;
 margin-left: 0.4rem;
 text-transform: uppercase;
 letter-spacing: 0.5px;
+}
+
+.custom-tag.tag-dont-give-admin {
+background: #ef6c00;
+}
+
+.custom-tag.tag-femboy {
+background: #ec407a;
+}
+
+.custom-tag.tag-cool-boy {
+background: #1e88e5;
+}
+
+.custom-tag.tag-gnb {
+background: #43a047;
+}
+
+.custom-tag.tag-bitch {
+background: #8b5cf6;
 }
 
 .party-action-row {
@@ -985,6 +2008,15 @@ display: block;
 opacity: 0.8;
 outline: 2px solid #5865f2;
 }
+.status-dot {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  vertical-align: middle;
+  margin-right: 0.2rem;
+  flex-shrink: 0;
+}
 </style>
 </head>
 <body>
@@ -1125,14 +2157,14 @@ userList.appendChild(opt);
 });
 </script>
 <div class="admin-grid">
-<div class="admin-section-card">
+<div class="admin-section-card" data-admin-scope="admin">
 <div class="admin-section-title">Ban Controls</div>
 <button onclick="adminBanUser()" style="padding:0.5rem 1rem; background:#d32f2f; color:#fff; border:none; border-radius:0.25rem;">Ban Username</button>
 <button onclick="adminUnbanUser()" style="padding:0.5rem 1rem; background:#388e3c; color:#fff; border:none; border-radius:0.25rem;">Unban Username</button>
 <button onclick="adminClearChat()" style="padding:0.5rem 1rem; background:#111; color:#fff; border:none; border-radius:0.25rem;">Clear All Chat</button>
 </div>
 
-<div class="admin-section-card">
+<div class="admin-section-card" data-admin-scope="moderator">
 <div class="admin-section-title">Mute / Unmute</div>
 <input type="text" id="admin-mute-username" placeholder="Username to mute/unmute" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
 <div class="admin-button-row">
@@ -1141,7 +2173,7 @@ userList.appendChild(opt);
 </div>
 </div>
 
-<div class="admin-section-card">
+<div class="admin-section-card" data-admin-scope="moderator">
 <div class="admin-section-title">Kick / Warn</div>
 <input type="text" id="admin-kick-username" placeholder="Username to kick" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
 <button onclick="adminKickUser()" style="padding:0.5rem 1rem; background:#7b1fa2; color:#fff; border:none; border-radius:0.25rem;">Kick</button>
@@ -1150,7 +2182,7 @@ userList.appendChild(opt);
 <button onclick="adminWarnUser()" style="padding:0.5rem 1rem; background:#c2185b; color:#fff; border:none; border-radius:0.25rem;">Warn</button>
 </div>
 
-<div class="admin-section-card">
+<div class="admin-section-card" data-admin-scope="admin">
 <div class="admin-section-title">Temporary Ban</div>
 <input type="text" id="admin-tempban-username" placeholder="Username to temp ban" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
 <input type="number" id="admin-tempban-minutes" placeholder="Minutes (e.g. 60)" min="1" max="10080" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
@@ -1158,7 +2190,13 @@ userList.appendChild(opt);
 <button onclick="adminTempBanUser()" style="padding:0.5rem 1rem; background:#6a1b9a; color:#fff; border:none; border-radius:0.25rem;">Temp Ban</button>
 </div>
 
-<div class="admin-section-card">
+<div class="admin-section-card" data-admin-scope="admin">
+<div class="admin-section-title">Active Temp Bans</div>
+<button onclick="loadActiveTempBans()" style="padding:0.45rem 0.8rem; background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Refresh Temp Bans</button>
+<div id="admin-tempban-list" style="margin-top:0.6rem; max-height:220px; overflow:auto; background:#1b1b1b; border:1px solid #333; border-radius:0.35rem; padding:0.5rem; color:#ddd; font-size:0.82rem;"></div>
+</div>
+
+<div class="admin-section-card" data-admin-scope="owner">
 <div class="admin-section-title">Roles</div>
 <input type="text" id="admin-role-username" placeholder="Username for role" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
 <select id="admin-role-select" style="padding:0.5rem; border:none; border-radius:0.25rem;">
@@ -1172,17 +2210,54 @@ userList.appendChild(opt);
 <button onclick="adminAssignRole()" style="padding:0.5rem 1rem; background:#0d47a1; color:#fff; border:none; border-radius:0.25rem;">Set Role</button>
 </div>
 
-<div class="admin-section-card">
+<div class="admin-section-card" data-admin-scope="admin">
 <div class="admin-section-title">Site</div>
 <button onclick="adminToggleReadOnlyMode()" style="padding:0.5rem 1rem; background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Toggle Read-Only Chat</button>
 <button onclick="adminEditWordFilter()" style="padding:0.5rem 1rem; background:#5d4037; color:#fff; border:none; border-radius:0.25rem;">Edit Word Filter</button>
 <button onclick="adminSetAnnouncement()" style="padding:0.5rem 1rem; background:#2e7d32; color:#fff; border:none; border-radius:0.25rem;">Set Announcement</button>
 <button onclick="adminClearAnnouncement()" style="padding:0.5rem 1rem; background:#616161; color:#fff; border:none; border-radius:0.25rem;">Clear Announcement</button>
+<button onclick="adminSendAlertPopup()" style="padding:0.5rem 1rem; background:#1565c0; color:#fff; border:none; border-radius:0.25rem;">Send Alert Popup</button>
 <button onclick="adminEditUpdateNotes()" style="padding:0.5rem 1rem; background:#1565c0; color:#fff; border:none; border-radius:0.25rem;">Edit Update Notes</button>
+<div style="margin-top:0.6rem; display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+<input type="number" id="admin-slowmode-seconds" min="0" max="60" value="3" placeholder="Slow mode seconds" style="padding:0.5rem; width:140px; border:none; border-radius:0.25rem;" />
+<button onclick="adminSetSlowMode()" style="padding:0.5rem 1rem; background:#37474f; color:#fff; border:none; border-radius:0.25rem;">Set Slow Mode</button>
+</div>
+</div>
+
+<div class="admin-section-card" data-admin-scope="owner">
+<div class="admin-section-title">Role Permissions</div>
+<div style="font-size:0.8rem; color:#bbb;">Toggle what each role can do.</div>
+<div id="admin-role-permissions" style="margin-top:0.5rem; max-height:240px; overflow:auto; background:#1b1b1b; border:1px solid #333; border-radius:0.35rem; padding:0.5rem;"></div>
+<button onclick="adminSaveRolePermissions()" style="padding:0.5rem 1rem; background:#00695c; color:#fff; border:none; border-radius:0.25rem;">Save Permissions</button>
+</div>
+
+<div class="admin-section-card" data-admin-scope="moderator">
+<div class="admin-section-title">Message Reports</div>
+<button onclick="loadMessageReports()" style="padding:0.45rem 0.8rem; background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Refresh Reports</button>
+<div id="admin-report-queue" style="margin-top:0.6rem; max-height:220px; overflow:auto; background:#1b1b1b; border:1px solid #333; border-radius:0.35rem; padding:0.5rem; color:#ddd; font-size:0.82rem;"></div>
+</div>
+
+<div class="admin-section-card" data-admin-scope="admin">
+<div class="admin-section-title">Appeals</div>
+<button onclick="loadAppealsQueue()" style="padding:0.45rem 0.8rem; background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Refresh Appeals</button>
+<div id="admin-appeals-queue" style="margin-top:0.6rem; max-height:220px; overflow:auto; background:#1b1b1b; border:1px solid #333; border-radius:0.35rem; padding:0.5rem; color:#ddd; font-size:0.82rem;"></div>
+</div>
+
+<div class="admin-section-card" data-admin-scope="admin">
+<div class="admin-section-title">Audit Log</div>
+<button onclick="loadAuditLogs()" style="padding:0.45rem 0.8rem; background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Refresh Log</button>
+<div id="admin-audit-log" style="margin-top:0.6rem; max-height:220px; overflow:auto; background:#1b1b1b; border:1px solid #333; border-radius:0.35rem; padding:0.5rem; color:#ddd; font-size:0.82rem;"></div>
+</div>
+
+<div class="admin-section-card" data-admin-scope="admin">
+<div class="admin-section-title">Analytics</div>
+<button onclick="loadAdminAnalytics()" style="padding:0.45rem 0.8rem; background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Refresh Analytics</button>
+<div id="admin-analytics-panel" style="margin-top:0.6rem; background:#1b1b1b; border:1px solid #333; border-radius:0.35rem; padding:0.7rem; color:#ddd; font-size:0.82rem;"></div>
 </div>
 </div>
 
 <div class="admin-footer">
+      <div id="admin-project-status" style="margin-bottom:0.75rem; padding:0.75rem; background:#1e1e1e; border:1px solid #3a3a3a; border-radius:0.4rem; color:#bbb; font-size:0.85rem;"></div>
 <button onclick="closeAdminMenu()" style="background:#444; color:#fff; border:none; border-radius:0.25rem; padding:0.5rem 1.5rem;">Close</button>
 <div id="admin-ban-status" style="color:#ff9800; margin-top:0.75rem; min-height:1.5em;"></div>
 </div>
@@ -1214,6 +2289,16 @@ userList.appendChild(opt);
 <button class="close-notification" onclick="closeIPNotification()">✕</button>
 </div>
 
+<div id="global-alert-notification" style="display:none;">
+<span id="global-alert-text"></span>
+<button class="close-notification" onclick="closeGlobalAlertNotification()">✕</button>
+</div>
+
+<div id="dm-notification" style="display:none;">
+<span id="dm-notification-text"></span>
+<button class="close-notification" onclick="closeDMNotification()">✕</button>
+</div>
+
 <div id="ban-notification" style="display: none;">
 <h2>🚫 Access Denied</h2>
 <p>Your IP address has been banned from this site.</p>
@@ -1224,15 +2309,61 @@ userList.appendChild(opt);
 <h2>🚫 Access Denied</h2>
 <p>Your account has been banned from this site.</p>
 <p id="user-ban-reason"></p>
+<textarea id="ban-appeal-text" placeholder="Write your appeal here" style="width:min(460px,90vw); min-height:90px; margin-top:0.75rem; background:#1d1d1d; color:#fff; border:1px solid #555; border-radius:0.35rem; padding:0.5rem;"></textarea>
+<div style="margin-top:0.6rem;">
+<button onclick="submitBanAppeal()" style="padding:0.45rem 0.9rem; background:#1565c0; color:#fff; border:none; border-radius:0.25rem;">Submit Appeal</button>
+</div>
 </div>
 
-<h1>Games</h1>
-<div id="site-announcement-banner" style="display:none; max-width:900px; margin:0.75rem auto 1rem auto; background:#1f5f2d; color:#fff; border:1px solid #2f8d46; border-radius:0.5rem; padding:0.75rem 1rem; text-align:center; font-weight:bold;"></div>
-<div class="button-container" id="game-buttons"></div>
-
-<div style="margin-top:1rem; text-align:center;" class="party-action-row">
+<div id="store-shell">
+<div class="store-hero">
+<div class="store-hero-panel">
+<div>
+<div class="store-eyebrow">Library</div>
+<h1>Chud Games</h1>
+</div>
+<div class="store-hero-actions">
 <button onclick="window.open('https://forms.gle/5CBgYQZ6VzrFKS3Y9','_blank')">Suggest a Game</button>
-<button onclick="openUpdateNotesModal()" style="margin-left:0.6rem;">Update Notes</button>
+<button class="store-hero-button-secondary" onclick="openUpdateNotesModal()">Update Notes</button>
+</div>
+</div>
+</div>
+
+<div id="site-announcement-banner" style="display:none; max-width:none; margin:1rem 0 0 0; background:#1f5f2d; color:#fff; border:1px solid #2f8d46; border-radius:0.75rem; padding:0.85rem 1rem; text-align:center; font-weight:bold;"></div>
+
+<div class="store-section-header">
+<div>
+<div class="store-section-title">Browse Games</div>
+<div class="store-section-subtitle">Launch games</div>
+</div>
+<div id="store-library-meta" class="store-library-meta"></div>
+</div>
+
+<div class="button-container" id="game-buttons"></div>
+</div>
+
+<div id="game-thumbnail-poll-modal" class="overlay-modal" onclick="if(event.target===this)closeGameThumbnailPollModal()">
+<div class="overlay-panel" style="width:min(68rem, calc(100vw - 2rem));">
+<div class="overlay-header">
+<div>
+<h3 id="game-thumbnail-poll-title">Thumbnail Poll</h3>
+<div id="game-thumbnail-poll-subtitle" class="overlay-subtle"></div>
+</div>
+<button onclick="closeGameThumbnailPollModal()" style="padding:0.35rem 0.7rem;">Close</button>
+</div>
+<div id="game-thumbnail-poll-selected" class="overlay-subtle"></div>
+<div id="game-thumbnail-upload-wrap" class="overlay-field" style="display:none;">
+<label for="game-thumbnail-upload-input">Upload Thumbnail</label>
+<input id="game-thumbnail-upload-input" type="file" accept="image/*" />
+<div class="overlay-subtle" style="margin-top:0.45rem;">Users can upload one thumbnail each while the poll is live. Images are compressed before they are saved.</div>
+<div class="overlay-actions" style="margin-top:0.65rem;">
+<button onclick="submitGameThumbnailUpload()">Upload Thumbnail</button>
+</div>
+</div>
+<div id="game-thumbnail-poll-candidates" class="thumbnail-vote-grid"></div>
+<div id="game-thumbnail-poll-admin-actions" class="overlay-actions"></div>
+<div id="game-thumbnail-poll-status" class="overlay-status"></div>
+</div>
 </div>
 
 
@@ -1433,14 +2564,28 @@ userList.appendChild(opt);
 <div id="chat-toggle-btn" onclick="toggleChat()">💬<span id="chat-unread-badge"></span></div>
 <div id="chat-container" style="display:none;">
 <div id="chat-header" onmousedown="startChatDrag(event)" ontouchstart="startChatDrag(event)">
-<h3>Live Chat</h3>
+<h3>Chat</h3>
 <div id="chat-header-actions">
 <button id="chat-leaderboard-btn" onclick="openLeaderboardModal(event)">🏆</button>
+<button id="chat-friends-btn" onclick="openFriendsModal()" title="Friends">👥<span id="dm-unread-badge"></span></button>
 <button id="chat-profile-btn" onclick="openProfileModal(event)">Profile</button>
 <button id="chat-online-btn" onclick="toggleOnlineUsers(event)">🟢 0</button>
 <button id="chat-fullscreen-btn" onclick="toggleChatFullscreen(event)" title="Fullscreen">⛶</button>
 <button id="chat-minimize-btn" onclick="minimizeChat(event)">_</button>
 <button id="chat-close-btn" onclick="closeChat(event)">✕</button>
+</div>
+</div>
+<div id="chat-room-toolbar" class="chat-room-toolbar">
+<div class="chat-room-toolbar-header">
+<div id="chat-room-summary" class="chat-room-summary">General room</div>
+<button id="chat-room-toggle-btn" class="chat-room-toggle" onclick="toggleChatRoomToolbar()">Close Rooms</button>
+</div>
+<div id="chat-room-toolbar-content" class="chat-room-toolbar-content">
+<div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+<label for="chat-room-select" style="font-size:0.76rem; color:#b0bec5;">Room</label>
+<select id="chat-room-select" class="chat-room-select" onchange="changeChatRoom(this.value)"></select>
+<button onclick="openCreateRoomModal()" style="padding:0.35rem 0.6rem; font-size:0.76rem; background:#1565c0; color:#fff; border:none; border-radius:0.35rem;">New Room</button>
+</div>
 </div>
 </div>
 <div id="pinned-message-bar">
@@ -1451,6 +2596,7 @@ userList.appendChild(opt);
 <div id="online-users-panel"></div>
 <div id="chat-messages"></div>
 <div id="typing-indicator"></div>
+<div id="chat-timeout-status"></div>
 <div id="reply-preview-bar">
 <span id="reply-preview-text">Replying to...</span>
 <button id="reply-cancel-btn" onclick="clearReply()">✕</button>
@@ -1471,7 +2617,7 @@ oninput="onChatInput()"
 <!-- Color Picker Modal -->
 <div id="color-picker-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:2000; align-items:center; justify-content:center;">
 <div style="background:#222; padding:1.5rem; border-radius:0.5rem; text-align:center; color:#fff; box-shadow:0 8px 32px rgba(0,0,0,0.8);">
-<h3 style="margin-top:0;">Choose Message Color</h3>
+<h3 style="margin-top:0;">Choose Name Color</h3>
 <div style="display:flex; gap:0.5rem; justify-content:center; flex-wrap:wrap;">
 <button onclick="selectColor('#ef5350')" title="Red" style="width:50px; height:50px; background:#ef5350; border:3px solid #999; border-radius:6px; cursor:pointer; padding:0; flex-shrink:0;"></button>
 <button onclick="selectColor('#ff9800')" title="Orange" style="width:50px; height:50px; background:#ff9800; border:3px solid #999; border-radius:6px; cursor:pointer; padding:0; flex-shrink:0;"></button>
@@ -1480,6 +2626,11 @@ oninput="onChatInput()"
 <button onclick="selectColor('#1565c0')" title="Blue" style="width:50px; height:50px; background:#1565c0; border:3px solid #fff; border-radius:6px; cursor:pointer; padding:0; flex-shrink:0;"></button>
 <button onclick="selectColor('#7e57c2')" title="Purple" style="width:50px; height:50px; background:#7e57c2; border:3px solid #999; border-radius:6px; cursor:pointer; padding:0; flex-shrink:0;"></button>
 <button onclick="selectColor('#ec407a')" title="Pink" style="width:50px; height:50px; background:#ec407a; border:3px solid #999; border-radius:6px; cursor:pointer; padding:0; flex-shrink:0;"></button>
+</div>
+<div style="display:flex; align-items:center; justify-content:center; gap:0.65rem; margin-top:0.95rem; flex-wrap:wrap;">
+<span style="font-size:0.8rem; color:#b0bec5;">Custom</span>
+<input type="color" id="custom-chat-color-input" value="#1565c0" oninput="updateCustomColorPreview(this.value)" onchange="selectCustomColor(this.value)" style="width:56px; height:40px; border:none; border-radius:0.45rem; background:transparent; cursor:pointer; padding:0;" />
+<span id="custom-chat-color-label" style="font-size:0.78rem; color:#d7e6f7; min-width:72px; text-align:left;">#1565c0</span>
 </div>
 <button onclick="closeColorPicker()" style="margin-top:1rem; padding:0.5rem 1rem; background:#444; color:#fff; border:none; border-radius:4px; cursor:pointer;">Close</button>
 </div>
@@ -1501,6 +2652,10 @@ oninput="onChatInput()"
     </div>
     <div id="media-tab-gif" class="media-tab-content" style="display:none;">
       <input type="text" id="gif-search-input" class="gif-search-input" placeholder="Search GIFs…" oninput="onGifSearchInput()" />
+      <div style="display:flex; gap:0.5rem; margin-bottom:0.75rem;">
+        <input type="text" id="gif-url-input" class="gif-search-input" placeholder="Paste Giphy or direct GIF URL" onkeypress="if(event.key==='Enter') sendGifUrlFromInput()" style="margin:0;" />
+        <button onclick="sendGifUrlFromInput()" style="padding:0.65rem 0.9rem; white-space:nowrap;">Send URL</button>
+      </div>
       <div id="gif-grid" class="gif-grid"></div>
     </div>
   </div>
@@ -1518,9 +2673,18 @@ oninput="onChatInput()"
 <h2 style="margin:0;">Profile</h2>
 <div id="profile-username" style="margin-top:0.2rem; color:#bbb;"></div>
 <div id="profile-level" style="margin-top:0.4rem; color:#66bb6a; font-weight:bold; font-size:1.1rem;"></div>
+<div id="profile-level-progress-wrap" style="margin-top:0.45rem; width:min(340px, 100%); height:0.7rem; background:#111; border:1px solid #333; border-radius:999px; overflow:hidden;">
+<div id="profile-level-progress-bar" style="height:100%; width:0%; background:linear-gradient(90deg, #66bb6a 0%, #43a047 100%); border-radius:999px;"></div>
+</div>
+<div id="profile-level-progress-text" style="margin-top:0.25rem; color:#9ccc65; font-size:0.78rem;"></div>
 <div id="profile-role" style="margin-top:0.25rem; color:#90caf9; font-size:0.82rem;"></div>
 </div>
+<div style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+<button id="profile-dm-btn" onclick="openDMFromProfile()" style="padding:0.35rem 0.65rem; background:#1565c0; color:#fff; border:none; border-radius:0.3rem; font-size:0.85rem; display:none;">💬 DM</button>
+<button id="profile-friend-btn" onclick="toggleFriendFromProfile()" style="padding:0.35rem 0.65rem; background:#37474f; color:#fff; border:none; border-radius:0.3rem; font-size:0.85rem; display:none;">👥 Add Friend</button>
+<button id="profile-block-btn" onclick="toggleBlockFromProfile()" style="padding:0.35rem 0.65rem; background:#5d4037; color:#fff; border:none; border-radius:0.3rem; font-size:0.85rem; display:none;">Block</button>
 <button onclick="closeProfileModal()" style="padding:0.45rem 0.8rem;">Close</button>
+</div>
 </div>
 <div id="profile-flags-panel" style="display:none; margin-top:0.8rem; padding:0.8rem; background:#2b2b2b; border:1px solid #3a3a3a; border-radius:0.5rem;"></div>
 <div id="profile-stat-grid" class="profile-stat-grid"></div>
@@ -1550,10 +2714,156 @@ oninput="onChatInput()"
 <button onclick="closeUpdateNotesModal()" style="padding:0.45rem 0.8rem;">Close</button>
 </div>
 <div style="margin-top:0.8rem; color:#bbb; font-size:0.95rem; line-height:1.5;">
-<p style="margin:0 0 0.75rem 0;">Latest updates will be listed here.</p>
+<p style="margin:0 0 0.75rem 0;">A quick look at what changed.</p>
 <ul id="update-notes-list" style="margin:0; padding-left:1.2rem;"></ul>
 <div id="update-notes-meta" style="margin-top:0.75rem; color:#888; font-size:0.82rem;"></div>
 </div>
+</div>
+</div>
+
+<div id="create-room-modal" class="overlay-modal" onclick="if(event.target===this)closeCreateRoomModal()">
+<div class="overlay-panel">
+<div class="overlay-header">
+<h3>Create Room</h3>
+<button onclick="closeCreateRoomModal()" style="padding:0.35rem 0.7rem;">Close</button>
+</div>
+<div class="overlay-subtle">General stays public for everyone. Create a new room and either open it to everyone or only specific usernames.</div>
+<div class="overlay-field">
+<label for="create-room-name">Room name</label>
+<input id="create-room-name" type="text" maxlength="32" placeholder="Movie night" />
+</div>
+<div class="overlay-field">
+<label for="create-room-description">Description</label>
+<input id="create-room-description" type="text" maxlength="120" placeholder="What this room is for" />
+</div>
+<div class="overlay-field">
+<label for="create-room-privacy">Who can join?</label>
+<select id="create-room-privacy" onchange="updateCreateRoomMembersVisibility()">
+<option value="public">Everyone</option>
+<option value="private">Only certain people</option>
+</select>
+</div>
+<div id="create-room-members-wrap" class="overlay-field" style="display:none;">
+<label for="create-room-members">Allowed usernames</label>
+<textarea id="create-room-members" maxlength="400" placeholder="comma,separated,usernames"></textarea>
+</div>
+<div class="overlay-actions">
+<button onclick="closeCreateRoomModal()" style="background:#444; color:#fff;">Cancel</button>
+<button onclick="submitCreateRoom()" style="background:#1565c0; color:#fff;">Create Room</button>
+</div>
+<div id="create-room-status" class="overlay-status"></div>
+</div>
+</div>
+
+<div id="dm-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.78); z-index:7000; align-items:center; justify-content:center;">
+<div style="background:#222; width:min(56rem, calc(100vw - 2rem)); max-height:calc(100vh - 2rem); display:flex; flex-direction:column; border-radius:0.8rem; color:#fff; box-shadow:0 8px 32px rgba(0,0,0,0.6); overflow:hidden;">
+<div class="dm-shell">
+<div class="dm-sidebar">
+<div class="dm-sidebar-header">
+<div class="dm-sidebar-title">Inbox</div>
+<div class="dm-sidebar-subtitle">Recent conversations and unread counts</div>
+</div>
+<div id="dm-conversation-list" class="dm-conversation-list"></div>
+</div>
+<div class="dm-pane">
+<div style="display:flex; justify-content:space-between; align-items:center; padding:1rem 1.5rem; border-bottom:1px solid #333; gap:1rem;">
+<h2 style="margin:0; font-size:1.1rem;">💬 DM: <span id="dm-modal-title">Select a conversation</span></h2>
+<button onclick="closeDMModal()" style="padding:0.35rem 0.7rem;">Close</button>
+</div>
+<div id="dm-messages" style="flex:1; overflow-y:auto; padding:0.8rem 1rem; min-height:200px; max-height:380px; display:flex; flex-direction:column; gap:0.4rem;"><div class="dm-empty-state">Pick a conversation from the inbox to read or reply.</div></div>
+<div style="padding:0.7rem 1rem; border-top:1px solid #333; display:flex; gap:0.5rem;">
+<input id="dm-input" type="text" placeholder="Type a message..." maxlength="500" style="flex:1; background:#1d1d1d; color:#fff; border:1px solid #444; border-radius:0.35rem; padding:0.45rem 0.7rem;" onkeydown="if(event.key==='Enter')sendDMMessage()" />
+<button onclick="sendDMMessage()" style="padding:0.45rem 1rem; background:#1565c0; color:#fff; border:none; border-radius:0.35rem; cursor:pointer;">Send</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="friends-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.78); z-index:7000; align-items:center; justify-content:center;">
+<div style="background:#222; width:min(38rem, calc(100vw - 2rem)); max-height:calc(100vh - 2rem); overflow:auto; padding:1.5rem; border-radius:0.8rem; color:#fff; box-shadow:0 8px 32px rgba(0,0,0,0.6);">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:1rem;">
+<h2 style="margin:0;">👥 Friends</h2>
+<button onclick="closeFriendsModal()" style="padding:0.45rem 0.8rem;">Close</button>
+</div>
+<div class="friends-inbox-section">
+<div class="friends-inbox-header">
+<div class="friends-inbox-title">Inbox</div>
+<button onclick="openLatestDMConversation()" style="padding:0.25rem 0.65rem; background:#1565c0; color:#fff; border:none; border-radius:0.3rem; font-size:0.76rem;">Open Inbox</button>
+</div>
+<div id="friends-dm-inbox-list" class="friends-inbox-list"></div>
+</div>
+<div id="friend-requests-section" style="display:none; margin-top:1rem; padding:0.6rem; background:#1b1b1b; border-radius:0.4rem;">
+<div style="font-weight:bold; color:#ffca28; margin-bottom:0.4rem; font-size:0.9rem;">📬 Pending Requests</div>
+<div id="friend-requests-list"></div>
+</div>
+<div style="margin-top:1rem;">
+<div style="font-weight:bold; color:#90caf9; margin-bottom:0.5rem;">Your Friends</div>
+<div id="friends-list" style="display:flex; flex-direction:column; gap:0.1rem;"></div>
+</div>
+</div>
+</div>
+
+<div id="chat-report-modal" class="overlay-modal" onclick="if(event.target===this)closeReportModal()">
+<div class="overlay-panel">
+<div class="overlay-header">
+<h3>Report Message</h3>
+<button onclick="closeReportModal()" style="padding:0.35rem 0.7rem;">Close</button>
+</div>
+<div class="overlay-subtle">Send a report without leaving the chat. Include enough detail for moderators to act on it.</div>
+<div id="chat-report-preview" class="message-preview-card"></div>
+<div class="overlay-field">
+<label for="chat-report-reason">Reason</label>
+<select id="chat-report-reason">
+<option value="spam">Spam</option>
+<option value="harassment">Harassment</option>
+<option value="nsfw">NSFW</option>
+<option value="scam">Scam</option>
+<option value="other">Other</option>
+</select>
+</div>
+<div class="overlay-field">
+<label for="chat-report-extra">Details</label>
+<textarea id="chat-report-extra" maxlength="160" placeholder="Add context for the moderators."></textarea>
+</div>
+<div class="overlay-actions">
+<button onclick="closeReportModal()" style="background:#444; color:#fff;">Cancel</button>
+<button onclick="submitReportModal()" style="background:#c62828; color:#fff;">Submit Report</button>
+</div>
+<div id="chat-report-status" class="overlay-status"></div>
+<input type="hidden" id="chat-report-doc-id" />
+</div>
+</div>
+
+<div id="chat-edit-modal" class="overlay-modal" onclick="if(event.target===this)closeEditMessageModal()">
+<div class="overlay-panel">
+<div class="overlay-header">
+<h3>Edit Message</h3>
+<button onclick="closeEditMessageModal()" style="padding:0.35rem 0.7rem;">Close</button>
+</div>
+<div class="overlay-subtle">You can edit your own message within the short edit window. Edit history remains available to moderators.</div>
+<div class="overlay-field">
+<label for="chat-edit-textarea">Message</label>
+<textarea id="chat-edit-textarea" maxlength="600" placeholder="Update your message"></textarea>
+</div>
+<div class="overlay-actions">
+<button onclick="closeEditMessageModal()" style="background:#444; color:#fff;">Cancel</button>
+<button onclick="submitEditMessageModal()" style="background:#1565c0; color:#fff;">Save Changes</button>
+</div>
+<div id="chat-edit-status" class="overlay-status"></div>
+<input type="hidden" id="chat-edit-doc-id" />
+</div>
+</div>
+
+<div id="chat-history-modal" class="overlay-modal" onclick="if(event.target===this)closeMessageHistoryModal()">
+<div class="overlay-panel">
+<div class="overlay-header">
+<h3>Message Edit History</h3>
+<button onclick="closeMessageHistoryModal()" style="padding:0.35rem 0.7rem;">Close</button>
+</div>
+<div class="overlay-subtle">Previous versions are shown newest last, so moderators can review what changed.</div>
+<div id="chat-history-list" class="modal-history-list"></div>
 </div>
 </div>
 
@@ -1591,23 +2901,144 @@ const USER_ROLES_COLLECTION = 'user_roles';
 const USER_WARNINGS_COLLECTION = 'user_warnings';
 const USER_FLAGS_COLLECTION = 'user_flags';
 const TIMED_BANS_COLLECTION = 'timed_bans';
+const USER_STRIKES_COLLECTION = 'user_strikes';
+const AUDIT_LOG_COLLECTION = 'admin_audit_logs';
+const MESSAGE_REPORTS_COLLECTION = 'message_reports';
+const APPEALS_COLLECTION = 'ban_appeals';
+const DM_EDIT_WINDOW_MS = 60000;
+const MUTE_STATUS_REFRESH_MS = 1000;
+const OWNER_TAG_USERNAME = 'kaiden';
+const DEFAULT_SLOW_MODE_SECONDS = 3;
+const DEFAULT_ROLE_PERMISSIONS = {
+owner: {
+ban: true,
+mute: true,
+kick: true,
+warn: true,
+tempBan: true,
+manageSettings: true,
+assignRoles: true,
+deleteMessage: true
+},
+admin: {
+ban: true,
+mute: true,
+kick: true,
+warn: true,
+tempBan: true,
+manageSettings: true,
+assignRoles: false,
+deleteMessage: true
+},
+moderator: {
+ban: false,
+mute: true,
+kick: true,
+warn: true,
+tempBan: false,
+manageSettings: false,
+assignRoles: false,
+deleteMessage: true
+},
+helper: {
+ban: false,
+mute: false,
+kick: false,
+warn: true,
+tempBan: false,
+manageSettings: false,
+assignRoles: false,
+deleteMessage: false
+},
+member: {
+ban: false,
+mute: false,
+kick: false,
+warn: false,
+tempBan: false,
+manageSettings: false,
+assignRoles: false,
+deleteMessage: false
+}
+};
+const PROFILE_TAGS = {
+'dont give admin': { label: 'Dont Give Admin', className: 'tag-dont-give-admin' },
+'femboy': { label: 'femboy', className: 'tag-femboy' },
+'cool boy': { label: 'cool boy', className: 'tag-cool-boy' },
+'gnb': { label: 'GNB', className: 'tag-gnb' },
+'bitch': { label: 'bitch', className: 'tag-bitch' }
+};
 const DEFAULT_UPDATE_NOTES = [
-'Added owner tag display in chat and leaderboard.',
-'Added profile levels, achievements, and leaderboard.',
-'Enabled clicking chat usernames to view profiles.'
+'Default thumbnails are plain black now.',
+'Users can upload thumbnails instead of picking presets.',
+'Global alerts should stop repeating after refresh.',
+'Fixed weird null text showing in names and messages.'
 ];
 let updateNotesCache = DEFAULT_UPDATE_NOTES.slice();
 const ACHIEVEMENTS = [
 { id: 'first_message', label: 'First Word', description: 'Send your first chat message.', stat: 'messagesSent', goal: 1 },
 { id: 'talkative', label: 'Talkative', description: 'Send 25 chat messages.', stat: 'messagesSent', goal: 25 },
+{ id: 'chatterbox', label: 'Unemployed', description: 'Send 75 chat messages.', stat: 'messagesSent', goal: 75 },
+{ id: 'daily_noise', label: 'Gooner', description: 'Send 150 chat messages.', stat: 'messagesSent', goal: 150 },
+{ id: 'keyboard_warrior', label: 'Master Gooner', description: 'Send 300 chat messages.', stat: 'messagesSent', goal: 300 },
 { id: 'game_starter', label: 'Game Starter', description: 'Open 5 games.', stat: 'gamesOpened', goal: 5 },
-{ id: 'game_grinder', label: 'Arcade Grinder', description: 'Open 20 games.', stat: 'gamesOpened', goal: 20 },
-{ id: 'media_drop', label: 'Media Drop', description: 'Post an image or video in chat.', stat: 'mediaShared', goal: 1 },
-{ id: 'reactor', label: 'Reactor', description: 'Use 10 reactions.', stat: 'reactionsUsed', goal: 10 }
+{ id: 'game_grinder', label: 'Gamer', description: 'Open 20 games.', stat: 'gamesOpened', goal: 20 },
+{ id: 'marathon_player', label: 'Chud', description: 'Open 50 games.', stat: 'gamesOpened', goal: 50 },
+{ id: 'arcade_legend', label: 'Super Chud', description: 'Open 100 games.', stat: 'gamesOpened', goal: 100 },
+{ id: 'media_drop', label: 'Media Post', description: 'Post an image or video in chat.', stat: 'mediaShared', goal: 1 },
+{ id: 'media_flow', label: 'Medias', description: 'Share 10 images or videos.', stat: 'mediaShared', goal: 10 },
+{ id: 'content_machine', label: 'Media Machine', description: 'Share 30 images or videos.', stat: 'mediaShared', goal: 30 },
+{ id: 'visual_spammer', label: 'Spammer', description: 'Share 75 images or videos.', stat: 'mediaShared', goal: 75 },
+{ id: 'reactor', label: 'Reactor', description: 'Use 10 reactions.', stat: 'reactionsUsed', goal: 10 },
+{ id: 'reaction_party', label: 'Couple of Reactions', description: 'Use 30 reactions.', stat: 'reactionsUsed', goal: 30 },
+{ id: 'hype_machine', label: 'Hype Man', description: 'Use 75 reactions.', stat: 'reactionsUsed', goal: 75 },
+{ id: 'emoji_overload', label: 'Boiiiiiii', description: 'Use 150 reactions.', stat: 'reactionsUsed', goal: 150 }
 ];
 
+function sanitizeNullableText(value, fallback = '') {
+const text = value == null ? '' : String(value).trim();
+if (!text) return fallback;
+const lowered = text.toLowerCase();
+return lowered === 'null' || lowered === 'undefined' ? fallback : text;
+}
+
 function normalizeUsername(value) {
-return (value || '').trim().toLowerCase();
+return sanitizeNullableText(value, '').toLowerCase();
+}
+
+function sanitizeProfileTag(value) {
+const tag = String(value || '').trim().toLowerCase();
+return PROFILE_TAGS[tag] ? tag : '';
+}
+
+function getUserProfileTagKey(username) {
+const key = normalizeUsername(username);
+if (!key) return '';
+if (userTagCache[key]) return userTagCache[key];
+return '';
+}
+
+function getOwnerTagHtml(username) {
+const key = normalizeUsername(username);
+if (key !== OWNER_TAG_USERNAME) return '';
+return '<span class="owner-tag">OWNER</span>';
+}
+
+function getUserTagHtml(username) {
+const tagKey = getUserProfileTagKey(username);
+if (!tagKey || !PROFILE_TAGS[tagKey]) return '';
+const tagData = PROFILE_TAGS[tagKey];
+return `<span class="custom-tag ${tagData.className}">${escapeHtml(tagData.label)}</span>`;
+}
+
+function getProfileTagOptionsHtml(selectedTag = '') {
+const normalizedSelectedTag = sanitizeProfileTag(selectedTag);
+const options = ['<option value="">None</option>'];
+Object.entries(PROFILE_TAGS).forEach(([value, data]) => {
+const selected = value === normalizedSelectedTag ? 'selected' : '';
+options.push(`<option value="${value}" ${selected}>${escapeHtml(data.label)}</option>`);
+});
+return options.join('');
 }
 
 function getRoleRank(role) {
@@ -1676,6 +3107,14 @@ return PROTECTED_USERNAMES.includes(normalizeUsername(username));
 
 function openAdminMenu() {
 if (!canModerate(currentChatUser)) return;
+renderAdminProjectStatus();
+renderAdminRolePermissions();
+updateAdminSectionVisibility();
+loadActiveTempBans();
+loadMessageReports();
+loadAppealsQueue();
+loadAuditLogs();
+loadAdminAnalytics();
 document.getElementById('admin-menu').style.display = 'flex';
 }
 function closeAdminMenu() {
@@ -1722,6 +3161,7 @@ body: new URLSearchParams({ username, reason, banned: 'yes' })
 });
 await postSystemNotice(`${username} was banned.`);
 statusDiv.textContent = `User '${username}' has been banned.`;
+await writeAuditLog('ban', username, reason || 'no reason');
 document.getElementById('admin-ban-username').value = '';
 document.getElementById('admin-ban-reason').value = '';
 customReasonInput.value = '';
@@ -1749,8 +3189,19 @@ if (!firebase.apps.length) {
 firebase.initializeApp(firebaseConfig);
 }
 
-const db = firebase.firestore();
+const db = getPrimaryDb();
+const archiveDb = getArchiveDb();
 let deletedCount = 0;
+const archiveSessionId = `archive_${Date.now()}_${normalizeUsername(currentChatUser || 'admin')}`;
+
+if (archiveDb) {
+await archiveDb.collection('chat_archives').doc(archiveSessionId).set({
+archivedBy: currentChatUser || 'admin',
+archivedAt: firebase.firestore.FieldValue.serverTimestamp(),
+sourceProjectId: firebaseConfig.projectId,
+reason: 'admin_clear_chat'
+});
+}
 
 while (true) {
 const snapshot = await db.collection('site_messages').limit(250).get();
@@ -1759,15 +3210,29 @@ break;
 }
 
 const batch = db.batch();
+const archiveBatch = archiveDb ? archiveDb.batch() : null;
 snapshot.forEach(doc => {
+if (archiveBatch) {
+archiveBatch.set(
+archiveDb.collection('chat_archives').doc(archiveSessionId).collection('messages').doc(doc.id),
+{
+originalId: doc.id,
+archivedAt: firebase.firestore.FieldValue.serverTimestamp(),
+...doc.data()
+}
+);
+}
 batch.delete(doc.ref);
 deletedCount += 1;
 });
+if (archiveBatch) {
+await archiveBatch.commit();
+}
 await batch.commit();
 }
 
 statusDiv.textContent = deletedCount
-? `Deleted ${deletedCount} chat messages.`
+? `Archived and deleted ${deletedCount} chat messages${archiveDb ? '' : ' (archive project not configured, so no off-project backup was made)'}.`
 : 'Chat was already empty.';
 } catch (e) {
 console.error('Failed to clear chat:', e);
@@ -1847,7 +3312,11 @@ if (reasonElem) reasonElem.textContent = reason ? `Reason: ${reason}` : '';
 }
 
 function getUserName() {
-return (localStorage.getItem('userName') || '').toLowerCase();
+const stored = normalizeUsername(localStorage.getItem('userName') || '');
+if (!stored) {
+localStorage.removeItem('userName');
+}
+return stored;
 }
 function getBannedIPs() {
 const stored = localStorage.getItem('bannedIPs');
@@ -1876,7 +3345,13 @@ showBanNotification('Your IP address has been banned from this site.');
 return;
 }
 
-const geoData = await geoResponse.json();
+let geoData = {};
+try {
+const geoResponse = await fetch(`https://ipapi.co/${encodeURIComponent(userIP)}/json/`, { cache: 'no-store' });
+geoData = await geoResponse.json();
+} catch (geoErr) {
+geoData = {};
+}
 
 const notification = document.getElementById('ip-notification');
 const notificationText = document.getElementById('notification-text');
@@ -1957,6 +3432,122 @@ notification.style.display = 'flex';
 function closeIPNotification() {
 const notification = document.getElementById('ip-notification');
 notification.style.display = 'none';
+}
+
+function closeGlobalAlertNotification() {
+const notification = document.getElementById('global-alert-notification');
+if (!notification) return;
+notification.style.display = 'none';
+}
+
+function setLastSeenGlobalAlertKey(key) {
+lastGlobalAlertKey = String(key || '');
+try {
+if (lastGlobalAlertKey) {
+localStorage.setItem('lastGlobalAlertKey', lastGlobalAlertKey);
+} else {
+localStorage.removeItem('lastGlobalAlertKey');
+}
+} catch (err) {}
+}
+
+function showGlobalAlertNotification(text, durationSeconds = 10) {
+const notification = document.getElementById('global-alert-notification');
+const textEl = document.getElementById('global-alert-text');
+if (!notification || !textEl) return;
+const message = String(text || '').trim();
+if (!message) return;
+textEl.textContent = message;
+notification.style.display = 'flex';
+
+const ms = Math.max(2000, Math.min(30000, (parseInt(durationSeconds, 10) || 10) * 1000));
+setTimeout(() => {
+if (notification.style.display !== 'none') {
+notification.style.display = 'none';
+}
+}, ms);
+}
+
+function closeDMNotification() {
+const notification = document.getElementById('dm-notification');
+if (!notification) return;
+notification.style.display = 'none';
+}
+
+function showDMNotification(text, durationMs = 4500) {
+const notification = document.getElementById('dm-notification');
+const textEl = document.getElementById('dm-notification-text');
+if (!notification || !textEl) return;
+const message = String(text || '').trim();
+if (!message) return;
+textEl.textContent = message;
+notification.style.display = 'flex';
+setTimeout(() => {
+if (notification.style.display !== 'none') notification.style.display = 'none';
+}, Math.max(2000, durationMs));
+}
+
+function updateAdminSectionVisibility() {
+const roleRank = getRoleRank(getUserRole(currentChatUser));
+document.querySelectorAll('#admin-menu .admin-section-card[data-admin-scope]').forEach((card) => {
+const scope = String(card.dataset.adminScope || 'moderator').toLowerCase();
+const requiredRank = scope === 'owner' ? 4 : scope === 'admin' ? 3 : 2;
+card.classList.toggle('is-hidden-by-role', roleRank < requiredRank);
+});
+}
+
+function formatRemainingDuration(ms) {
+const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+const hours = Math.floor(totalSeconds / 3600);
+const minutes = Math.floor((totalSeconds % 3600) / 60);
+const seconds = totalSeconds % 60;
+if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+if (minutes > 0) return `${minutes}m ${seconds}s`;
+return `${seconds}s`;
+}
+
+function setChatComposerEnabled(enabled) {
+const ids = ['chat-message-input', 'chat-color-btn', 'chat-image-btn'];
+ids.forEach((id) => {
+const el = document.getElementById(id);
+if (!el) return;
+el.disabled = !enabled;
+el.style.opacity = enabled ? '1' : '0.55';
+el.style.cursor = enabled ? '' : 'not-allowed';
+});
+}
+
+function updateChatTimeoutStatusUi() {
+const statusEl = document.getElementById('chat-timeout-status');
+if (!statusEl) return;
+let text = '';
+let blocked = false;
+if (currentTimedBanInfo && currentTimedBanInfo.expiresAt && currentTimedBanInfo.expiresAt.getTime() > Date.now()) {
+text = `Temp banned for ${formatRemainingDuration(currentTimedBanInfo.expiresAt.getTime() - Date.now())}. Reason: ${currentTimedBanInfo.reason || 'Temporary ban'}`;
+blocked = true;
+} else if (currentMuteInfo) {
+if (currentMuteInfo.expiresAt && currentMuteInfo.expiresAt.getTime() > Date.now()) {
+text = `Muted for ${formatRemainingDuration(currentMuteInfo.expiresAt.getTime() - Date.now())}. ${currentMuteInfo.reason ? `Reason: ${currentMuteInfo.reason}` : ''}`.trim();
+} else {
+text = `Muted until an admin unmutes you.${currentMuteInfo.reason ? ` Reason: ${currentMuteInfo.reason}` : ''}`;
+}
+blocked = true;
+}
+if (!text) {
+statusEl.style.display = 'none';
+statusEl.textContent = '';
+setChatComposerEnabled(true);
+return;
+}
+statusEl.textContent = text;
+statusEl.style.display = 'block';
+setChatComposerEnabled(!blocked);
+}
+
+function startTimeoutStatusLoop() {
+if (timeoutStatusInterval) clearInterval(timeoutStatusInterval);
+updateChatTimeoutStatusUi();
+timeoutStatusInterval = setInterval(updateChatTimeoutStatusUi, MUTE_STATUS_REFRESH_MS);
 }
 
 
@@ -2085,14 +3676,432 @@ const games = [
 {name: 'Youtube (Unblock All Videos)', url: 'https://tube.rvere.com/'},
 ];
 
-document.body.style.overflow = 'hidden';
-document.body.style.overflow = 'auto';
+const GAME_THUMBNAIL_POLLS_COLLECTION = 'game_thumbnail_polls';
+const GAME_THUMBNAIL_MAX_WIDTH = 800;
+const GAME_THUMBNAIL_MAX_HEIGHT = 450;
+const GAME_THUMBNAIL_QUALITY = 0.68;
+const GAME_THUMBNAIL_SIZE_LIMIT = 100000;
+const GAME_THUMBNAIL_MAX_CANDIDATES = 6;
+let gameThumbnailPollsCache = {};
+let gameThumbnailPollsUnsub = null;
+let activeGameThumbnailPollId = '';
+
+function getPlayableGames() {
+return games
+.map((game, idx) => ({
+...game,
+index: idx,
+id: `game-${idx + 1}-${normalizeRoomId(game.name || `slot-${idx + 1}`)}`
+}))
+.filter((game) => game.name && game.url);
+}
+
+function getGameById(gameId) {
+return getPlayableGames().find((game) => game.id === gameId) || null;
+}
+
+function getGameSummary(game) {
+const summaries = {
+Slope: 'An endless downhill reflex test with almost no room for mistakes.',
+Minecraft: 'Launch straight into a browser sandbox and start building.',
+'Escape Road': 'High-speed getaway driving with simple controls and fast runs.',
+'Infinite Craft': 'Mix elements until the recipe tree gets completely out of hand.',
+'Youtube (Unblock All Videos)': 'Watch videos in the same launcher without leaving the site.'
+};
+return summaries[game.name] || `Launch ${game.name} instantly from your library.`;
+}
+
+function buildDefaultGameThumbnailDataUrl(game) {
+const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450">
+<rect width="800" height="450" fill="#000000" />
+</svg>`;
+return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+function getGameThumbnailUploadCandidates(state) {
+if (!state || !Array.isArray(state.candidates)) return [];
+return state.candidates.filter((candidate) => candidate
+&& typeof candidate.url === 'string'
+&& candidate.url
+&& (candidate.source === 'upload' || candidate.uploadedBy || candidate.uploadedByName));
+}
+
+function compressGameThumbnailImage(file) {
+return new Promise((resolve, reject) => {
+if (!file || !file.type.startsWith('image/')) {
+reject(new Error('Choose an image file to upload.'));
+return;
+}
+
+if (file.size > GAME_THUMBNAIL_SIZE_LIMIT * 10) {
+reject(new Error('Thumbnail file is too large. Choose a smaller image.'));
+return;
+}
+
+const reader = new FileReader();
+reader.onload = () => {
+const image = new Image();
+image.onload = () => {
+let width = image.width;
+let height = image.height;
+const scale = Math.min(
+1,
+GAME_THUMBNAIL_MAX_WIDTH / width,
+GAME_THUMBNAIL_MAX_HEIGHT / height
+);
+
+width = Math.max(1, Math.round(width * scale));
+height = Math.max(1, Math.round(height * scale));
+
+const canvas = document.createElement('canvas');
+canvas.width = width;
+canvas.height = height;
+const context = canvas.getContext('2d');
+
+if (!context) {
+reject(new Error('Could not process thumbnail image.'));
+return;
+}
+
+context.drawImage(image, 0, 0, width, height);
+
+let dataUrl = canvas.toDataURL('image/jpeg', GAME_THUMBNAIL_QUALITY);
+if (dataUrl.length > GAME_THUMBNAIL_SIZE_LIMIT) {
+dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+}
+
+if (dataUrl.length > GAME_THUMBNAIL_SIZE_LIMIT) {
+reject(new Error('Thumbnail is too large after compression. Use a simpler image.'));
+return;
+}
+
+resolve(dataUrl);
+};
+
+image.onerror = () => reject(new Error('Could not read thumbnail image.'));
+const src = typeof reader.result === 'string' ? reader.result : '';
+if (!src) {
+reject(new Error('Could not load thumbnail image.'));
+return;
+}
+image.src = src;
+};
+
+reader.onerror = () => reject(new Error('Could not load thumbnail file.'));
+reader.readAsDataURL(file);
+});
+}
+
+function getGameThumbnailPollState(gameId) {
+return gameThumbnailPollsCache[normalizeUsername(gameId)] || null;
+}
+
+function getGameSelectedThumbnail(game) {
+const state = getGameThumbnailPollState(game.id);
+if (state && state.selectedThumbnail && state.selectedThumbnail.url) {
+return state.selectedThumbnail.url;
+}
+return buildDefaultGameThumbnailDataUrl(game);
+}
+
+function getThumbnailVoteCount(state, candidateId) {
+const votes = state && state.votes && Array.isArray(state.votes[candidateId]) ? state.votes[candidateId] : [];
+return votes.length;
+}
+
+function getActiveThumbnailPollCount() {
+return Object.values(gameThumbnailPollsCache).filter((state) => state && state.pollActive).length;
+}
+
+function getTotalThumbnailVoteCount(state) {
+if (!state || !state.votes || typeof state.votes !== 'object') return 0;
+return Object.values(state.votes).reduce((sum, voters) => sum + (Array.isArray(voters) ? voters.length : 0), 0);
+}
+
+function getWinningThumbnailCandidate(game, state) {
+const candidates = getGameThumbnailUploadCandidates(state);
+let winner = candidates[0] || null;
+let highestVotes = -1;
+for (const candidate of candidates) {
+const voteCount = getThumbnailVoteCount(state, candidate.id);
+if (voteCount > highestVotes) {
+highestVotes = voteCount;
+winner = candidate;
+}
+}
+return winner;
+}
+
+function renderGameStorefront() {
 const gameButtons = document.getElementById('game-buttons');
-games.forEach((game, idx) => {
-const btn = document.createElement('button');
-btn.textContent = game.name || `Game ${idx+1}`;
-btn.onclick = () => openGame(idx);
-gameButtons.appendChild(btn);
+const meta = document.getElementById('store-library-meta');
+if (!gameButtons) return;
+const gamesList = getPlayableGames();
+if (meta) {
+meta.textContent = `${gamesList.length} games • ${getActiveThumbnailPollCount()} live thumbnail polls`;
+}
+gameButtons.innerHTML = gamesList.map((game) => {
+const state = getGameThumbnailPollState(game.id) || {};
+const thumb = getGameSelectedThumbnail(game);
+const hasSelection = !!(state.selectedThumbnail && state.selectedThumbnail.url);
+const pollLabel = state.pollActive ? 'Poll Live' : (hasSelection ? 'Locked Choice' : '');
+const pollClass = state.pollActive ? 'thumbnail-poll-chip is-live' : (hasSelection ? 'game-thumb-win-badge' : 'thumbnail-poll-chip');
+const totalVotes = getTotalThumbnailVoteCount(state);
+return `<article class="game-store-card">
+<div class="game-store-thumb" style="background-image:url('${escapeHtml(thumb)}')">
+<div class="game-store-thumb-top">
+${pollLabel ? `<span class="${pollClass}">${escapeHtml(pollLabel)}</span>` : ''}
+</div>
+</div>
+<div class="game-store-content">
+<div class="game-store-title-row">
+<h3 class="game-store-title">${escapeHtml(game.name)}</h3>
+<span class="thumbnail-poll-chip">${totalVotes} vote${totalVotes === 1 ? '' : 's'}</span>
+</div>
+<p class="game-store-description">${escapeHtml(getGameSummary(game))}</p>
+<div class="game-store-footer">
+<button onclick="openGame(${game.index})">Play Now</button>
+<button class="secondary-button" onclick="openGameThumbnailPollModal('${game.id}')">${state.pollActive ? 'Vote Thumbnail' : 'Thumbnail Poll'}</button>
+</div>
+</div>
+</article>`;
+}).join('');
+}
+
+function openGameThumbnailPollModal(gameId) {
+activeGameThumbnailPollId = gameId;
+renderGameThumbnailPollModal();
+openModalById('game-thumbnail-poll-modal');
+}
+
+function closeGameThumbnailPollModal() {
+activeGameThumbnailPollId = '';
+const input = document.getElementById('game-thumbnail-upload-input');
+const status = document.getElementById('game-thumbnail-poll-status');
+if (input) input.value = '';
+if (status) status.textContent = '';
+closeModalById('game-thumbnail-poll-modal');
+}
+
+function renderGameThumbnailPollModal() {
+const game = getGameById(activeGameThumbnailPollId);
+const title = document.getElementById('game-thumbnail-poll-title');
+const subtitle = document.getElementById('game-thumbnail-poll-subtitle');
+const selected = document.getElementById('game-thumbnail-poll-selected');
+const uploadWrap = document.getElementById('game-thumbnail-upload-wrap');
+const uploadInput = document.getElementById('game-thumbnail-upload-input');
+const candidates = document.getElementById('game-thumbnail-poll-candidates');
+const adminActions = document.getElementById('game-thumbnail-poll-admin-actions');
+const status = document.getElementById('game-thumbnail-poll-status');
+if (!title || !subtitle || !selected || !uploadWrap || !uploadInput || !candidates || !adminActions || !status) return;
+if (!game) {
+title.textContent = 'Thumbnail Poll';
+subtitle.textContent = 'Game not found.';
+selected.textContent = '';
+uploadWrap.style.display = 'none';
+uploadInput.value = '';
+adminActions.innerHTML = '';
+candidates.innerHTML = '';
+return;
+}
+const state = getGameThumbnailPollState(game.id) || {};
+const options = getGameThumbnailUploadCandidates(state);
+const selectedThumb = state.selectedThumbnail || null;
+title.textContent = `${game.name} Thumbnail Poll`;
+subtitle.textContent = state.pollActive
+? 'Users can upload thumbnails and vote for the one that should become the permanent card art. It stays locked until an admin starts another poll.'
+: 'No live poll right now. The selected thumbnail stays in place until an admin restarts the poll.';
+selected.textContent = selectedThumb
+? `Current chosen thumbnail: ${selectedThumb.label || 'Selected thumbnail'}`
+: (state.pollActive ? 'No thumbnail locked yet. Users can upload thumbnails below.' : 'No thumbnail has been locked yet.');
+status.textContent = '';
+uploadWrap.style.display = state.pollActive ? 'block' : 'none';
+uploadInput.disabled = !state.pollActive;
+adminActions.innerHTML = canAdminSettings(currentChatUser)
+? `${state.pollActive && options.length ? `<button onclick="finalizeGameThumbnailPoll('${game.id}')" style="background:#2e7d32; color:#fff;">Finalize Winner</button>` : ''}<button onclick="startGameThumbnailPoll('${game.id}')" style="background:#1565c0; color:#fff;">${state.pollActive ? 'Restart Poll' : 'Start Poll'}</button>`
+: '';
+if (!options.length) {
+candidates.innerHTML = `<div class="overlay-subtle" style="grid-column:1 / -1;">${state.pollActive ? 'No uploaded thumbnails yet. Upload one below to start the vote.' : 'No uploaded thumbnails are saved for this poll yet.'}</div>`;
+return;
+}
+const myVote = state.votes || {};
+candidates.innerHTML = options.map((candidate) => {
+const voteCount = getThumbnailVoteCount(state, candidate.id);
+const hasVoted = Array.isArray(myVote[candidate.id]) && myVote[candidate.id].includes(currentChatUser);
+const isChosen = !!(selectedThumb && selectedThumb.id === candidate.id && !state.pollActive);
+const uploaderName = candidate.uploadedByName || candidate.uploadedBy || 'user';
+const uploadedAt = candidate.uploadedAtMs ? new Date(candidate.uploadedAtMs).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+const candidateTitle = candidate.label || `${uploaderName} upload`;
+const metaText = `Uploaded by ${uploaderName}${uploadedAt ? ` · ${uploadedAt}` : ''}`;
+const buttonLabel = state.pollActive ? (hasVoted ? 'Voted' : 'Vote for this') : (isChosen ? 'Selected thumbnail' : 'Poll closed');
+return `<div class="thumbnail-vote-card">
+<div class="thumbnail-vote-image" style="background-image:url('${escapeHtml(candidate.url)}')"></div>
+<div class="thumbnail-vote-content">
+<div style="display:flex; justify-content:space-between; gap:0.5rem; align-items:center;">
+<strong>${escapeHtml(candidateTitle)}</strong>
+${isChosen ? '<span class="game-thumb-win-badge">Winner</span>' : `<span class="thumbnail-poll-chip${state.pollActive ? ' is-live' : ''}">${voteCount} vote${voteCount === 1 ? '' : 's'}</span>`}
+</div>
+<div class="thumbnail-vote-meta">${escapeHtml(metaText)}</div>
+<button onclick="voteForGameThumbnail('${candidate.id}')" ${state.pollActive ? '' : 'disabled'} style="${state.pollActive ? '' : 'opacity:0.55; cursor:not-allowed;'} background:${hasVoted ? '#2e7d32' : '#1565c0'}; color:#fff;">${buttonLabel}</button>
+</div>
+</div>`;
+}).join('');
+}
+
+async function listenForGameThumbnailPolls() {
+try {
+const db = getAdminDb();
+if (gameThumbnailPollsUnsub) gameThumbnailPollsUnsub();
+gameThumbnailPollsUnsub = db.collection(GAME_THUMBNAIL_POLLS_COLLECTION).onSnapshot((snapshot) => {
+const next = {};
+snapshot.forEach((doc) => {
+next[normalizeUsername(doc.id)] = doc.data() || {};
+});
+gameThumbnailPollsCache = next;
+renderGameStorefront();
+if (activeGameThumbnailPollId) renderGameThumbnailPollModal();
+});
+} catch (err) {
+gameThumbnailPollsCache = {};
+renderGameStorefront();
+}
+}
+
+async function startGameThumbnailPoll(gameId) {
+if (!canAdminSettings(currentChatUser)) return;
+const game = getGameById(gameId);
+if (!game) return;
+const ref = getAdminDb().collection(GAME_THUMBNAIL_POLLS_COLLECTION).doc(gameId);
+const existing = await ref.get();
+const existingData = existing.exists ? (existing.data() || {}) : {};
+await ref.set({
+gameName: game.name,
+candidates: [],
+pollActive: true,
+votes: {},
+selectedThumbnail: existingData.selectedThumbnail || null,
+revision: (parseInt(existingData.revision, 10) || 0) + 1,
+startedBy: currentChatUser,
+startedAt: firebase.firestore.FieldValue.serverTimestamp(),
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+});
+}
+
+async function submitGameThumbnailUpload() {
+const status = document.getElementById('game-thumbnail-poll-status');
+const input = document.getElementById('game-thumbnail-upload-input');
+if (status) status.textContent = '';
+if (!currentChatUser) {
+if (status) status.textContent = 'Log in before uploading a thumbnail.';
+return;
+}
+if (!activeGameThumbnailPollId) {
+if (status) status.textContent = 'Open a thumbnail poll first.';
+return;
+}
+const file = input && input.files && input.files[0];
+if (!file) {
+if (status) status.textContent = 'Choose an image file to upload.';
+return;
+}
+
+try {
+if (status) status.textContent = 'Compressing thumbnail...';
+const compressedThumbnail = await compressGameThumbnailImage(file);
+const db = getAdminDb();
+const ref = db.collection(GAME_THUMBNAIL_POLLS_COLLECTION).doc(activeGameThumbnailPollId);
+const me = normalizeUsername(currentChatUser);
+const uploadedAtMs = Date.now();
+
+if (status) status.textContent = 'Uploading thumbnail...';
+await db.runTransaction(async (transaction) => {
+const snap = await transaction.get(ref);
+if (!snap.exists) {
+throw new Error('This thumbnail poll does not exist anymore.');
+}
+const data = snap.data() || {};
+if (!data.pollActive) {
+throw new Error('This thumbnail poll is closed.');
+}
+const existingCandidates = getGameThumbnailUploadCandidates(data);
+if (existingCandidates.length >= GAME_THUMBNAIL_MAX_CANDIDATES) {
+throw new Error(`This poll already has ${GAME_THUMBNAIL_MAX_CANDIDATES} uploaded thumbnails.`);
+}
+if (existingCandidates.some((candidate) => normalizeUsername(candidate.uploadedBy || candidate.uploadedByName || '') === me)) {
+throw new Error('You already uploaded a thumbnail for this poll.');
+}
+
+transaction.set(ref, {
+candidates: [...existingCandidates, {
+id: `upload-${uploadedAtMs}-${Math.random().toString(36).slice(2, 8)}`,
+label: `${currentChatUser} upload`,
+url: compressedThumbnail,
+uploadedBy: me,
+uploadedByName: currentChatUser,
+uploadedAtMs,
+source: 'upload'
+}],
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+});
+
+if (input) input.value = '';
+if (status) status.textContent = 'Thumbnail uploaded.';
+} catch (err) {
+if (status) status.textContent = err && err.message ? err.message : 'Failed to upload thumbnail.';
+}
+}
+
+async function voteForGameThumbnail(candidateId) {
+if (!currentChatUser || !activeGameThumbnailPollId) return;
+const game = getGameById(activeGameThumbnailPollId);
+if (!game) return;
+const ref = getAdminDb().collection(GAME_THUMBNAIL_POLLS_COLLECTION).doc(game.id);
+const snap = await ref.get();
+if (!snap.exists) return;
+const data = snap.data() || {};
+if (!data.pollActive) return;
+const options = getGameThumbnailUploadCandidates(data);
+if (!options.some((candidate) => candidate.id === candidateId)) return;
+const updates = {
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+};
+options.forEach((candidate) => {
+updates[`votes.${candidate.id}`] = candidate.id === candidateId
+? firebase.firestore.FieldValue.arrayUnion(currentChatUser)
+: firebase.firestore.FieldValue.arrayRemove(currentChatUser);
+});
+await ref.set(updates, { merge: true });
+}
+
+async function finalizeGameThumbnailPoll(gameId) {
+if (!canAdminSettings(currentChatUser)) return;
+const game = getGameById(gameId);
+if (!game) return;
+const ref = getAdminDb().collection(GAME_THUMBNAIL_POLLS_COLLECTION).doc(gameId);
+const snap = await ref.get();
+if (!snap.exists) return;
+const data = snap.data() || {};
+const winner = getWinningThumbnailCandidate(game, data);
+if (!winner) {
+const status = document.getElementById('game-thumbnail-poll-status');
+if (status) status.textContent = 'No uploaded thumbnails have been submitted yet.';
+return;
+}
+await ref.set({
+pollActive: false,
+selectedThumbnail: winner,
+lockedBy: currentChatUser,
+lockedAt: firebase.firestore.FieldValue.serverTimestamp(),
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+}
+
+window.addEventListener('load', () => {
+renderGameStorefront();
+renderChatRoomToolbarState();
+updateCustomColorInput(getChatColor());
 });
 
 const iframeContainer = document.getElementById('iframe-container');
@@ -2280,38 +4289,539 @@ const STATIC_BANNED_USERS = [
 ]
 
 const firebaseConfig = {
-apiKey: "AIzaSyC7ivI30OuZuYiHQ_zm-AkvJVxmmI5rIyU",
-authDomain: "balright-chat.firebaseapp.com",
-projectId: "balright-chat",
-storageBucket: "balright-chat.firebasestorage.app",
-messagingSenderId: "506344188110",
-appId: "1:506344188110:web:c7293b22e6fc730adb089f"
+apiKey: "AIzaSyC9SMr54yXr0uk0M7JEeuawj0J98IylU20",
+authDomain: "balright--chat.firebaseapp.com",
+projectId: "balright--chat",
+storageBucket: "balright--chat.firebasestorage.app",
+messagingSenderId: "233595240223",
+appId: "1:233595240223:web:8477fa939d4491d375fa2a"
 };                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+
+const adminFirebaseConfig = {
+apiKey: "AIzaSyDYQNtr7l1G35coXkOS0yU1hAN0SaqUwnI",
+authDomain: "balright-admin.firebaseapp.com",
+projectId: "balright-admin",
+storageBucket: "balright-admin.firebasestorage.app",
+messagingSenderId: "217574354625",
+appId: "1:217574354625:web:f7da2650966911a56f2e40"
+};
+
+const archiveFirebaseConfig = {
+apiKey: "AIzaSyD_mTLJiBJUc7OgVKQ4A0vTrJ8b3u2tnlY",
+authDomain: "balright-archive.firebaseapp.com",
+projectId: "balright-archive",
+storageBucket: "balright-archive.firebasestorage.app",
+messagingSenderId: "696203941105",
+appId: "1:696203941105:web:5b8d370ad383537c19c550"
+};
+
+const ADMIN_APP_NAME = 'balright-admin';
+const ARCHIVE_APP_NAME = 'balright-archive';
+
+function isFirebaseConfigReady(config) {
+return !!(config && config.apiKey && config.projectId && config.appId);
+}
+
+function ensureFirebaseApp(config, appName) {
+if (!isFirebaseConfigReady(config)) return null;
+const existing = firebase.apps.find(app => app.name === appName);
+if (existing) return existing;
+return firebase.initializeApp(config, appName);
+}
+
+function getPrimaryDb() {
+if (!firebase.apps.length) {
+firebase.initializeApp(firebaseConfig);
+}
+return firebase.firestore();
+}
+
+function getAdminDb() {
+const adminApp = ensureFirebaseApp(adminFirebaseConfig, ADMIN_APP_NAME);
+return adminApp ? adminApp.firestore() : getPrimaryDb();
+}
+
+function getArchiveDb() {
+const archiveApp = ensureFirebaseApp(archiveFirebaseConfig, ARCHIVE_APP_NAME);
+return archiveApp ? archiveApp.firestore() : null;
+}
+
+function renderAdminProjectStatus() {
+const el = document.getElementById('admin-project-status');
+if (!el) return;
+
+const mainReady = isFirebaseConfigReady(firebaseConfig);
+const adminReady = isFirebaseConfigReady(adminFirebaseConfig);
+const archiveReady = isFirebaseConfigReady(archiveFirebaseConfig);
+
+el.innerHTML = [
+`<div><strong>Main Chat Project:</strong> ${mainReady ? firebaseConfig.projectId : 'Not configured'}</div>`,
+`<div><strong>Admin Project:</strong> ${adminReady ? adminFirebaseConfig.projectId : 'Not configured'}${adminReady ? '' : ' (falling back to main project)'}</div>`,
+`<div><strong>Archive Project:</strong> ${archiveReady ? archiveFirebaseConfig.projectId : 'Not configured'}${archiveReady ? '' : ' (archive backup disabled)'}</div>`
+].join('');
+}
 
 let chatInitialized = false;
 let currentChatUser = '';
 let currentChatColor = '#1565c0';
+let chatRoomToolbarOpen = localStorage.getItem('chatRoomToolbarOpen') !== '0';
 let isChatDragging = false;
 let chatDragOffsetX = 0;
 let chatDragOffsetY = 0;
 let chatUnreadCount = 0;
 let typingTimeout = null;
+let lastTypingWriteMs = 0;
+let typingStateIsTrue = false;
 let currentPinnedMessage = null;
+let lastGlobalAlertKey = localStorage.getItem('lastGlobalAlertKey') || '';
 let roleCache = {};
+let userTagCache = {};
 let currentProfileViewUser = '';
+let dmUnreadCount = 0;
+let dmUnreadListenerUnsub = null;
+let dmKnownIncomingIds = new Set();
+let dmConversationSummaries = [];
+let dmInboxDocs = new Map();
+let dmInboxOutgoingUnsub = null;
+let currentChatRoom = 'general';
+let blockedUsers = new Set();
+let chatMessagesUnsub = null;
+let timeoutStatusInterval = null;
+let currentMuteInfo = null;
+let currentTimedBanInfo = null;
+let muteStatusUnsub = null;
+let timedBanStatusUnsub = null;
 let moderationSettings = {
 readOnlyMode: false,
 blockedWords: [],
 announcementText: '',
-announcementEndsAt: null
+announcementEndsAt: null,
+slowModeSeconds: DEFAULT_SLOW_MODE_SECONDS,
+rolePermissions: JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS))
 };
 const CHAT_IMAGE_MAX_WIDTH = 1280;
 const CHAT_IMAGE_MAX_HEIGHT = 1280;
 const CHAT_IMAGE_QUALITY = 0.82;
 const CHAT_IMAGE_SIZE_LIMIT = 700000;
 const CHAT_VIDEO_SIZE_LIMIT = 700000;
-const GIPHY_API_KEY = 'YOUR_GIPHY_API_KEY'; // Replace with your Giphy API key from https://developers.giphy.com
+const CHAT_ROOMS_COLLECTION = 'chat_rooms';
+let chatRoomsCache = {};
+let chatRoomsUnsub = null;
+let chatSlowModeMs = DEFAULT_SLOW_MODE_SECONDS * 1000;
+const GIPHY_API_KEY = 'pvSwWmExkUp8gCMWWKoh8xYzGeexgOTN'; // Restrict this Giphy API key by domain in the Giphy developer console.
 // Note: API keys in client-side code are visible to users. Restrict your Giphy key by domain in the Giphy developer console.
+let lastChatSendAtMs = 0;
+
+function getSlowModeRemainingMs() {
+return Math.max(0, chatSlowModeMs - (Date.now() - lastChatSendAtMs));
+}
+
+function canSendChatNow() {
+const remainingMs = getSlowModeRemainingMs();
+if (remainingMs > 0) {
+const secondsLeft = Math.max(1, Math.ceil(remainingMs / 1000));
+alert(`Slow mode is on. Wait ${secondsLeft}s before sending again.`);
+return false;
+}
+return true;
+}
+
+function getBlockedUsersStorageKey() {
+const me = normalizeUsername(currentChatUser || getUserName() || 'guest');
+return `blockedUsers:${me || 'guest'}`;
+}
+
+function loadBlockedUsers() {
+try {
+const raw = JSON.parse(localStorage.getItem(getBlockedUsersStorageKey()) || '[]');
+blockedUsers = new Set((Array.isArray(raw) ? raw : []).map(normalizeUsername).filter(Boolean));
+} catch (err) {
+blockedUsers = new Set();
+}
+}
+
+function saveBlockedUsers() {
+localStorage.setItem(getBlockedUsersStorageKey(), JSON.stringify(Array.from(blockedUsers)));
+}
+
+function isUserBlocked(username) {
+return blockedUsers.has(normalizeUsername(username));
+}
+
+function getDefaultGeneralRoom() {
+return {
+id: 'general',
+name: 'General',
+description: '',
+isPublic: true,
+createdBy: 'system',
+members: []
+};
+}
+
+function sanitizeRoomName(value) {
+return String(value || '').replace(/\s+/g, ' ').trim().slice(0, 32);
+}
+
+function sanitizeRoomDescription(value) {
+return String(value || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+}
+
+function normalizeRoomId(value) {
+const normalized = String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+return (normalized || 'room').slice(0, 36);
+}
+
+function buildChatRoomConfig(roomId, raw = {}) {
+const fallback = getDefaultGeneralRoom();
+const id = normalizeUsername(roomId) || fallback.id;
+return {
+id,
+name: sanitizeRoomName(raw.name || (id === 'general' ? fallback.name : roomId)) || fallback.name,
+description: sanitizeRoomDescription(raw.description || (id === 'general' ? fallback.description : 'Custom chat room')),
+isPublic: id === 'general' ? true : raw.isPublic !== false,
+createdBy: normalizeUsername(raw.createdBy || ''),
+members: Array.isArray(raw.members) ? raw.members.map(normalizeUsername).filter(Boolean) : []
+};
+}
+
+function canAccessRoom(room, username = currentChatUser) {
+const targetRoom = buildChatRoomConfig(room && room.id ? room.id : 'general', room || {});
+const me = normalizeUsername(username);
+if (targetRoom.id === 'general') return true;
+if (canAdminSettings(me)) return true;
+if (targetRoom.isPublic) return true;
+if (!me) return false;
+return targetRoom.createdBy === me || targetRoom.members.includes(me);
+}
+
+function getAllChatRooms() {
+const merged = { general: getDefaultGeneralRoom(), ...chatRoomsCache };
+return Object.values(merged).map((room) => buildChatRoomConfig(room.id, room)).sort((a, b) => {
+if (a.id === 'general') return -1;
+if (b.id === 'general') return 1;
+return a.name.localeCompare(b.name);
+});
+}
+
+function getAvailableChatRooms(username = currentChatUser) {
+return getAllChatRooms().filter((room) => canAccessRoom(room, username));
+}
+
+function getChatRoomConfig(roomId) {
+const normalizedId = normalizeUsername(roomId) || 'general';
+const merged = { general: getDefaultGeneralRoom(), ...chatRoomsCache };
+if (merged[normalizedId]) {
+return buildChatRoomConfig(normalizedId, merged[normalizedId]);
+}
+if (normalizedId === 'general') {
+return getDefaultGeneralRoom();
+}
+return buildChatRoomConfig(normalizedId, {
+name: normalizedId.replace(/-/g, ' '),
+description: 'Loading room...',
+isPublic: false
+});
+}
+
+function renderChatRoomOptions() {
+const select = document.getElementById('chat-room-select');
+if (!select) return;
+const rooms = getAvailableChatRooms();
+select.innerHTML = rooms.map((room) => `<option value="${escapeHtml(room.id)}">${escapeHtml(room.name)}</option>`).join('');
+}
+
+function renderChatRoomSummary() {
+const summary = document.getElementById('chat-room-summary');
+const select = document.getElementById('chat-room-select');
+const room = getChatRoomConfig(currentChatRoom);
+renderChatRoomOptions();
+if (select) select.value = room.id;
+if (summary) {
+const summaryParts = room.id === 'general'
+? ['General room']
+: [room.name, room.isPublic ? 'Public room' : 'Private room'];
+if (room.id !== 'general' && room.description) {
+summaryParts.push(room.description);
+}
+summary.textContent = summaryParts.join(' · ');
+}
+const input = document.getElementById('chat-message-input');
+if (input && !isReadOnlyForCurrentUser()) {
+input.placeholder = `Message ${room.name}...`;
+}
+}
+
+function renderChatRoomToolbarState() {
+const toolbar = document.getElementById('chat-room-toolbar');
+const button = document.getElementById('chat-room-toggle-btn');
+if (!toolbar || !button) return;
+toolbar.classList.toggle('is-collapsed', !chatRoomToolbarOpen);
+button.textContent = chatRoomToolbarOpen ? 'Close Rooms' : 'Open Rooms';
+}
+
+function toggleChatRoomToolbar() {
+chatRoomToolbarOpen = !chatRoomToolbarOpen;
+localStorage.setItem('chatRoomToolbarOpen', chatRoomToolbarOpen ? '1' : '0');
+renderChatRoomToolbarState();
+}
+
+function changeChatRoom(roomId) {
+const room = getChatRoomConfig(roomId);
+if (!canAccessRoom(room)) return;
+currentChatRoom = room.id;
+localStorage.setItem('chatRoom', currentChatRoom);
+clearReply();
+renderChatRoomSummary();
+loadChatMessages();
+}
+
+function getCurrentChatRoom() {
+const stored = normalizeUsername(localStorage.getItem('chatRoom') || '');
+return stored || currentChatRoom || 'general';
+}
+
+function updateCreateRoomMembersVisibility() {
+const privacy = document.getElementById('create-room-privacy');
+const wrap = document.getElementById('create-room-members-wrap');
+if (!privacy || !wrap) return;
+wrap.style.display = privacy.value === 'private' ? 'block' : 'none';
+}
+
+function openCreateRoomModal() {
+const status = document.getElementById('create-room-status');
+const name = document.getElementById('create-room-name');
+const description = document.getElementById('create-room-description');
+const members = document.getElementById('create-room-members');
+const privacy = document.getElementById('create-room-privacy');
+if (status) status.textContent = '';
+if (name) name.value = '';
+if (description) description.value = '';
+if (members) members.value = '';
+if (privacy) privacy.value = 'public';
+updateCreateRoomMembersVisibility();
+openModalById('create-room-modal');
+if (name) setTimeout(() => name.focus(), 50);
+}
+
+function closeCreateRoomModal() {
+closeModalById('create-room-modal');
+}
+
+async function loadChatRooms() {
+try {
+const db = getAdminDb();
+if (chatRoomsUnsub) chatRoomsUnsub();
+chatRoomsUnsub = db.collection(CHAT_ROOMS_COLLECTION).onSnapshot((snapshot) => {
+const next = { general: getDefaultGeneralRoom() };
+snapshot.forEach((doc) => {
+next[normalizeUsername(doc.id)] = buildChatRoomConfig(doc.id, doc.data() || {});
+});
+chatRoomsCache = next;
+const currentRoom = getChatRoomConfig(currentChatRoom);
+if (!canAccessRoom(currentRoom)) {
+currentChatRoom = 'general';
+localStorage.setItem('chatRoom', currentChatRoom);
+}
+renderChatRoomSummary();
+if (chatInitialized) loadChatMessages();
+});
+} catch (err) {
+chatRoomsCache = { general: getDefaultGeneralRoom() };
+renderChatRoomSummary();
+}
+}
+
+async function submitCreateRoom() {
+const nameEl = document.getElementById('create-room-name');
+const descriptionEl = document.getElementById('create-room-description');
+const privacyEl = document.getElementById('create-room-privacy');
+const membersEl = document.getElementById('create-room-members');
+const statusEl = document.getElementById('create-room-status');
+const me = normalizeUsername(currentChatUser);
+if (!nameEl || !descriptionEl || !privacyEl || !membersEl || !statusEl || !me) return;
+const name = sanitizeRoomName(nameEl.value);
+const description = sanitizeRoomDescription(descriptionEl.value);
+const isPublic = privacyEl.value !== 'private';
+const requestedMembers = membersEl.value.split(',').map(normalizeUsername).filter(Boolean);
+const memberSet = new Set([me, ...requestedMembers]);
+if (!name) {
+statusEl.textContent = 'Enter a room name.';
+return;
+}
+const baseId = normalizeRoomId(name);
+const roomId = baseId === 'general' ? `room-${Date.now()}` : `${baseId}-${Date.now().toString().slice(-5)}`;
+try {
+const db = getAdminDb();
+await db.collection(CHAT_ROOMS_COLLECTION).doc(roomId).set({
+name,
+description: description || 'Custom chat room',
+isPublic,
+members: Array.from(memberSet),
+createdBy: me,
+createdAt: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+currentChatRoom = roomId;
+localStorage.setItem('chatRoom', currentChatRoom);
+closeCreateRoomModal();
+loadChatMessages();
+} catch (err) {
+statusEl.textContent = 'Failed to create room.';
+}
+}
+
+function extractFirstUrl(text) {
+const match = String(text || '').match(/https?:\/\/[^\s<>"]+/i);
+return match ? match[0] : '';
+}
+
+function buildLinkPreviewData(url) {
+if (!url) return null;
+try {
+const parsed = new URL(url);
+const host = parsed.hostname.replace(/^www\./i, '');
+const path = parsed.pathname.replace(/\/$/, '') || '/';
+const lastSegment = path.split('/').filter(Boolean).pop() || host;
+const cleanedTitle = decodeURIComponent(lastSegment).replace(/[-_]+/g, ' ').slice(0, 80) || host;
+return {
+url: parsed.toString(),
+host: host.slice(0, 60),
+title: cleanedTitle.charAt(0).toUpperCase() + cleanedTitle.slice(1),
+path: path.slice(0, 120)
+};
+} catch (err) {
+return null;
+}
+}
+
+function renderLinkifiedText(text) {
+const escaped = escapeHtml(String(text || ''));
+return escaped.replace(/(https?:\/\/[^\s<>"]+)/gi, (match) => {
+const safeUrl = escapeHtml(match);
+return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a>`;
+});
+}
+
+function renderLinkPreviewHtml(preview) {
+if (!preview || !preview.url) return '';
+return `<a class="chat-link-preview" href="${escapeHtml(preview.url)}" target="_blank" rel="noopener noreferrer">
+<div class="chat-link-preview-title">${escapeHtml(preview.title || preview.host || preview.url)}</div>
+<div class="chat-link-preview-meta">${escapeHtml(preview.host || '')}</div>
+<div class="chat-link-preview-url">${escapeHtml(preview.url)}</div>
+</a>`;
+}
+
+function collectReportEvidence(docId) {
+const order = Array.isArray(window._chatDocOrder) ? window._chatDocOrder : [];
+const docs = window._chatDocs || {};
+const index = order.indexOf(docId);
+if (index === -1) return [];
+return order.slice(Math.max(0, index - 2), Math.min(order.length, index + 3)).map((id) => {
+const item = docs[id] || {};
+return {
+id,
+user: item.user || 'unknown',
+message: String(item.message || '').slice(0, 220),
+room: item.room || 'general',
+timestampMs: getTimestampMs(item.timestamp)
+};
+});
+}
+
+function deepCloneRolePermissions(source) {
+return JSON.parse(JSON.stringify(source || DEFAULT_ROLE_PERMISSIONS));
+}
+
+function normalizeRolePermissions(raw) {
+const normalized = deepCloneRolePermissions(DEFAULT_ROLE_PERMISSIONS);
+if (!raw || typeof raw !== 'object') return normalized;
+Object.keys(normalized).forEach((role) => {
+const candidate = raw[role];
+if (!candidate || typeof candidate !== 'object') return;
+Object.keys(normalized[role]).forEach((perm) => {
+if (Object.prototype.hasOwnProperty.call(candidate, perm)) {
+normalized[role][perm] = !!candidate[perm];
+}
+});
+});
+return normalized;
+}
+
+function hasRolePermission(username, permissionKey) {
+const role = getUserRole(username);
+const perms = moderationSettings.rolePermissions || DEFAULT_ROLE_PERMISSIONS;
+if (role === 'owner') return true;
+if (!perms[role]) return false;
+return !!perms[role][permissionKey];
+}
+
+function markSlowModeFromSettings() {
+const seconds = Math.max(0, Math.min(60, parseInt(moderationSettings.slowModeSeconds, 10) || DEFAULT_SLOW_MODE_SECONDS));
+moderationSettings.slowModeSeconds = seconds;
+chatSlowModeMs = seconds * 1000;
+const input = document.getElementById('admin-slowmode-seconds');
+if (input) input.value = String(seconds);
+}
+
+async function writeAuditLog(action, target = '', details = '') {
+try {
+const db = getAdminDb();
+await db.collection(AUDIT_LOG_COLLECTION).add({
+action: String(action || '').slice(0, 60),
+target: String(target || '').slice(0, 80),
+details: String(details || '').slice(0, 300),
+by: currentChatUser || getUserName() || 'system',
+at: firebase.firestore.FieldValue.serverTimestamp()
+});
+} catch (err) {}
+}
+
+async function addStrike(username, reason, source = 'manual') {
+const key = normalizeUsername(username);
+if (!key || isProtectedUsername(key)) return { count: 0, muted: false, tempBanned: false };
+const db = getAdminDb();
+const ref = db.collection(USER_STRIKES_COLLECTION).doc(key);
+const doc = await ref.get();
+const currentCount = doc.exists ? (parseInt((doc.data() || {}).count, 10) || 0) : 0;
+const nextCount = currentCount + 1;
+const history = doc.exists && Array.isArray(doc.data().history) ? doc.data().history.slice(-19) : [];
+history.push({
+reason: String(reason || 'Rule violation').slice(0, 120),
+source: String(source || 'manual').slice(0, 40),
+by: currentChatUser || getUserName() || 'system',
+at: new Date().toISOString()
+});
+await ref.set({ count: nextCount, history, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+
+let muted = false;
+let tempBanned = false;
+if (nextCount >= 3) {
+await db.collection('muted_users').doc(key).set({
+muted: true,
+mutedBy: currentChatUser || 'system',
+reason: 'Auto-mute after 3 strikes',
+timestamp: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+muted = true;
+}
+if (nextCount >= 5) {
+const expiresAt = new Date(Date.now() + 60 * 60000);
+await db.collection(TIMED_BANS_COLLECTION).doc(key).set({
+reason: 'Auto temp ban after 5 strikes',
+minutes: 60,
+bannedBy: currentChatUser || 'system',
+createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+expiresAt: firebase.firestore.Timestamp.fromDate(expiresAt)
+}, { merge: true });
+await db.collection('kicked_users').doc(key).set({
+kicked: true,
+kickedBy: currentChatUser || 'system',
+timestamp: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+tempBanned = true;
+}
+return { count: nextCount, muted, tempBanned };
+}
 
 function getStatsStore() {
 try {
@@ -2389,6 +4899,7 @@ async function openProfileModal(event) {
 if (event) event.stopPropagation();
 const key = getStatsUserKey();
 if (key) await fetchStatsFromFirestore(key);
+await loadFriendsData();
 renderProfileModal(key);
 document.getElementById('profile-modal').style.display = 'flex';
 }
@@ -2398,6 +4909,7 @@ if (event) event.stopPropagation();
 const username = normalizeUsername(decodeURIComponent(encodedUsername || ''));
 if (!username) return;
 await fetchStatsFromFirestore(username);
+await loadFriendsData();
 renderProfileModal(username);
 document.getElementById('profile-modal').style.display = 'flex';
 }
@@ -2409,6 +4921,8 @@ document.getElementById('profile-modal').style.display = 'none';
 function renderProfileModal(profileUserKey = '') {
 const usernameEl = document.getElementById('profile-username');
 const roleEl = document.getElementById('profile-role');
+const levelProgressBarEl = document.getElementById('profile-level-progress-bar');
+const levelProgressTextEl = document.getElementById('profile-level-progress-text');
 const statsGrid = document.getElementById('profile-stat-grid');
 const countEl = document.getElementById('profile-achievement-count');
 const listEl = document.getElementById('achievement-list');
@@ -2423,10 +4937,34 @@ usernameEl.textContent = resolvedUserKey ? `@${resolvedUserKey}` : 'Not logged i
 if (roleEl) {
 roleEl.textContent = resolvedUserKey ? `Role: ${getUserRole(resolvedUserKey).toUpperCase()}` : '';
 }
-const { level, points } = calculateUserLevel(stats, resolvedUserKey);
+const { level, points, nextLevelPoints } = calculateUserLevel(stats, resolvedUserKey);
 const profileLevelEl = document.getElementById('profile-level');
 if (profileLevelEl) {
 profileLevelEl.textContent = `LEVEL ${level} • ${points.toLocaleString()} points`;
+}
+if (levelProgressBarEl && levelProgressTextEl) {
+const baseMilestones = [0, 100, 250, 450, 700, 1000, 1500, 2100, 2800, 3600, 4500];
+let levelStart = 0;
+let targetPoints = nextLevelPoints;
+if (targetPoints > points) {
+for (let i = 0; i < baseMilestones.length; i++) {
+if (baseMilestones[i] <= points) {
+levelStart = baseMilestones[i];
+}
+}
+} else {
+levelStart = Math.floor(points / 1000) * 1000;
+targetPoints = levelStart + 1000;
+}
+const neededThisLevel = Math.max(1, targetPoints - levelStart);
+const gainedThisLevel = Math.min(neededThisLevel, Math.max(0, points - levelStart));
+const progressPercent = Math.max(0, Math.min(100, Math.round((gainedThisLevel / neededThisLevel) * 100)));
+const pointsToNext = Math.max(0, targetPoints - points);
+
+levelProgressBarEl.style.width = `${progressPercent}%`;
+levelProgressTextEl.textContent = pointsToNext > 0
+? `${gainedThisLevel.toLocaleString()} / ${neededThisLevel.toLocaleString()} XP (${progressPercent}%) • ${pointsToNext.toLocaleString()} to next level`
+: 'Max progress reached for this tier';
 }
 countEl.textContent = `${unlocked.length}/${ACHIEVEMENTS.length} unlocked`;
 statsGrid.innerHTML = [
@@ -2443,6 +4981,7 @@ const displayProgress = isKaidenProfile ? item.goal : Math.min(progress, item.go
 return `<div class="achievement-item ${unlockedNow ? 'unlocked' : ''}"><div><div style="font-weight:bold;">${item.label}</div><div style="font-size:0.78rem; color:#bbb; margin-top:0.15rem;">${item.description}</div></div><div style="white-space:nowrap; color:${unlockedNow ? '#66bb6a' : '#ffca28'}; font-weight:bold;">${displayProgress}/${item.goal}</div></div>`;
 }).join('');
 renderProfileFlags(resolvedUserKey);
+updateProfileModalButtons();
 }
 
 async function renderProfileFlags(targetUserKey) {
@@ -2459,16 +4998,19 @@ panel.style.display = 'block';
 panel.innerHTML = '<div style="color:#999; font-size:0.85rem;">Loading profile flags...</div>';
 
 try {
-const db = firebase.firestore();
+const db = getAdminDb();
 const doc = await db.collection(USER_FLAGS_COLLECTION).doc(targetUserKey).get();
 const data = doc.exists ? (doc.data() || {}) : {};
 const trusted = !!data.trusted;
 const offender = !!data.offender;
+const tag = sanitizeProfileTag(data.tag);
 const note = data.note ? String(data.note) : '';
 panel.innerHTML = `
      <div style="font-weight:bold; margin-bottom:0.4rem; color:#ffca28;">Admin Flags</div>
      <label style="display:block; margin-bottom:0.35rem;"><input id="profile-flag-trusted" type="checkbox" ${trusted ? 'checked' : ''} /> Trusted</label>
      <label style="display:block; margin-bottom:0.35rem;"><input id="profile-flag-offender" type="checkbox" ${offender ? 'checked' : ''} /> Repeat Offender</label>
+  <label style="display:block; margin-top:0.45rem; color:#ddd; font-size:0.85rem;">Profile Tag</label>
+  <select id="profile-flag-tag" style="width:100%; margin-top:0.25rem; background:#1d1d1d; color:#fff; border:1px solid #444; border-radius:0.35rem; padding:0.45rem;">${getProfileTagOptionsHtml(tag)}</select>
      <textarea id="profile-flag-note" placeholder="Private admin note" style="width:100%; min-height:72px; margin-top:0.4rem; background:#1d1d1d; color:#fff; border:1px solid #444; border-radius:0.35rem; padding:0.45rem;">${escapeHtml(note)}</textarea>
      <div style="margin-top:0.5rem;"><button onclick="saveProfileFlags()" style="padding:0.35rem 0.7rem; background:#1565c0; color:#fff; border:none; border-radius:0.25rem;">Save Flags</button></div>
    `;
@@ -2484,14 +5026,16 @@ if (!targetUser) return;
 
 const trustedEl = document.getElementById('profile-flag-trusted');
 const offenderEl = document.getElementById('profile-flag-offender');
+const tagEl = document.getElementById('profile-flag-tag');
 const noteEl = document.getElementById('profile-flag-note');
-if (!trustedEl || !offenderEl || !noteEl) return;
+if (!trustedEl || !offenderEl || !tagEl || !noteEl) return;
 
 try {
-const db = firebase.firestore();
+const db = getAdminDb();
 await db.collection(USER_FLAGS_COLLECTION).doc(targetUser).set({
 trusted: !!trustedEl.checked,
 offender: !!offenderEl.checked,
+tag: sanitizeProfileTag(tagEl.value),
 note: noteEl.value.trim().slice(0, 500),
 updatedBy: currentChatUser,
 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -2541,12 +5085,163 @@ function closeUpdateNotesModal() {
 document.getElementById('update-notes-modal').style.display = 'none';
 }
 
+function openModalById(modalId) {
+const modal = document.getElementById(modalId);
+if (modal) modal.style.display = 'flex';
+}
+
+function closeModalById(modalId) {
+const modal = document.getElementById(modalId);
+if (modal) modal.style.display = 'none';
+}
+
+function getTimestampMs(timestampValue) {
+if (!timestampValue || typeof timestampValue.toDate !== 'function') return 0;
+return timestampValue.toDate().getTime();
+}
+
+function formatInboxTime(timestampMs) {
+if (!timestampMs) return '';
+const date = new Date(timestampMs);
+const now = new Date();
+return date.toDateString() === now.toDateString()
+? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+: date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+function getDmConversationPreview(data, me) {
+const isOwn = normalizeUsername(data.from || '') === me;
+const rawText = sanitizeNullableText(data.message, '');
+const baseText = rawText || 'Sent a message';
+return `${isOwn ? 'You: ' : ''}${baseText}`.slice(0, 90);
+}
+
+function getDmConversationListHtml(activeUsername = '', emptyText = 'No conversations yet.', compact = false) {
+const active = normalizeUsername(activeUsername);
+if (!dmConversationSummaries.length) {
+return `<div class="dm-empty-state">${escapeHtml(emptyText)}</div>`;
+}
+return dmConversationSummaries.map((summary) => {
+const summaryUser = normalizeUsername(summary.username);
+const displayUsername = sanitizeNullableText(summary.username, '?');
+const encodedUser = encodeURIComponent(summaryUser);
+const activeClass = summaryUser === active ? ' is-active' : '';
+const unreadClass = summary.unreadCount > 0 ? ' has-unread' : '';
+const unreadBadge = summary.unreadCount > 0 ? `<span class="dm-conversation-unread">${summary.unreadCount > 99 ? '99+' : summary.unreadCount}</span>` : '';
+const avatar = escapeHtml(displayUsername.slice(0, 2).toUpperCase());
+const preview = escapeHtml(sanitizeNullableText(summary.preview, 'Open conversation'));
+const timeText = escapeHtml(formatInboxTime(summary.lastMessageAtMs));
+return `<button class="dm-conversation-item${activeClass}${unreadClass}" onclick="openDMModalByEncoded('${encodedUser}')" style="${compact ? 'padding:0.65rem 0.75rem;' : ''}">
+<div class="dm-conversation-avatar">${avatar}</div>
+<div class="dm-conversation-content">
+<div class="dm-conversation-top">
+<div class="dm-conversation-name">${escapeHtml(displayUsername)}</div>
+<div class="dm-conversation-time">${timeText}</div>
+</div>
+<div class="dm-conversation-preview">${preview}</div>
+</div>
+${unreadBadge}
+</button>`;
+}).join('');
+}
+
+function renderDMConversationLists() {
+const sidebarList = document.getElementById('dm-conversation-list');
+if (sidebarList) {
+sidebarList.innerHTML = getDmConversationListHtml(activeDMUser, 'No conversations yet. Start from a profile or your friends list.');
+}
+const inboxList = document.getElementById('friends-dm-inbox-list');
+if (inboxList) {
+inboxList.innerHTML = getDmConversationListHtml(activeDMUser, 'No DMs yet. Messages you send or receive will show up here.', true);
+}
+}
+
+function rebuildDMConversationSummaries() {
+const me = normalizeUsername(currentChatUser);
+const summaryMap = new Map();
+if (!me) {
+dmConversationSummaries = [];
+dmUnreadCount = 0;
+updateDmUnreadBadge();
+renderDMConversationLists();
+return;
+}
+
+dmInboxDocs.forEach((data) => {
+const from = normalizeUsername(data.from || '');
+const to = normalizeUsername(data.to || '');
+if (!from || !to || (from !== me && to !== me)) return;
+const other = from === me ? to : from;
+if (isUserBlocked(other)) return;
+const timestampMs = getTimestampMs(data.timestamp);
+const unreadIncrement = to === me && !data.readByRecipient ? 1 : 0;
+const existing = summaryMap.get(other) || {
+username: other,
+preview: '',
+lastMessageAtMs: 0,
+unreadCount: 0
+};
+existing.unreadCount += unreadIncrement;
+if (timestampMs >= existing.lastMessageAtMs) {
+existing.preview = getDmConversationPreview(data, me);
+existing.lastMessageAtMs = timestampMs;
+}
+summaryMap.set(other, existing);
+});
+
+dmConversationSummaries = Array.from(summaryMap.values()).sort((a, b) => {
+if (b.unreadCount !== a.unreadCount) return b.unreadCount - a.unreadCount;
+return b.lastMessageAtMs - a.lastMessageAtMs;
+});
+dmUnreadCount = dmConversationSummaries.reduce((sum, item) => sum + item.unreadCount, 0);
+updateDmUnreadBadge();
+renderDMConversationLists();
+const friendsModal = document.getElementById('friends-modal');
+if (friendsModal && friendsModal.style.display === 'flex') {
+renderFriendsModal();
+}
+}
+
+function openDMModalByEncoded(encodedUsername) {
+openDMModal(decodeURIComponent(encodedUsername || ''));
+}
+
+function openLatestDMConversation() {
+if (!dmConversationSummaries.length) {
+openDMModal('');
+return;
+}
+openDMModal(dmConversationSummaries[0].username);
+}
+
+function closeReportModal() {
+closeModalById('chat-report-modal');
+const status = document.getElementById('chat-report-status');
+if (status) status.textContent = '';
+const extra = document.getElementById('chat-report-extra');
+if (extra) extra.value = '';
+const docInput = document.getElementById('chat-report-doc-id');
+if (docInput) docInput.value = '';
+}
+
+function closeEditMessageModal() {
+closeModalById('chat-edit-modal');
+const status = document.getElementById('chat-edit-status');
+if (status) status.textContent = '';
+const docInput = document.getElementById('chat-edit-doc-id');
+if (docInput) docInput.value = '';
+}
+
+function closeMessageHistoryModal() {
+closeModalById('chat-history-modal');
+}
+
 function renderUpdateNotes(notes, updatedBy = '', updatedAt = null) {
 const listEl = document.getElementById('update-notes-list');
 const metaEl = document.getElementById('update-notes-meta');
 if (!listEl || !metaEl) return;
 
-const finalNotes = Array.isArray(notes) && notes.length ? notes : ['No update notes yet.'];
+const finalNotes = Array.isArray(notes) && notes.length ? notes : ['No updates yet.'];
 listEl.innerHTML = finalNotes.map(note => `<li>${escapeHtml(note)}</li>`).join('');
 
 if (updatedBy || updatedAt) {
@@ -2562,7 +5257,7 @@ try {
 if (!firebase.apps.length) {
 firebase.initializeApp(firebaseConfig);
 }
-const db = firebase.firestore();
+const db = getAdminDb();
 const doc = await db.collection('chat_meta').doc(UPDATE_NOTES_DOC_ID).get();
 if (!doc.exists) {
 renderUpdateNotes(updateNotesCache);
@@ -2615,7 +5310,7 @@ try {
 if (!firebase.apps.length) {
 firebase.initializeApp(firebaseConfig);
 }
-const db = firebase.firestore();
+const db = getAdminDb();
 await db.collection('chat_meta').doc(UPDATE_NOTES_DOC_ID).set({
 notes,
 updatedBy: currentChatUser || getUserName() || 'admin',
@@ -2643,7 +5338,7 @@ btn.style.display = (siteLoginPassed && canModerate(currentChatUser)) ? 'block' 
 
 async function loadRoleCache() {
 try {
-const db = firebase.firestore();
+const db = getAdminDb();
 db.collection(USER_ROLES_COLLECTION).onSnapshot(snapshot => {
 const next = {};
 snapshot.forEach(doc => {
@@ -2657,6 +5352,24 @@ applyReadOnlyUiState();
 });
 } catch (err) {
 console.error('Failed to load role cache:', err);
+}
+}
+
+async function loadUserTagCache() {
+try {
+const db = getAdminDb();
+db.collection(USER_FLAGS_COLLECTION).onSnapshot(snapshot => {
+const next = {};
+snapshot.forEach(doc => {
+const tag = sanitizeProfileTag((doc.data() || {}).tag);
+if (tag) {
+next[normalizeUsername(doc.id)] = tag;
+}
+});
+userTagCache = next;
+});
+} catch (err) {
+console.error('Failed to load user tag cache:', err);
 }
 }
 
@@ -2692,7 +5405,7 @@ input.disabled = isReadOnly;
 if (isReadOnly) {
 input.placeholder = 'Chat is in read-only mode.';
 } else if (input.placeholder === 'Chat is in read-only mode.') {
-input.placeholder = 'Type a message...';
+renderChatRoomSummary();
 }
 }
 if (mediaBtn) {
@@ -2714,7 +5427,7 @@ return moderationSettings.blockedWords.some(word => value.includes(word));
 
 async function loadModerationSettings() {
 try {
-const db = firebase.firestore();
+const db = getAdminDb();
 db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).onSnapshot(doc => {
 const data = doc.exists ? (doc.data() || {}) : {};
 moderationSettings.readOnlyMode = !!data.readOnlyMode;
@@ -2723,6 +5436,24 @@ moderationSettings.announcementText = data.announcementText ? String(data.announ
 moderationSettings.announcementEndsAt = data.announcementEndsAt && typeof data.announcementEndsAt.toDate === 'function'
 ? data.announcementEndsAt.toDate()
 : null;
+
+const alertText = data.globalAlertText ? String(data.globalAlertText).trim() : '';
+const alertDurationSeconds = Math.max(2, Math.min(30, parseInt(data.globalAlertDurationSeconds, 10) || 10));
+const alertUpdatedAt = data.globalAlertUpdatedAt && typeof data.globalAlertUpdatedAt.toDate === 'function'
+? data.globalAlertUpdatedAt.toDate().getTime()
+: 0;
+const nextAlertKey = alertText ? `${alertText}::${alertUpdatedAt}` : '';
+if (nextAlertKey && nextAlertKey !== lastGlobalAlertKey) {
+showGlobalAlertNotification(alertText, alertDurationSeconds);
+setLastSeenGlobalAlertKey(nextAlertKey);
+}
+
+moderationSettings.slowModeSeconds = data.slowModeSeconds !== undefined
+? (parseInt(data.slowModeSeconds, 10) || DEFAULT_SLOW_MODE_SECONDS)
+: DEFAULT_SLOW_MODE_SECONDS;
+moderationSettings.rolePermissions = normalizeRolePermissions(data.rolePermissions);
+markSlowModeFromSettings();
+renderAdminRolePermissions();
 renderAnnouncementBanner();
 applyReadOnlyUiState();
 });
@@ -2731,10 +5462,968 @@ console.error('Failed to load moderation settings:', err);
 }
 }
 
+async function adminSendAlertPopup() {
+if (!canAdminSettings(currentChatUser)) return;
+const text = (prompt('Alert popup text (shows to everyone):', '') || '').trim();
+if (!text) return;
+const durationInput = (prompt('How many seconds should it stay visible? (2-30)', '10') || '').trim();
+const durationSeconds = Math.max(2, Math.min(30, parseInt(durationInput, 10) || 10));
+try {
+const db = getAdminDb();
+await db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).set({
+globalAlertText: text.slice(0, 220),
+globalAlertDurationSeconds: durationSeconds,
+globalAlertUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+updatedBy: currentChatUser,
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+const statusDiv = document.getElementById('admin-ban-status');
+if (statusDiv) statusDiv.textContent = 'Alert popup sent.';
+} catch (err) {
+alert('Failed to send alert popup.');
+}
+}
+
+// === SLOW MODE ADMIN ===
+async function adminSetSlowMode() {
+if (!canAdminSettings(currentChatUser)) return;
+const input = document.getElementById('admin-slowmode-seconds');
+const seconds = Math.max(0, Math.min(60, parseInt((input ? input.value : '0') || '0', 10) || 0));
+try {
+const db = getAdminDb();
+await db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).set({
+slowModeSeconds: seconds,
+updatedBy: currentChatUser,
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+moderationSettings.slowModeSeconds = seconds;
+chatSlowModeMs = seconds * 1000;
+if (input) input.value = String(seconds);
+const statusDiv = document.getElementById('admin-ban-status');
+if (statusDiv) statusDiv.textContent = `Slow mode set to ${seconds}s.`;
+await writeAuditLog('set_slow_mode', `${seconds}s`, `Slow mode set to ${seconds} seconds`);
+} catch (err) {
+alert('Failed to set slow mode.');
+}
+}
+
+// === ROLE PERMISSIONS ADMIN ===
+function renderAdminRolePermissions() {
+const container = document.getElementById('admin-role-permissions');
+if (!container) return;
+const roles = ['owner', 'admin', 'moderator', 'helper', 'member'];
+const permissions = ['ban', 'mute', 'kick', 'warn', 'tempBan', 'manageSettings', 'assignRoles', 'deleteMessage'];
+const permLabels = { ban: 'Ban', mute: 'Mute', kick: 'Kick', warn: 'Warn', tempBan: 'Temp Ban', manageSettings: 'Settings', assignRoles: 'Assign Roles', deleteMessage: 'Delete Msg' };
+const perms = moderationSettings.rolePermissions || DEFAULT_ROLE_PERMISSIONS;
+container.innerHTML = roles.map(role => {
+const isOwner = role === 'owner';
+return `<div style="margin-bottom:0.5rem;">
+<div style="font-weight:bold; color:#90caf9; text-transform:capitalize; margin-bottom:0.2rem;">${role}</div>
+<div style="display:flex; flex-wrap:wrap; gap:0.4rem;">${permissions.map(perm => {
+const checked = isOwner ? true : (perms[role] ? !!perms[role][perm] : false);
+const dis = isOwner ? 'disabled' : '';
+return `<label style="font-size:0.78rem; color:#ddd; display:flex; align-items:center; gap:0.2rem; cursor:pointer;"><input type="checkbox" class="role-perm-check" data-role="${role}" data-perm="${perm}" ${checked ? 'checked' : ''} ${dis} style="cursor:pointer;" />${permLabels[perm]}</label>`;
+}).join('')}</div>
+</div>`;
+}).join('');
+}
+
+async function adminSaveRolePermissions() {
+if (!canAdminSettings(currentChatUser)) return;
+const checks = document.querySelectorAll('.role-perm-check');
+const builtPerms = deepCloneRolePermissions(DEFAULT_ROLE_PERMISSIONS);
+checks.forEach(cb => {
+const role = cb.dataset.role;
+const perm = cb.dataset.perm;
+if (role === 'owner') return;
+if (builtPerms[role] && perm in builtPerms[role]) builtPerms[role][perm] = cb.checked;
+});
+try {
+const db = getAdminDb();
+await db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).set({
+rolePermissions: builtPerms,
+updatedBy: currentChatUser,
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+moderationSettings.rolePermissions = normalizeRolePermissions(builtPerms);
+const statusDiv = document.getElementById('admin-ban-status');
+if (statusDiv) statusDiv.textContent = 'Role permissions saved.';
+await writeAuditLog('save_role_permissions', '', 'Role permissions updated');
+} catch (err) {
+alert('Failed to save role permissions.');
+}
+}
+
+// === BAN APPEAL ===
+async function submitBanAppeal() {
+const appealText = ((document.getElementById('ban-appeal-text') || {}).value || '').trim();
+if (!appealText) { alert('Please write an appeal before submitting.'); return; }
+const username = normalizeUsername(
+((document.getElementById('site-login-username') || {}).value || '').trim() || getUserName() || ''
+);
+if (!username) { alert('Username not found. Please refresh.'); return; }
+try {
+const db = getAdminDb();
+await db.collection(APPEALS_COLLECTION).add({
+username,
+appealText: appealText.slice(0, 1000),
+status: 'pending',
+submittedAt: firebase.firestore.FieldValue.serverTimestamp()
+});
+alert('Appeal submitted. An admin will review it.');
+const btn = document.querySelector('button[onclick="submitBanAppeal()"]');
+if (btn) { btn.disabled = true; btn.textContent = 'Appeal Submitted'; }
+} catch (err) {
+alert('Failed to submit appeal. Please try again.');
+}
+}
+
+// === AUDIT LOG ===
+async function loadAuditLogs() {
+const container = document.getElementById('admin-audit-log');
+if (!container) return;
+if (!canAdminSettings(currentChatUser)) { container.textContent = 'Insufficient permissions.'; return; }
+container.textContent = 'Loading...';
+try {
+const db = getAdminDb();
+const snapshot = await db.collection(AUDIT_LOG_COLLECTION).orderBy('at', 'desc').limit(50).get();
+if (snapshot.empty) { container.textContent = 'No audit log entries yet.'; return; }
+container.innerHTML = snapshot.docs.map(doc => {
+const d = doc.data() || {};
+const time = d.at && d.at.toDate ? d.at.toDate().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+const actionText = sanitizeNullableText(d.action, '');
+const targetText = sanitizeNullableText(d.target, '');
+const detailsText = sanitizeNullableText(d.details, '');
+const byText = sanitizeNullableText(d.by, '');
+return `<div style="padding:0.3rem 0; border-bottom:1px solid #2a2a2a; overflow:hidden;">
+<span style="color:#90caf9; font-size:0.78rem;">[${escapeHtml(actionText)}]</span>
+${targetText ? `<span style="color:#ffca28; font-size:0.82rem;"> ${escapeHtml(targetText)}</span>` : ''}
+${detailsText ? `<span style="color:#bbb; font-size:0.78rem;"> — ${escapeHtml(detailsText)}</span>` : ''}
+<span style="color:#666; font-size:0.73rem; float:right;">${escapeHtml(byText)} ${time}</span>
+</div>`;
+}).join('');
+} catch (err) {
+container.textContent = 'Failed to load audit log.';
+}
+}
+
+async function loadAdminAnalytics() {
+const container = document.getElementById('admin-analytics-panel');
+if (!container) return;
+if (!canAdminSettings(currentChatUser)) {
+container.textContent = 'Insufficient permissions.';
+return;
+}
+container.textContent = 'Loading analytics...';
+try {
+const db = getAdminDb();
+const primaryDb = firebase.firestore();
+const [
+messagesSnapshot,
+reportsSnapshot,
+appealsSnapshot,
+presenceSnapshot,
+rolesSnapshot
+] = await Promise.all([
+primaryDb.collection('site_messages').orderBy('timestamp', 'desc').limit(200).get(),
+db.collection(MESSAGE_REPORTS_COLLECTION).orderBy('reportedAt', 'desc').limit(100).get(),
+db.collection(APPEALS_COLLECTION).orderBy('submittedAt', 'desc').limit(100).get(),
+db.collection(USER_ACTIVITY_COLLECTION).limit(100).get(),
+db.collection(USER_ROLES_COLLECTION).limit(100).get()
+]);
+
+const recentMessages = messagesSnapshot.docs.map((doc) => doc.data() || {});
+const pendingReports = reportsSnapshot.docs.filter((doc) => ((doc.data() || {}).status || 'pending') === 'pending').length;
+const pendingAppeals = appealsSnapshot.docs.filter((doc) => ((doc.data() || {}).status || 'pending') === 'pending').length;
+const onlineUsers = presenceSnapshot.docs.filter((doc) => {
+const data = doc.data() || {};
+const updatedMs = getTimestampMs(data.updatedAt);
+return (data.status || 'offline') !== 'offline' && updatedMs && (Date.now() - updatedMs) < 10 * 60000;
+}).length;
+const modCount = rolesSnapshot.docs.filter((doc) => getRoleRank((doc.data() || {}).role || 'member') >= 2).length;
+const roomCounts = {};
+recentMessages.forEach((message) => {
+const room = getChatRoomConfig(message.room || 'general').id;
+roomCounts[room] = (roomCounts[room] || 0) + 1;
+});
+
+container.innerHTML = `
+<div class="analytics-grid">
+<div class="analytics-card"><div class="analytics-card-label">Recent Messages</div><div class="analytics-card-value">${recentMessages.length}</div></div>
+<div class="analytics-card"><div class="analytics-card-label">Pending Reports</div><div class="analytics-card-value">${pendingReports}</div></div>
+<div class="analytics-card"><div class="analytics-card-label">Pending Appeals</div><div class="analytics-card-value">${pendingAppeals}</div></div>
+<div class="analytics-card"><div class="analytics-card-label">Active Users</div><div class="analytics-card-value">${onlineUsers}</div></div>
+<div class="analytics-card"><div class="analytics-card-label">Staff Roles</div><div class="analytics-card-value">${modCount}</div></div>
+</div>
+<div class="analytics-sublist">
+${getAllChatRooms().map((room) => `<div><strong>${escapeHtml(room.name)}:</strong> ${roomCounts[room.id] || 0} recent messages</div>`).join('')}
+</div>`;
+} catch (err) {
+container.textContent = 'Failed to load analytics.';
+}
+}
+
+// === MESSAGE REPORTS ===
+async function loadMessageReports() {
+const container = document.getElementById('admin-report-queue');
+if (!container) return;
+if (!canModerate(currentChatUser)) { container.textContent = 'Insufficient permissions.'; return; }
+container.textContent = 'Loading...';
+try {
+const db = getAdminDb();
+const snapshot = await db.collection(MESSAGE_REPORTS_COLLECTION).orderBy('reportedAt', 'desc').limit(40).get();
+if (snapshot.empty) { container.textContent = 'No reports.'; return; }
+container.innerHTML = snapshot.docs.map(doc => {
+const d = doc.data() || {};
+const time = d.reportedAt && d.reportedAt.toDate ? d.reportedAt.toDate().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+const safeId = encodeURIComponent(doc.id);
+const safeMsgId = encodeURIComponent(d.messageDocId || '');
+const reportedUserText = sanitizeNullableText(d.reportedUser, '?');
+const reportedByText = sanitizeNullableText(d.reportedBy, '?');
+const messageText = sanitizeNullableText(d.messageText, '');
+const reasonText = sanitizeNullableText(d.reason, '');
+return `<div style="padding:0.4rem 0; border-bottom:1px solid #2a2a2a;">
+<div><strong style="color:#ef9a9a;">${escapeHtml(reportedUserText)}</strong>: <span style="color:#eee;">${escapeHtml(messageText.slice(0, 100))}</span></div>
+<div style="font-size:0.75rem; color:#999;">by ${escapeHtml(reportedByText)} · ${escapeHtml(reasonText)} · ${escapeHtml(getChatRoomConfig(d.room || 'general').name)} · ${time}</div>
+${Array.isArray(d.evidenceContext) && d.evidenceContext.length ? `<div style="margin-top:0.35rem; padding:0.4rem; background:#151515; border:1px solid #2f2f2f; border-radius:0.3rem; font-size:0.74rem; color:#bbb;">${d.evidenceContext.map((entry) => {
+const entryUserText = sanitizeNullableText(entry.user, '?');
+const entryMessageText = sanitizeNullableText(entry.message, '');
+return `<div style="margin-bottom:0.2rem;"><span style="color:#90caf9;">${escapeHtml(entryUserText)}</span> <span style="color:#607d8b;">#${escapeHtml(getChatRoomConfig(entry.room || 'general').name)}</span>: ${escapeHtml(entryMessageText.slice(0, 140) || '(media message)')}</div>`;
+}).join('')}</div>` : ''}
+<div style="margin-top:0.25rem; display:flex; gap:0.4rem;">
+<button onclick="dismissReport('${safeId}')" style="padding:0.2rem 0.5rem; background:#455a64; color:#fff; border:none; border-radius:0.2rem; font-size:0.75rem; cursor:pointer;">Dismiss</button>
+<button onclick="warnFromReport('${safeId}','${encodeURIComponent(normalizeUsername(reportedUserText))}')" style="padding:0.2rem 0.5rem; background:#8e24aa; color:#fff; border:none; border-radius:0.2rem; font-size:0.75rem; cursor:pointer;">Warn</button>
+<button onclick="strikeFromReport('${safeId}','${encodeURIComponent(normalizeUsername(reportedUserText))}','${encodeURIComponent(reasonText)}')" style="padding:0.2rem 0.5rem; background:#ef6c00; color:#fff; border:none; border-radius:0.2rem; font-size:0.75rem; cursor:pointer;">Strike</button>
+<button onclick="deleteReportedMessage('${safeId}','${safeMsgId}')" style="padding:0.2rem 0.5rem; background:#c62828; color:#fff; border:none; border-radius:0.2rem; font-size:0.75rem; cursor:pointer;">Delete Msg</button>
+</div>
+</div>`;
+}).join('');
+} catch (err) {
+container.textContent = 'Failed to load reports.';
+}
+}
+
+async function warnFromReport(reportDocId, encodedUsername) {
+const username = normalizeUsername(decodeURIComponent(encodedUsername || ''));
+if (!username) return;
+const reason = (prompt(`Warning reason for ${username}:`, 'Reported message') || '').trim().slice(0, 120);
+if (!reason) return;
+try {
+const db = getAdminDb();
+const ref = db.collection(USER_WARNINGS_COLLECTION).doc(username);
+const doc = await ref.get();
+const count = ((doc.exists ? (doc.data().count || 0) : 0) + 1);
+const history = doc.exists && Array.isArray(doc.data().history) ? doc.data().history.slice(-19) : [];
+history.push({ reason, by: currentChatUser, at: new Date().toISOString() });
+await ref.set({ count, history, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+await db.collection(MESSAGE_REPORTS_COLLECTION).doc(decodeURIComponent(reportDocId)).set({
+status: 'resolved',
+resolvedBy: currentChatUser,
+resolution: `warning:${count}`
+}, { merge: true });
+await writeAuditLog('warn_from_report', username, reason);
+loadMessageReports();
+} catch (err) {
+alert('Failed to warn user from report.');
+}
+}
+
+async function strikeFromReport(reportDocId, encodedUsername, encodedReason) {
+const username = normalizeUsername(decodeURIComponent(encodedUsername || ''));
+if (!username) return;
+const baseReason = decodeURIComponent(encodedReason || '') || 'Reported message';
+try {
+const result = await addStrike(username, baseReason, 'report');
+const db = getAdminDb();
+await db.collection(MESSAGE_REPORTS_COLLECTION).doc(decodeURIComponent(reportDocId)).set({
+status: 'resolved',
+resolvedBy: currentChatUser,
+resolution: `strike:${result.count}`
+}, { merge: true });
+await writeAuditLog('strike_from_report', username, `${baseReason} (count ${result.count})`);
+loadMessageReports();
+alert(`${username} now has ${result.count} strike(s).`);
+} catch (err) {
+alert('Failed to add strike from report.');
+}
+}
+
+async function dismissReport(reportDocId) {
+try {
+const db = getAdminDb();
+await db.collection(MESSAGE_REPORTS_COLLECTION).doc(decodeURIComponent(reportDocId)).update({ status: 'dismissed', resolvedBy: currentChatUser });
+loadMessageReports();
+} catch (err) { alert('Failed to dismiss.'); }
+}
+
+async function deleteReportedMessage(reportDocId, messageDocId) {
+const msgId = decodeURIComponent(messageDocId || '');
+if (msgId) {
+try {
+const db = firebase.firestore();
+await db.collection('site_messages').doc(msgId).delete();
+} catch (e) {}
+}
+try {
+const db = getAdminDb();
+await db.collection(MESSAGE_REPORTS_COLLECTION).doc(decodeURIComponent(reportDocId)).update({ status: 'resolved', resolvedBy: currentChatUser });
+await writeAuditLog('delete_reported_message', msgId, 'Deleted via report queue');
+loadMessageReports();
+} catch (err) { alert('Failed to resolve report.'); }
+}
+
+async function reportMessage(docId) {
+if (!currentChatUser) { alert('You must be logged in to report messages.'); return; }
+const data = window._chatDocs && window._chatDocs[docId];
+if (!data) { alert('Message not found.'); return; }
+const preview = document.getElementById('chat-report-preview');
+const status = document.getElementById('chat-report-status');
+const docInput = document.getElementById('chat-report-doc-id');
+const reasonInput = document.getElementById('chat-report-reason');
+const extraInput = document.getElementById('chat-report-extra');
+if (!preview || !status || !docInput || !reasonInput || !extraInput) return;
+docInput.value = docId;
+reasonInput.value = 'spam';
+extraInput.value = '';
+status.textContent = '';
+const previewUser = sanitizeNullableText(data.user, 'unknown');
+const previewText = sanitizeNullableText(data.message, '');
+preview.innerHTML = `
+<div class="message-preview-user">@${escapeHtml(previewUser)}</div>
+<div class="message-preview-text">${escapeHtml(previewText.slice(0, 300) || '(No message text)')}</div>
+<div style="margin-top:0.35rem; font-size:0.72rem; color:#90a4ae;">Room: ${escapeHtml(getChatRoomConfig(data.room || currentChatRoom || 'general').name)}</div>`;
+openModalById('chat-report-modal');
+}
+
+async function submitReportModal() {
+const docInput = document.getElementById('chat-report-doc-id');
+const reasonInput = document.getElementById('chat-report-reason');
+const extraInput = document.getElementById('chat-report-extra');
+const status = document.getElementById('chat-report-status');
+const docId = docInput ? docInput.value : '';
+const pickedReason = reasonInput ? reasonInput.value.trim().toLowerCase() : '';
+const extra = extraInput ? extraInput.value.trim() : '';
+const data = window._chatDocs && window._chatDocs[docId];
+const evidenceContext = collectReportEvidence(docId);
+if (!docId || !data || !pickedReason) {
+if (status) status.textContent = 'Could not submit the report. Reload chat and try again.';
+return;
+}
+const reason = `${pickedReason}${extra ? ` - ${extra}` : ''}`.slice(0, 200);
+const reportMessageText = sanitizeNullableText(data.message, '').slice(0, 300);
+const reportedUser = sanitizeNullableText(data.user, 'unknown');
+try {
+const db = getAdminDb();
+await db.collection(MESSAGE_REPORTS_COLLECTION).add({
+messageDocId: docId,
+messageText: reportMessageText,
+reportedUser,
+reportedBy: currentChatUser,
+room: data.room || currentChatRoom || 'general',
+reportedMessageAt: data.timestamp || null,
+evidenceContext,
+reason,
+status: 'pending',
+reportedAt: firebase.firestore.FieldValue.serverTimestamp()
+});
+closeReportModal();
+alert('Report submitted. Thank you.');
+} catch (err) {
+if (status) status.textContent = 'Failed to submit report.';
+}
+}
+
+async function editOwnMessage(docId) {
+const data = window._chatDocs && window._chatDocs[docId];
+if (!data || data.system) return;
+if (normalizeUsername(data.user) !== normalizeUsername(currentChatUser)) return;
+const timestampMs = data.timestamp && typeof data.timestamp.toDate === 'function' ? data.timestamp.toDate().getTime() : 0;
+if (!timestampMs || (Date.now() - timestampMs) > DM_EDIT_WINDOW_MS) {
+alert('You can only edit your message for 60 seconds after sending it.');
+return;
+}
+const textarea = document.getElementById('chat-edit-textarea');
+const status = document.getElementById('chat-edit-status');
+const input = document.getElementById('chat-edit-doc-id');
+if (!textarea || !status || !input) return;
+const originalMessageText = sanitizeNullableText(data.message, '');
+input.value = docId;
+textarea.value = originalMessageText;
+status.textContent = '';
+openModalById('chat-edit-modal');
+}
+
+async function submitEditMessageModal() {
+const textarea = document.getElementById('chat-edit-textarea');
+const status = document.getElementById('chat-edit-status');
+const input = document.getElementById('chat-edit-doc-id');
+const docId = input ? input.value : '';
+const nextText = textarea ? textarea.value.trim() : '';
+const data = window._chatDocs && window._chatDocs[docId];
+if (!docId || !data || !textarea || !status) return;
+const originalMessageText = sanitizeNullableText(data.message, '');
+if (!nextText || nextText === originalMessageText) {
+status.textContent = 'No changes to save.';
+return;
+}
+if (containsBlockedWord(nextText)) {
+status.textContent = 'Edited message blocked by word filter.';
+return;
+}
+const timestampMs = getTimestampMs(data.timestamp);
+if (!timestampMs || (Date.now() - timestampMs) > DM_EDIT_WINDOW_MS) {
+status.textContent = 'The edit window has expired.';
+return;
+}
+try {
+const db = firebase.firestore();
+const history = Array.isArray(data.editHistory) ? data.editHistory.slice(-9) : [];
+history.push({
+previousMessage: originalMessageText,
+editedAt: new Date().toISOString(),
+editedBy: currentChatUser
+});
+await db.collection('site_messages').doc(docId).set({
+message: nextText.slice(0, 600),
+editedAt: firebase.firestore.FieldValue.serverTimestamp(),
+editHistory: history
+}, { merge: true });
+closeEditMessageModal();
+} catch (err) {
+status.textContent = 'Failed to edit message.';
+}
+}
+
+function showMessageEditHistory(docId) {
+const data = window._chatDocs && window._chatDocs[docId];
+if (!data) return;
+const history = Array.isArray(data.editHistory) ? data.editHistory : [];
+const list = document.getElementById('chat-history-list');
+if (!list) return;
+if (!history.length) {
+list.innerHTML = '<div class="dm-empty-state">No edit history for this message.</div>';
+openModalById('chat-history-modal');
+return;
+}
+list.innerHTML = history.map((entry, index) => {
+const editedAt = entry.editedAt ? new Date(entry.editedAt).toLocaleString() : 'Unknown time';
+const previousMessageText = sanitizeNullableText(entry.previousMessage, '');
+return `<div class="modal-history-item">
+<div class="modal-history-meta">Version ${index + 1} • ${escapeHtml(editedAt)}</div>
+<div class="message-preview-text">${escapeHtml(previousMessageText)}</div>
+</div>`;
+}).join('');
+openModalById('chat-history-modal');
+}
+
+// === APPEALS QUEUE ===
+async function loadAppealsQueue() {
+const container = document.getElementById('admin-appeals-queue');
+if (!container) return;
+if (!canAdminSettings(currentChatUser)) { container.textContent = 'Insufficient permissions.'; return; }
+container.textContent = 'Loading...';
+try {
+const db = getAdminDb();
+const snapshot = await db.collection(APPEALS_COLLECTION)
+.orderBy('submittedAt', 'desc')
+.limit(50)
+.get();
+const pendingDocs = snapshot.docs.filter(doc => ((doc.data() || {}).status || 'pending') === 'pending');
+if (!pendingDocs.length) { container.textContent = 'No pending appeals.'; return; }
+container.innerHTML = pendingDocs.map(doc => {
+const d = doc.data() || {};
+const time = d.submittedAt && d.submittedAt.toDate ? d.submittedAt.toDate().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+const safeId = encodeURIComponent(doc.id);
+const usernameText = sanitizeNullableText(d.username, '?');
+const appealText = sanitizeNullableText(d.appealText, '');
+const safeUser = encodeURIComponent(normalizeUsername(d.username || ''));
+return `<div style="padding:0.4rem 0; border-bottom:1px solid #2a2a2a;">
+<div><strong style="color:#ffca28;">${escapeHtml(usernameText)}</strong> · <span style="color:#999; font-size:0.78rem;">${time}</span></div>
+<div style="color:#ddd; font-size:0.85rem; margin:0.2rem 0;">${escapeHtml(appealText.slice(0, 200))}</div>
+<div style="display:flex; gap:0.4rem;">
+<button onclick="approveAppeal('${safeId}','${safeUser}')" style="padding:0.2rem 0.5rem; background:#2e7d32; color:#fff; border:none; border-radius:0.2rem; font-size:0.75rem; cursor:pointer;">Approve (Unban)</button>
+<button onclick="rejectAppeal('${safeId}')" style="padding:0.2rem 0.5rem; background:#b71c1c; color:#fff; border:none; border-radius:0.2rem; font-size:0.75rem; cursor:pointer;">Reject</button>
+</div>
+</div>`;
+}).join('');
+} catch (err) {
+container.textContent = 'Failed to load appeals.';
+}
+}
+
+async function approveAppeal(appealDocId, encodedUsername) {
+const username = decodeURIComponent(encodedUsername || '');
+if (!username) return;
+try {
+await fetch(BAN_API_URL, { method: 'POST', body: new URLSearchParams({ username, banned: 'no', reason: 'Appeal approved' }) });
+const db = getAdminDb();
+await db.collection(APPEALS_COLLECTION).doc(decodeURIComponent(appealDocId)).update({ status: 'approved', resolvedBy: currentChatUser });
+await writeAuditLog('approve_appeal', username, 'Ban appeal approved — user unbanned');
+loadAppealsQueue();
+} catch (err) { alert('Failed to approve appeal.'); }
+}
+
+async function rejectAppeal(appealDocId) {
+try {
+const db = getAdminDb();
+await db.collection(APPEALS_COLLECTION).doc(decodeURIComponent(appealDocId)).update({ status: 'rejected', resolvedBy: currentChatUser });
+loadAppealsQueue();
+} catch (err) { alert('Failed to reject appeal.'); }
+}
+
+// === ACTIVITY STATUS ===
+const USER_ACTIVITY_COLLECTION = 'user_activity';
+let activityHeartbeatInterval = null;
+let activityCache = {};
+let activitySnapshotUnsub = null;
+
+async function startActivityHeartbeat() {
+if (!currentChatUser) return;
+const writeStatus = async (statusVal) => {
+try {
+const db = getAdminDb();
+await db.collection(USER_ACTIVITY_COLLECTION).doc(currentChatUser).set({
+status: statusVal !== undefined ? statusVal : (document.hidden ? 'idle' : 'online'),
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+} catch (e) {}
+};
+await writeStatus();
+if (activityHeartbeatInterval) clearInterval(activityHeartbeatInterval);
+activityHeartbeatInterval = setInterval(() => writeStatus(), 60000);
+document.addEventListener('visibilitychange', () => writeStatus(document.hidden ? 'idle' : 'online'));
+window.addEventListener('beforeunload', () => writeStatus('offline'));
+}
+
+function loadActivityStatuses() {
+try {
+const db = getAdminDb();
+if (activitySnapshotUnsub) activitySnapshotUnsub();
+activitySnapshotUnsub = db.collection(USER_ACTIVITY_COLLECTION).onSnapshot(snapshot => {
+const now = Date.now();
+snapshot.forEach(doc => {
+const d = doc.data() || {};
+const updatedMs = d.updatedAt && d.updatedAt.toDate ? d.updatedAt.toDate().getTime() : 0;
+const age = now - updatedMs;
+if (d.status === 'offline' || age > 10 * 60000) {
+activityCache[doc.id] = 'offline';
+} else if (age > 2 * 60000 || d.status === 'idle') {
+activityCache[doc.id] = 'idle';
+} else {
+activityCache[doc.id] = 'online';
+}
+});
+});
+} catch (e) {}
+}
+
+function getStatusDotHtml(username) {
+const status = activityCache[normalizeUsername(username)] || 'offline';
+const color = status === 'online' ? '#66bb6a' : status === 'idle' ? '#ffca28' : '#555';
+return `<span class="status-dot" style="background:${color};" title="${status}"></span>`;
+}
+
+// === FRIENDS & DM SYSTEM ===
+const USER_FRIENDS_COLLECTION = 'user_friends';
+const DM_MESSAGES_COLLECTION = 'dm_messages';
+let activeDMUser = null;
+let dmSnapshotUnsub = null;
+let myFriends = new Set();
+let pendingRequestsFromOthers = [];
+let pendingRequestsToOthers = new Set();
+
+function getFriendshipId(a, b) {
+return [normalizeUsername(a), normalizeUsername(b)].sort().join('::');
+}
+
+function getDMConversationId(a, b) {
+return [normalizeUsername(a), normalizeUsername(b)].sort().join('::');
+}
+
+function updateDmUnreadBadge() {
+const badge = document.getElementById('dm-unread-badge');
+if (!badge) return;
+if (dmUnreadCount > 0) {
+badge.textContent = dmUnreadCount > 99 ? '99+' : String(dmUnreadCount);
+badge.style.display = 'flex';
+} else {
+badge.style.display = 'none';
+badge.textContent = '';
+}
+}
+
+function startDMInboxListeners() {
+const me = normalizeUsername(currentChatUser);
+if (!me) return;
+const db = getAdminDb();
+if (dmUnreadListenerUnsub) dmUnreadListenerUnsub();
+if (dmInboxOutgoingUnsub) dmInboxOutgoingUnsub();
+dmKnownIncomingIds = new Set();
+dmInboxDocs = new Map();
+let initialSnapshot = true;
+dmUnreadListenerUnsub = db.collection(DM_MESSAGES_COLLECTION)
+  .where('to', '==', me)
+  .limit(200)
+  .onSnapshot((snapshot) => {
+    snapshot.docChanges().forEach((change) => {
+      if (change.type === 'removed') {
+        dmInboxDocs.delete(change.doc.id);
+        return;
+      }
+      const data = change.doc.data() || {};
+      const isUnread = !data.readByRecipient;
+      dmInboxDocs.set(change.doc.id, data);
+      if (!dmKnownIncomingIds.has(change.doc.id)) {
+        dmKnownIncomingIds.add(change.doc.id);
+        if (!initialSnapshot && change.type === 'added' && isUnread && !isUserBlocked(data.from || '') && activeDMUser !== normalizeUsername(data.from || '')) {
+          showDMNotification(`New DM from ${data.from || 'someone'}`);
+        }
+      }
+    });
+    initialSnapshot = false;
+    rebuildDMConversationSummaries();
+  });
+
+dmInboxOutgoingUnsub = db.collection(DM_MESSAGES_COLLECTION)
+  .where('from', '==', me)
+  .limit(200)
+  .onSnapshot((snapshot) => {
+    snapshot.docChanges().forEach((change) => {
+      if (change.type === 'removed') {
+        dmInboxDocs.delete(change.doc.id);
+        return;
+      }
+      dmInboxDocs.set(change.doc.id, change.doc.data() || {});
+    });
+    rebuildDMConversationSummaries();
+  });
+}
+
+async function markConversationAsRead(targetUsername) {
+const me = normalizeUsername(currentChatUser);
+const target = normalizeUsername(targetUsername);
+if (!me || !target) return;
+try {
+const db = getAdminDb();
+const convoId = getDMConversationId(me, target);
+const snapshot = await db.collection(DM_MESSAGES_COLLECTION)
+    .where('conversationId', '==', convoId)
+    .limit(120)
+    .get();
+  const unreadDocs = snapshot.docs.filter((doc) => {
+    const data = doc.data() || {};
+    return data.to === me && !data.readByRecipient;
+  });
+  for (const doc of unreadDocs) {
+    await doc.ref.set({
+      readByRecipient: true,
+      readAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  }
+} catch (err) {}
+}
+
+async function loadFriendsData() {
+const me = normalizeUsername(currentChatUser);
+if (!me) return;
+try {
+const db = getAdminDb();
+const snapshot = await db.collection(USER_FRIENDS_COLLECTION).where('users', 'array-contains', me).get();
+myFriends.clear();
+pendingRequestsFromOthers = [];
+pendingRequestsToOthers.clear();
+(snapshot.docs || []).forEach(doc => {
+const d = doc.data() || {};
+const other = Array.isArray(d.users) ? d.users.find(u => u !== me) : null;
+if (!other) return;
+if (d.status === 'accepted') {
+myFriends.add(other);
+} else if (d.status === 'pending' && d.initiatedBy === me) {
+pendingRequestsToOthers.add(other);
+} else if (d.status === 'pending' && d.initiatedBy !== me) {
+pendingRequestsFromOthers.push({ username: other, docId: doc.id });
+}
+});
+} catch (e) {}
+}
+
+async function sendFriendRequest(targetUsername) {
+const from = normalizeUsername(currentChatUser);
+const to = normalizeUsername(targetUsername);
+if (!from || !to || from === to) return;
+const docId = getFriendshipId(from, to);
+try {
+const db = getAdminDb();
+const existing = await db.collection(USER_FRIENDS_COLLECTION).doc(docId).get();
+if (existing.exists) { alert('Friend request already sent or already friends.'); return; }
+await db.collection(USER_FRIENDS_COLLECTION).doc(docId).set({
+users: [from, to],
+status: 'pending',
+initiatedBy: from,
+createdAt: firebase.firestore.FieldValue.serverTimestamp()
+});
+pendingRequestsToOthers.add(to);
+updateProfileModalButtons();
+alert(`Friend request sent to ${to}!`);
+} catch (err) {
+alert('Failed to send friend request.');
+}
+}
+
+async function acceptFriendRequest(fromUsername) {
+const from = normalizeUsername(fromUsername);
+const to = normalizeUsername(currentChatUser);
+if (!from || !to) return;
+const docId = getFriendshipId(from, to);
+try {
+const db = getAdminDb();
+await db.collection(USER_FRIENDS_COLLECTION).doc(docId).update({
+status: 'accepted',
+acceptedAt: firebase.firestore.FieldValue.serverTimestamp()
+});
+await loadFriendsData();
+renderFriendsModal();
+updateProfileModalButtons();
+} catch (err) {
+alert('Failed to accept friend request.');
+}
+}
+
+async function removeFriend(targetUsername) {
+const me = normalizeUsername(currentChatUser);
+const target = normalizeUsername(targetUsername);
+if (!me || !target) return;
+const docId = getFriendshipId(me, target);
+try {
+const db = getAdminDb();
+await db.collection(USER_FRIENDS_COLLECTION).doc(docId).delete();
+myFriends.delete(target);
+pendingRequestsToOthers.delete(target);
+pendingRequestsFromOthers = pendingRequestsFromOthers.filter(r => r.username !== target);
+updateProfileModalButtons();
+renderFriendsModal();
+} catch (err) {
+alert('Failed to remove friend.');
+}
+}
+
+async function openFriendsModal() {
+if (!currentChatUser) return;
+await loadFriendsData();
+renderFriendsModal();
+openModalById('friends-modal');
+}
+
+function closeFriendsModal() {
+closeModalById('friends-modal');
+}
+
+function renderFriendsModal() {
+const reqSection = document.getElementById('friend-requests-section');
+const reqList = document.getElementById('friend-requests-list');
+const friendsList = document.getElementById('friends-list');
+const inboxList = document.getElementById('friends-dm-inbox-list');
+if (!reqList || !friendsList || !inboxList) return;
+inboxList.innerHTML = getDmConversationListHtml(activeDMUser, 'No DMs yet. Messages you send or receive will show up here.', true);
+if (pendingRequestsFromOthers.length) {
+reqSection.style.display = 'block';
+reqList.innerHTML = pendingRequestsFromOthers.map(r =>
+`<div style="display:flex; align-items:center; gap:0.5rem; padding:0.3rem 0; border-bottom:1px solid #2a2a2a;">
+${getStatusDotHtml(r.username)}
+<span style="flex:1;">${escapeHtml(r.username)}</span>
+<button onclick="acceptFriendRequest('${escapeHtml(r.username)}')" style="padding:0.2rem 0.5rem; background:#2e7d32; color:#fff; border:none; border-radius:0.2rem; font-size:0.78rem; cursor:pointer;">Accept</button>
+<button onclick="removeFriend('${escapeHtml(r.username)}')" style="padding:0.2rem 0.5rem; background:#b71c1c; color:#fff; border:none; border-radius:0.2rem; font-size:0.78rem; cursor:pointer;">Decline</button>
+</div>`).join('');
+} else {
+if (reqSection) reqSection.style.display = 'none';
+}
+if (!myFriends.size) {
+friendsList.innerHTML = '<div style="color:#999; font-size:0.88rem;">No friends yet. Add them from their profile!</div>';
+} else {
+friendsList.innerHTML = Array.from(myFriends).map(username =>
+`<div style="display:flex; align-items:center; gap:0.5rem; padding:0.35rem 0; border-bottom:1px solid #2a2a2a;">
+${getStatusDotHtml(username)}
+<span style="flex:1; cursor:pointer; color:#90caf9;" onclick="openUserProfileFromChat('${encodeURIComponent(username)}', event)">${escapeHtml(username)}</span>
+<button onclick="openDMModal('${escapeHtml(username)}')" style="padding:0.2rem 0.5rem; background:#1565c0; color:#fff; border:none; border-radius:0.2rem; font-size:0.78rem; cursor:pointer;">\ud83d\udcac DM</button>
+<button onclick="removeFriend('${escapeHtml(username)}')" style="padding:0.2rem 0.5rem; background:#555; color:#fff; border:none; border-radius:0.2rem; font-size:0.78rem; cursor:pointer;">Remove</button>
+</div>`).join('');
+}
+}
+
+function updateProfileModalButtons() {
+const dmBtn = document.getElementById('profile-dm-btn');
+const friendBtn = document.getElementById('profile-friend-btn');
+const blockBtn = document.getElementById('profile-block-btn');
+const me = normalizeUsername(currentChatUser);
+const target = normalizeUsername(currentProfileViewUser);
+if (!me || !target || me === target) {
+if (dmBtn) dmBtn.style.display = 'none';
+if (friendBtn) friendBtn.style.display = 'none';
+if (blockBtn) blockBtn.style.display = 'none';
+return;
+}
+if (dmBtn) dmBtn.style.display = 'inline-block';
+if (friendBtn) {
+friendBtn.style.display = 'inline-block';
+if (myFriends.has(target)) {
+friendBtn.textContent = '\ud83d\udc65 Friends';
+friendBtn.style.background = '#2e7d32';
+} else if (pendingRequestsToOthers.has(target)) {
+friendBtn.textContent = '\u23f3 Pending';
+friendBtn.style.background = '#5a4a00';
+} else {
+friendBtn.textContent = '\ud83d\udc65 Add Friend';
+friendBtn.style.background = '#37474f';
+}
+}
+if (blockBtn) {
+blockBtn.style.display = 'inline-block';
+if (isUserBlocked(target)) {
+blockBtn.textContent = 'Unblock';
+blockBtn.style.background = '#2e7d32';
+} else {
+blockBtn.textContent = 'Block';
+blockBtn.style.background = '#5d4037';
+}
+}
+}
+
+function openDMFromProfile() {
+if (!currentProfileViewUser) return;
+openDMModal(currentProfileViewUser);
+}
+
+async function toggleFriendFromProfile() {
+const target = normalizeUsername(currentProfileViewUser);
+const me = normalizeUsername(currentChatUser);
+if (!target || !me || me === target) return;
+if (myFriends.has(target)) {
+if (confirm(`Remove ${target} as a friend?`)) await removeFriend(target);
+} else if (pendingRequestsToOthers.has(target)) {
+if (confirm(`Cancel friend request to ${target}?`)) await removeFriend(target);
+} else {
+await sendFriendRequest(target);
+}
+
+function toggleBlockFromProfile() {
+const target = normalizeUsername(currentProfileViewUser);
+const me = normalizeUsername(currentChatUser);
+if (!target || !me || target === me) return;
+if (blockedUsers.has(target)) {
+blockedUsers.delete(target);
+} else {
+blockedUsers.add(target);
+}
+saveBlockedUsers();
+updateProfileModalButtons();
+renderFriendsModal();
+loadChatMessages();
+rebuildDMConversationSummaries();
+}
+}
+
+async function openDMModal(targetUsername) {
+if (!currentChatUser) { alert('You must be logged in to send DMs.'); return; }
+const target = normalizeUsername(targetUsername);
+const friendsModal = document.getElementById('friends-modal');
+if (friendsModal && friendsModal.style.display === 'flex') {
+closeFriendsModal();
+}
+openModalById('dm-modal');
+renderDMConversationLists();
+if (!target) {
+activeDMUser = null;
+document.getElementById('dm-modal-title').textContent = 'Select a conversation';
+document.getElementById('dm-messages').innerHTML = '<div class="dm-empty-state">Pick a conversation from the inbox to read or reply.</div>';
+return;
+}
+if (target === normalizeUsername(currentChatUser)) return;
+activeDMUser = target;
+document.getElementById('dm-modal-title').textContent = target;
+const input = document.getElementById('dm-input');
+if (input) input.value = '';
+renderDMConversationLists();
+markConversationAsRead(target);
+loadDMConversation(target);
+}
+
+function closeDMModal() {
+closeModalById('dm-modal');
+if (dmSnapshotUnsub) { dmSnapshotUnsub(); dmSnapshotUnsub = null; }
+activeDMUser = null;
+renderDMConversationLists();
+}
+
+function loadDMConversation(targetUsername) {
+if (dmSnapshotUnsub) { dmSnapshotUnsub(); dmSnapshotUnsub = null; }
+const me = normalizeUsername(currentChatUser);
+const target = normalizeUsername(targetUsername);
+const convoId = getDMConversationId(me, target);
+const container = document.getElementById('dm-messages');
+if (!container) return;
+container.innerHTML = '<div style="color:#999; font-size:0.85rem; padding:0.5rem;">Loading...</div>';
+try {
+const db = getAdminDb();
+dmSnapshotUnsub = db.collection(DM_MESSAGES_COLLECTION)
+.where('conversationId', '==', convoId)
+.limit(80)
+.onSnapshot(snapshot => {
+markConversationAsRead(target);
+if (snapshot.empty) {
+container.innerHTML = '<div style="color:#999; font-size:0.85rem; padding:0.5rem;">No messages yet. Say hi!</div>';
+return;
+}
+const sortedDocs = snapshot.docs.slice().sort((a, b) => {
+const aMs = a.data().timestamp && a.data().timestamp.toDate ? a.data().timestamp.toDate().getTime() : 0;
+const bMs = b.data().timestamp && b.data().timestamp.toDate ? b.data().timestamp.toDate().getTime() : 0;
+return aMs - bMs;
+});
+container.innerHTML = sortedDocs.map(doc => {
+const d = doc.data() || {};
+const isOwn = d.from === me;
+const time = d.timestamp && d.timestamp.toDate ? d.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+const messageText = sanitizeNullableText(d.message, '');
+const fromText = sanitizeNullableText(d.from, '');
+return `<div style="display:flex; flex-direction:column; align-items:${isOwn ? 'flex-end' : 'flex-start'}; max-width:80%; align-self:${isOwn ? 'flex-end' : 'flex-start'};">
+<div style="background:${isOwn ? '#1565c0' : '#2a2a2a'}; padding:0.45rem 0.75rem; border-radius:0.6rem; color:#fff; font-size:0.9rem; word-break:break-word;">${escapeHtml(messageText)}</div>
+<div style="font-size:0.7rem; color:#666; margin-top:0.1rem;">${escapeHtml(fromText)} \u00b7 ${time}</div>
+</div>`;
+}).join('');
+container.scrollTop = container.scrollHeight;
+});
+} catch (e) {
+container.innerHTML = '<div style="color:#f88; font-size:0.85rem; padding:0.5rem;">Failed to load messages.</div>';
+}
+}
+
+async function sendDMMessage() {
+if (!currentChatUser || !activeDMUser) return;
+const input = document.getElementById('dm-input');
+const message = input ? input.value.trim() : '';
+if (!message) return;
+const me = normalizeUsername(currentChatUser);
+const target = normalizeUsername(activeDMUser);
+const convoId = getDMConversationId(me, target);
+try {
+const db = getAdminDb();
+await db.collection(DM_MESSAGES_COLLECTION).add({
+conversationId: convoId,
+from: me,
+to: target,
+message: message.slice(0, 500),
+readByRecipient: false,
+timestamp: firebase.firestore.FieldValue.serverTimestamp()
+});
+if (input) input.value = '';
+} catch (err) {
+alert('Failed to send message.');
+}
+}
+
 async function adminToggleReadOnlyMode() {
 if (!canAdminSettings(currentChatUser)) return;
 try {
-const db = firebase.firestore();
+const db = getAdminDb();
 await db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).set({
 readOnlyMode: !moderationSettings.readOnlyMode,
 updatedBy: currentChatUser,
@@ -2754,7 +6443,7 @@ const input = prompt('Blocked words (one per line):', current);
 if (input === null) return;
 const words = input.split('\n').map(w => w.trim().toLowerCase()).filter(Boolean).slice(0, 120);
 try {
-const db = firebase.firestore();
+const db = getAdminDb();
 await db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).set({
 blockedWords: words,
 updatedBy: currentChatUser,
@@ -2775,7 +6464,7 @@ const minsInput = (prompt('How many minutes should it stay visible? (blank = no 
 const minutes = minsInput ? Math.max(1, Math.min(10080, parseInt(minsInput, 10) || 60)) : 0;
 const expiresAt = minutes ? new Date(Date.now() + minutes * 60000) : null;
 try {
-const db = firebase.firestore();
+const db = getAdminDb();
 await db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).set({
 announcementText: text.slice(0, 300),
 announcementEndsAt: expiresAt ? firebase.firestore.Timestamp.fromDate(expiresAt) : null,
@@ -2792,7 +6481,7 @@ alert('Failed to set announcement.');
 async function adminClearAnnouncement() {
 if (!canAdminSettings(currentChatUser)) return;
 try {
-const db = firebase.firestore();
+const db = getAdminDb();
 await db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).set({
 announcementText: '',
 announcementEndsAt: null,
@@ -2824,7 +6513,7 @@ statusDiv.textContent = 'Invalid role selected.';
 return;
 }
 try {
-const db = firebase.firestore();
+const db = getAdminDb();
 await db.collection(USER_ROLES_COLLECTION).doc(username).set({
 role,
 updatedBy: currentChatUser,
@@ -2852,7 +6541,7 @@ return;
 const reasonInput = document.getElementById('admin-warn-reason').value;
 const reason = (reasonInput || 'Rule violation').trim().slice(0, 120);
 try {
-const db = firebase.firestore();
+const db = getAdminDb();
 const ref = db.collection(USER_WARNINGS_COLLECTION).doc(username);
 const doc = await ref.get();
 const count = ((doc.exists ? (doc.data().count || 0) : 0) + 1);
@@ -2861,6 +6550,7 @@ history.push({ reason, by: currentChatUser, at: new Date().toISOString() });
 await ref.set({ count, history, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
 await postSystemNotice(`${username} received warning ${count}/3.`);
 statusDiv.textContent = `${username} warning count: ${count}/3.`;
+await writeAuditLog('warn', username, `Warning ${count}/3: ${reason}`);
 document.getElementById('admin-warn-username').value = '';
 document.getElementById('admin-warn-reason').value = '';
 if (count >= 3) {
@@ -2884,19 +6574,111 @@ try {
 if (!firebase.apps.length) {
 firebase.initializeApp(firebaseConfig);
 }
-const db = firebase.firestore();
+const db = getAdminDb();
 const ref = db.collection(TIMED_BANS_COLLECTION).doc(key);
 const doc = await ref.get();
 if (!doc.exists) return null;
 const data = doc.data() || {};
 const expiresAt = data.expiresAt && typeof data.expiresAt.toDate === 'function' ? data.expiresAt.toDate() : null;
 if (!expiresAt || expiresAt.getTime() <= Date.now()) {
-await ref.delete();
+await clearTimedBanState(key, db);
 return null;
 }
-return { reason: String(data.reason || 'Temporary ban'), expiresAt };
+return { reason: sanitizeNullableText(data.reason, 'Temporary ban'), expiresAt };
 } catch (err) {
 return null;
+}
+}
+
+async function clearTimedBanState(username, db = null) {
+const key = normalizeUsername(username);
+if (!key || isProtectedUsername(key)) return;
+const adminDb = db || getAdminDb();
+await Promise.allSettled([
+adminDb.collection(TIMED_BANS_COLLECTION).doc(key).delete(),
+adminDb.collection('kicked_users').doc(key).delete()
+]);
+}
+
+async function loadActiveTempBans() {
+const container = document.getElementById('admin-tempban-list');
+if (!container) return;
+if (!canAdminSettings(currentChatUser)) {
+container.textContent = 'Insufficient permissions.';
+return;
+}
+container.textContent = 'Loading temp bans...';
+try {
+const db = getAdminDb();
+const snapshot = await db.collection(TIMED_BANS_COLLECTION).get();
+const now = Date.now();
+const activeEntries = [];
+const cleanupTasks = [];
+
+snapshot.forEach((doc) => {
+const username = normalizeUsername(doc.id);
+const data = doc.data() || {};
+const expiresAt = data.expiresAt && typeof data.expiresAt.toDate === 'function' ? data.expiresAt.toDate() : null;
+if (!username || !expiresAt || expiresAt.getTime() <= now) {
+if (username) cleanupTasks.push(clearTimedBanState(username, db));
+return;
+}
+activeEntries.push({
+username,
+reason: sanitizeNullableText(data.reason, 'Temporary ban'),
+minutes: Math.max(1, parseInt(data.minutes, 10) || 0),
+bannedBy: normalizeUsername(data.bannedBy || ''),
+expiresAt
+});
+});
+
+if (cleanupTasks.length) {
+await Promise.allSettled(cleanupTasks);
+}
+
+if (!activeEntries.length) {
+container.textContent = 'No active temp bans.';
+return;
+}
+
+activeEntries.sort((a, b) => a.expiresAt.getTime() - b.expiresAt.getTime());
+container.innerHTML = activeEntries.map((entry) => {
+const safeUser = encodeURIComponent(entry.username);
+const remaining = formatRemainingDuration(entry.expiresAt.getTime() - now);
+const unbanAt = entry.expiresAt.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+const originalLength = entry.minutes > 0 ? `${entry.minutes} min` : 'custom';
+return `<div style="padding:0.55rem 0; border-bottom:1px solid #2a2a2a;">
+<div style="display:flex; justify-content:space-between; gap:0.75rem; align-items:flex-start; flex-wrap:wrap;">
+<div>
+<div style="font-weight:bold; color:#ffca28;">${escapeHtml(entry.username)}</div>
+<div style="margin-top:0.18rem; color:#bbb;">Remaining: ${escapeHtml(remaining)} • Unbans: ${escapeHtml(unbanAt)}</div>
+<div style="margin-top:0.18rem; color:#999;">Length: ${escapeHtml(originalLength)}${entry.bannedBy ? ` • By: ${escapeHtml(entry.bannedBy)}` : ''}</div>
+<div style="margin-top:0.18rem; color:#ddd;">Reason: ${escapeHtml(entry.reason)}</div>
+</div>
+<button onclick="adminUnbanTempBannedUser('${safeUser}')" style="padding:0.35rem 0.7rem; background:#2e7d32; color:#fff; border:none; border-radius:0.25rem; white-space:nowrap;">Unban</button>
+</div>
+</div>`;
+}).join('');
+} catch (err) {
+container.textContent = 'Failed to load temp bans.';
+}
+}
+
+async function adminUnbanTempBannedUser(encodedUsername) {
+if (!canAdminSettings(currentChatUser)) return;
+const username = normalizeUsername(decodeURIComponent(encodedUsername || ''));
+const statusDiv = document.getElementById('admin-ban-status');
+if (!username) {
+if (statusDiv) statusDiv.textContent = 'Invalid username.';
+return;
+}
+try {
+await clearTimedBanState(username);
+if (statusDiv) statusDiv.textContent = `${username} temp ban removed.`;
+await writeAuditLog('unban_temp_ban', username, 'Temporary ban removed');
+loadActiveTempBans();
+} catch (err) {
+if (statusDiv) statusDiv.textContent = 'Failed to remove temp ban.';
 }
 }
 
@@ -2916,7 +6698,7 @@ return;
 }
 try {
 const expiresAt = new Date(Date.now() + minutes * 60000);
-const db = firebase.firestore();
+const db = getAdminDb();
 await db.collection(TIMED_BANS_COLLECTION).doc(username).set({
 reason,
 minutes,
@@ -2931,9 +6713,11 @@ timestamp: firebase.firestore.FieldValue.serverTimestamp()
 });
 await postSystemNotice(`${username} was temporarily banned for ${minutes} minute(s).`);
 statusDiv.textContent = `${username} temp banned for ${minutes} minutes.`;
+await writeAuditLog('temp_ban', username, `Temp banned ${minutes}min: ${reason}`);
 document.getElementById('admin-tempban-username').value = '';
 document.getElementById('admin-tempban-minutes').value = '';
 document.getElementById('admin-tempban-reason').value = '';
+loadActiveTempBans();
 } catch (err) {
 statusDiv.textContent = 'Failed to temp ban user.';
 }
@@ -2941,15 +6725,61 @@ statusDiv.textContent = 'Failed to temp ban user.';
 
 function listenForTimedBan() {
 if (!chatInitialized || !currentChatUser || isProtectedUsername(currentChatUser)) return;
-const db = firebase.firestore();
-db.collection(TIMED_BANS_COLLECTION).doc(currentChatUser).onSnapshot((doc) => {
-if (!doc.exists) return;
+const db = getAdminDb();
+if (timedBanStatusUnsub) timedBanStatusUnsub();
+timedBanStatusUnsub = db.collection(TIMED_BANS_COLLECTION).doc(currentChatUser).onSnapshot(async (doc) => {
+if (!doc.exists) {
+currentTimedBanInfo = null;
+updateChatTimeoutStatusUi();
+return;
+}
 const data = doc.data() || {};
 const expiresAt = data.expiresAt && typeof data.expiresAt.toDate === 'function' ? data.expiresAt.toDate() : null;
-if (!expiresAt || expiresAt.getTime() <= Date.now()) return;
-alert(`You are temporarily banned until ${expiresAt.toLocaleString()}. Reason: ${data.reason || 'Temporary ban'}`);
-localStorage.removeItem('userName');
-location.reload();
+if (!expiresAt || expiresAt.getTime() <= Date.now()) {
+currentTimedBanInfo = null;
+try { await clearTimedBanState(currentChatUser, db); } catch (err) {}
+updateChatTimeoutStatusUi();
+return;
+}
+const nextInfo = { reason: sanitizeNullableText(data.reason, 'Temporary ban'), expiresAt };
+const previousExpiry = currentTimedBanInfo && currentTimedBanInfo.expiresAt ? currentTimedBanInfo.expiresAt.getTime() : 0;
+currentTimedBanInfo = nextInfo;
+updateChatTimeoutStatusUi();
+if (previousExpiry !== expiresAt.getTime()) {
+alert(`You are temporarily banned until ${expiresAt.toLocaleString()}. Reason: ${nextInfo.reason}`);
+}
+});
+}
+
+function listenForMuteStatus() {
+if (!chatInitialized || !currentChatUser || isProtectedUsername(currentChatUser)) return;
+const db = getAdminDb();
+if (muteStatusUnsub) muteStatusUnsub();
+muteStatusUnsub = db.collection('muted_users').doc(currentChatUser).onSnapshot(async (doc) => {
+if (!doc.exists) {
+currentMuteInfo = null;
+updateChatTimeoutStatusUi();
+return;
+}
+const data = doc.data() || {};
+if (data.muted !== true) {
+currentMuteInfo = null;
+updateChatTimeoutStatusUi();
+return;
+}
+const expiresAt = data.expiresAt && typeof data.expiresAt.toDate === 'function' ? data.expiresAt.toDate() : null;
+if (expiresAt && expiresAt.getTime() <= Date.now()) {
+currentMuteInfo = null;
+try { await db.collection('muted_users').doc(currentChatUser).delete(); } catch (err) {}
+updateChatTimeoutStatusUi();
+return;
+}
+currentMuteInfo = {
+reason: sanitizeNullableText(data.reason, ''),
+expiresAt,
+mutedBy: normalizeUsername(data.mutedBy || '')
+};
+updateChatTimeoutStatusUi();
 });
 }
 
@@ -2958,13 +6788,35 @@ const entriesDiv = document.getElementById('leaderboard-entries');
 if (!entriesDiv) return;
 try {
 const db = firebase.firestore();
+const bannedUsers = await getBannedUsernames();
+const bannedSet = new Set((bannedUsers || []).map(u => normalizeUsername(u)));
 const snapshot = await db.collection(USER_STATS_COLLECTION).get();
 const allStats = {};
 snapshot.forEach(doc => { allStats[doc.id] = doc.data(); });
-const leaderboardData = Object.entries(allStats).map(([username, stats]) => {
+const knownUsers = new Set();
+Object.keys(allStats).forEach((username) => knownUsers.add(normalizeUsername(username)));
+Object.keys(SITE_LOGINS || {}).forEach((username) => knownUsers.add(normalizeUsername(username)));
+Object.keys(roleCache || {}).forEach((username) => knownUsers.add(normalizeUsername(username)));
+Object.keys(userTagCache || {}).forEach((username) => knownUsers.add(normalizeUsername(username)));
+knownUsers.add(normalizeUsername(currentChatUser || getUserName() || ''));
+
+const leaderboardData = Array.from(knownUsers)
+.filter(Boolean)
+.filter((username) => !bannedSet.has(username))
+.map((username) => {
+const stats = allStats[username] || {
+gamesOpened: 0,
+messagesSent: 0,
+mediaShared: 0,
+reactionsUsed: 0
+};
 const { level, points } = calculateUserLevel(stats, username);
 return { username, level, points };
-}).sort((a, b) => b.points - a.points).slice(0, 20);
+})
+.sort((a, b) => {
+if (b.points !== a.points) return b.points - a.points;
+return a.username.localeCompare(b.username);
+});
 if (!leaderboardData.length) {
 entriesDiv.innerHTML = '<div style="color:#999; padding:1rem; text-align:center;">No scores yet. Start playing to climb the leaderboard!</div>';
 return;
@@ -2972,12 +6824,13 @@ return;
 entriesDiv.innerHTML = leaderboardData.map((entry, idx) => {
 const rank = idx + 1;
 const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
-const ownerTag = entry.username === 'kaiden' ? '<span class="owner-tag">OWNER</span>' : '';
-const bTag = entry.username === 'luca' ? '<span class="b-tag">BITCH</span>' : '';
+const ownerTag = getOwnerTagHtml(entry.username);
+const customTag = getUserTagHtml(entry.username);
 const levelDisplay = entry.level;
+const profileTarget = encodeURIComponent(entry.username);
 return `<div class="leaderboard-entry">
        <div class="leaderboard-rank">${medal}</div>
-       <div class="leaderboard-username">${escapeHtml(entry.username)}${ownerTag}${bTag}</div>
+  <div class="leaderboard-username" onclick="openUserProfileFromChat('${profileTarget}', event)">${getStatusDotHtml(entry.username)}${escapeHtml(entry.username)}${ownerTag}${customTag}</div>
        <div class="leaderboard-level">LVL ${levelDisplay}</div>
        <div class="leaderboard-points">${entry.points.toLocaleString()} pts</div>
      </div>`;
@@ -2992,12 +6845,13 @@ async function pinMessage(docId) {
 if (!canModerate(currentChatUser)) return;
 const data = window._chatDocs && window._chatDocs[docId];
 if (!data) return;
-const text = (data.message || '').trim() || (data.imageData ? '[image]' : '') || (data.videoData ? '[video]' : '');
+const text = sanitizeNullableText(data.message, '').trim() || (data.imageData ? '[image]' : '') || (data.videoData ? '[video]' : '');
+const pinnedUser = sanitizeNullableText(data.user, 'unknown');
 try {
-const db = firebase.firestore();
+const db = getAdminDb();
 await db.collection('chat_meta').doc('pinned').set({
 docId,
-user: data.user || 'unknown',
+user: pinnedUser,
 text,
 pinnedBy: currentChatUser,
 timestamp: firebase.firestore.FieldValue.serverTimestamp()
@@ -3010,7 +6864,7 @@ alert('Failed to pin message.');
 async function clearPinnedMessage() {
 if (!canModerate(currentChatUser)) return;
 try {
-const db = firebase.firestore();
+const db = getAdminDb();
 await db.collection('chat_meta').doc('pinned').delete();
 } catch (err) {
 alert('Failed to clear pinned message.');
@@ -3033,7 +6887,7 @@ clearBtn.style.display = canModerate(currentChatUser) ? 'inline-block' : 'none';
 
 function listenForPinnedMessage() {
 if (!chatInitialized) return;
-const db = firebase.firestore();
+const db = getAdminDb();
 db.collection('chat_meta').doc('pinned').onSnapshot(doc => {
 currentPinnedMessage = doc.exists ? (doc.data() || null) : null;
 renderPinnedMessage();
@@ -3055,15 +6909,34 @@ check();
 }
 
 function setChatColor(color) {
-currentChatColor = color;
-localStorage.setItem('chatColor', color);
+currentChatColor = String(color || '#1565c0').toLowerCase();
+localStorage.setItem('chatColor', currentChatColor);
 updateColorButtonBorders();
+updateCustomColorInput(currentChatColor);
 }
 
 function selectColor(color) {
 setChatColor(color);
 saveColorToFirebase(color);
 closeColorPicker();
+}
+
+function selectCustomColor(color) {
+setChatColor(color);
+saveColorToFirebase(color);
+closeColorPicker();
+}
+
+function updateCustomColorPreview(color) {
+const label = document.getElementById('custom-chat-color-label');
+if (label) label.textContent = String(color || '#1565c0').toLowerCase();
+}
+
+function updateCustomColorInput(color = currentChatColor) {
+const input = document.getElementById('custom-chat-color-input');
+const normalized = String(color || '#1565c0').toLowerCase();
+if (input) input.value = normalized;
+updateCustomColorPreview(normalized);
 }
 
 async function saveColorToFirebase(color) {
@@ -3081,6 +6954,7 @@ console.error('Error saving color to Firestore:', err);
 
 function openColorPicker() {
 document.getElementById('color-picker-modal').style.display = 'flex';
+updateCustomColorInput(currentChatColor);
 updateColorButtonBorders();
 }
 
@@ -3090,7 +6964,7 @@ document.getElementById('color-picker-modal').style.display = 'none';
 
 function getChatColor() {
 const stored = localStorage.getItem('chatColor');
-return stored || '#1565c0';
+return String(stored || '#1565c0').toLowerCase();
 }
 
 async function loadColorFromFirebase() {
@@ -3099,7 +6973,7 @@ try {
 const db = firebase.firestore();
 const doc = await db.collection('user_preferences').doc(currentChatUser).get();
 if (doc.exists && doc.data().color) {
-currentChatColor = doc.data().color;
+currentChatColor = String(doc.data().color || '#1565c0').toLowerCase();
 localStorage.setItem('chatColor', currentChatColor);
 } else {
 currentChatColor = getChatColor();
@@ -3113,8 +6987,8 @@ currentChatColor = getChatColor();
 function updateColorButtonBorders() {
 const buttons = document.querySelectorAll('#color-picker-modal button[onclick*="selectColor"]');
 buttons.forEach(btn => {
-const btnColor = btn.style.background;
-if (btnColor === currentChatColor || rgbToHex(btnColor) === currentChatColor) {
+const btnColor = rgbToHex(btn.style.background).toLowerCase();
+if (btnColor === currentChatColor) {
 btn.style.borderColor = '#fff';
 btn.style.borderWidth = '4px';
 } else {
@@ -3122,10 +6996,11 @@ btn.style.borderColor = '#999';
 btn.style.borderWidth = '3px';
 }
 });
+updateCustomColorInput(currentChatColor);
 }
 
 function rgbToHex(rgb) {
-if (rgb.startsWith('#')) return rgb;
+if (rgb.startsWith('#')) return rgb.toLowerCase();
 const match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
 if (!match) return rgb;
 const r = parseInt(match[1]).toString(16).padStart(2, '0');
@@ -3142,18 +7017,31 @@ if (!firebase.apps.length) {
 firebase.initializeApp(firebaseConfig);
 }
 chatInitialized = true;
+currentChatRoom = getCurrentChatRoom();
+loadBlockedUsers();
+loadChatRooms();
 
 await loadColorFromFirebase();
 updateColorButtonBorders();
+renderChatRoomToolbarState();
+renderChatRoomSummary();
 
 loadChatMessages();
 registerOnlinePresence();
 loadOnlineUsers();
 loadTypingUsers();
+listenForGameThumbnailPolls();
 loadRoleCache();
+loadUserTagCache();
 loadModerationSettings();
+startActivityHeartbeat();
+loadActivityStatuses();
+loadFriendsData();
+startTimeoutStatusLoop();
+startDMInboxListeners();
 listenForKick();
 listenForTimedBan();
+listenForMuteStatus();
 listenForPinnedMessage();
 await backfillLegacyMessageStatsForCurrentUser();
 showChatButton();
@@ -3345,15 +7233,42 @@ if (tab === 'gif') {
 }
 
 let gifSearchTimer = null;
+function hasGiphySearchConfigured() {
+return !!GIPHY_API_KEY && GIPHY_API_KEY !== 'YOUR_GIPHY_API_KEY';
+}
+
 function onGifSearchInput() {
 clearTimeout(gifSearchTimer);
 const query = document.getElementById('gif-search-input').value.trim();
 gifSearchTimer = setTimeout(() => searchGiphyGifs(query || 'trending'), 400);
 }
 
+async function sendGifUrlFromInput() {
+const input = document.getElementById('gif-url-input');
+if (!input) return;
+const rawUrl = normalizeReactionImageUrl(input.value);
+if (!rawUrl) {
+  alert('Paste a GIF or Giphy URL first.');
+  return;
+}
+
+const resolvedUrl = await resolveReactionImageUrl(rawUrl);
+if (!resolvedUrl) {
+  alert('Could not resolve that link to a direct GIF. Try a standard Giphy share link or direct .gif URL.');
+  return;
+}
+
+await sendGifMessage(resolvedUrl);
+input.value = '';
+}
+
 let _gifResults = [];
 async function searchGiphyGifs(query) {
 const grid = document.getElementById('gif-grid');
+if (!hasGiphySearchConfigured()) {
+grid.innerHTML = '<div style="color:#ffca28;padding:1rem;text-align:center;grid-column:1/-1;">GIF search is not configured yet. Paste a Giphy or direct GIF URL above.</div>';
+return;
+}
 grid.innerHTML = '<div style="color:#999;padding:1rem;text-align:center;grid-column:1/-1;">Loading…</div>';
 try {
   const isTrending = !query || query === 'trending';
@@ -3400,10 +7315,13 @@ sendGifMessage(gifUrl);
 function isTrustedGifUrl(url) {
 try {
   const parsed = new URL(url);
+  const host = parsed.hostname.toLowerCase();
   if (parsed.protocol !== 'https:') return false;
-  // Allow media.giphy.com and Giphy's numbered CDN subdomains (e.g. media0.giphy.com, media1.giphy.com)
-  return parsed.hostname === 'media.giphy.com' ||
-    /^media\d+\.giphy\.com$/.test(parsed.hostname);
+  return host === 'media.giphy.com' ||
+    /^media\d+\.giphy\.com$/.test(host) ||
+    host === 'i.giphy.com' ||
+    host.endsWith('.giphy.com') ||
+    host.endsWith('.giphyusercontent.com');
 } catch (_) {
   return false;
 }
@@ -3416,6 +7334,7 @@ const timedBan = await getActiveTimedBan(currentChatUser);
 if (timedBan) { alert(`You are temporarily banned until ${timedBan.expiresAt.toLocaleString()}.`); return; }
 if (await isUserMuted(currentChatUser)) { alert('You are currently muted and cannot send messages.'); return; }
 if (!isTrustedGifUrl(gifUrl)) { console.warn('Rejected untrusted GIF URL:', gifUrl); return; }
+if (!canSendChatNow()) { return; }
 closeMediaModal();
 try {
   const db = firebase.firestore();
@@ -3425,12 +7344,14 @@ try {
     type: 'gif',
     gifUrl: gifUrl,
     color: currentChatColor,
+    room: currentChatRoom,
     timestamp: firebase.firestore.FieldValue.serverTimestamp()
   };
   if (currentReplyTo) {
     msgData.replyTo = { user: currentReplyTo.user, text: currentReplyTo.text };
   }
   await db.collection('site_messages').add(msgData);
+  lastChatSendAtMs = Date.now();
   incrementUserStat('messagesSent');
   incrementUserStat('mediaShared');
   clearReply();
@@ -3442,7 +7363,7 @@ try {
 
 function startChatDrag(event) {
 const target = event.target;
-if (target.closest('#chat-minimize-btn') || target.closest('#chat-close-btn') || target.closest('#chat-online-btn') || target.closest('#chat-profile-btn') || target.closest('#chat-voice-btn') || target.closest('#chat-fullscreen-btn')) {
+if (target.closest('#chat-header-actions')) {
 return;
 }
 
@@ -3498,22 +7419,36 @@ async function loadChatMessages() {
 if (!chatInitialized) return;
 
 try {
+if (chatMessagesUnsub) {
+chatMessagesUnsub();
+chatMessagesUnsub = null;
+}
 const db = firebase.firestore();
 const messagesRef = db.collection('site_messages')
-.orderBy('timestamp', 'asc')
-.limit(100);
+.orderBy('timestamp', 'desc')
+.limit(200);
 
-let prevDocCount = 0;
 let snapshotReady = false;
+let lastNewestMessageId = '';
 
-messagesRef.onSnapshot(snapshot => {
+chatMessagesUnsub = messagesRef.onSnapshot(snapshot => {
 const messagesDiv = document.getElementById('chat-messages');
 
-const newDocCount = snapshot.size;
-const hasNewMessage = snapshotReady && newDocCount > prevDocCount;
+const visibleDocsDesc = snapshot.docs.filter((doc) => {
+const data = doc.data() || {};
+const roomConfig = getChatRoomConfig(data.room || 'general');
+const room = roomConfig.id;
+if (room !== currentChatRoom) return false;
+if (!canAccessRoom(roomConfig)) return false;
+if (!canModerate(currentChatUser) && isUserBlocked(data.user || '')) return false;
+return true;
+});
+
+const newestMessageId = visibleDocsDesc.length ? visibleDocsDesc[0].id : '';
+const hasNewMessage = snapshotReady && newestMessageId && newestMessageId !== lastNewestMessageId;
 const wasAtBottom = messagesDiv.scrollHeight - messagesDiv.scrollTop - messagesDiv.clientHeight < 60;
 snapshotReady = true;
-prevDocCount = newDocCount;
+lastNewestMessageId = newestMessageId;
 const scrollPos = messagesDiv.scrollTop;
 const chatContainer = document.getElementById('chat-container');
 const isChatOpen = chatContainer.style.display !== 'none' && !chatContainer.classList.contains('minimized');
@@ -3525,11 +7460,17 @@ updateUnreadBadge();
 messagesDiv.innerHTML = '';
 const isAdmin = canModerate(currentChatUser);
 window._chatDocs = {};
+window._chatDocOrder = [];
 
-snapshot.forEach(doc => {
+const docsForRender = visibleDocsDesc.slice().reverse();
+if (!docsForRender.length) {
+messagesDiv.innerHTML = '<div class="dm-empty-state">No messages in this room yet.</div>';
+}
+docsForRender.forEach(doc => {
 const docId = doc.id;
 const data = doc.data();
 window._chatDocs[docId] = data;
+window._chatDocOrder.push(docId);
 
 const messageDiv = document.createElement('div');
 const isOwn = data.user === currentChatUser;
@@ -3537,13 +7478,17 @@ const isSystem = data.system === true;
 const hasImage = typeof data.imageData === 'string' && data.imageData !== '';
 const hasVideo = typeof data.videoData === 'string' && data.videoData !== '';
 const hasGif = data.type === 'gif' && data.gifUrl && isTrustedGifUrl(data.gifUrl);
-const safeCaption = data.message ? escapeHtml(data.message) : '';
+const messageText = sanitizeNullableText(data.message, '');
+const safeCaption = messageText ? renderLinkifiedText(messageText) : '';
+const linkPreviewHtml = renderLinkPreviewHtml(data.linkPreview || null);
 const messageColor = data.color || (isSystem ? '#2f2f2f' : (isOwn ? '#1565c0' : '#5f6368'));
 const timeStr = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleString([], {month:'short', day:'numeric', hour: '2-digit', minute:'2-digit'}) : '';
+const roomBadge = !isSystem ? `<span class="chat-room-badge">${escapeHtml(getChatRoomConfig(data.room || 'general').name)}</span>` : '';
+const displayUser = sanitizeNullableText(data.user, 'unknown');
 
 const replyHtml = data.replyTo ? `
          <div class="chat-message-reply-quote">
-           <strong>${escapeHtml(data.replyTo.user || '')}</strong>: ${escapeHtml((data.replyTo.text || '').slice(0, 80))}
+           <strong>${escapeHtml(sanitizeNullableText(data.replyTo.user, ''))}</strong>: ${escapeHtml(sanitizeNullableText(data.replyTo.text, '').slice(0, 80))}
          </div>` : '';
 
 const reactions = data.reactions || {};
@@ -3571,22 +7516,29 @@ const reactBtns = isSystem ? '' : ['❤️','😂','😢','🔥'].map(e => `<but
 const imageReactBtn = isSystem ? '' : `<button class="chat-action-btn" onclick="promptImageReaction('${docId}')">🖼 Img</button>`;
 const deleteBtn = isAdmin ? `<button class="chat-action-btn" style="color:#ff8a80;" onclick="adminDeleteMessage('${docId}')">🗑 Delete</button>` : '';
 const pinBtn = isAdmin && !isSystem ? `<button class="chat-action-btn" style="color:#ffca28;" onclick="pinMessage('${docId}')">📌 Pin</button>` : '';
+const reportBtn = !isSystem && !isAdmin && !isOwn ? `<button class="chat-action-btn" style="color:#ff8a80; opacity:0.75;" onclick="reportMessage('${docId}')">⚑ Report</button>` : '';
+const timestampMs = data.timestamp && typeof data.timestamp.toDate === 'function' ? data.timestamp.toDate().getTime() : 0;
+const canEditOwn = !isSystem && isOwn && !!data.message && timestampMs && (Date.now() - timestampMs <= DM_EDIT_WINDOW_MS);
+const editBtn = canEditOwn ? `<button class="chat-action-btn" onclick="editOwnMessage('${docId}')">✎ Edit</button>` : '';
+const historyBtn = isAdmin && Array.isArray(data.editHistory) && data.editHistory.length ? `<button class="chat-action-btn" onclick="showMessageEditHistory('${docId}')">🕘 History</button>` : '';
+const editedMarker = data.editedAt ? `<span class="chat-edited-marker">edited</span>` : '';
 
 messageDiv.className = `chat-message ${isSystem ? 'system' : (isOwn ? 'own' : 'other')}`;
-const ownerTag = !isSystem && data.user === 'kaiden' ? '<span class="owner-tag">OWNER</span>' : '';
-const bTag = !isSystem && data.user === 'luca' ? '<span class="b-tag">BITCH</span>' : '';
-const profileTarget = encodeURIComponent(normalizeUsername(data.user || 'unknown'));
+const ownerTag = !isSystem ? getOwnerTagHtml(displayUser) : '';
+const customTag = !isSystem ? getUserTagHtml(displayUser) : '';
+const profileTarget = encodeURIComponent(normalizeUsername(displayUser || 'unknown'));
 const nameColor = isSystem ? '' : (/^#[0-9a-fA-F]{3,8}$/.test(messageColor) ? messageColor : (isOwn ? '#1565c0' : '#5f6368'));
 messageDiv.innerHTML = `
          ${replyHtml}
-         ${isSystem ? '' : `<div class="chat-message-user chat-user-link" style="color:${nameColor}" onclick="openUserProfileFromChat('${profileTarget}', event)">${escapeHtml(data.user || 'unknown')}${ownerTag}${bTag}</div>`}
+         ${isSystem ? '' : `<div class="chat-message-user chat-user-link" style="color:${nameColor}" onclick="openUserProfileFromChat('${profileTarget}', event)">${escapeHtml(displayUser)}${ownerTag}${customTag}</div>`}
          ${hasImage ? `<img class="chat-message-image" src="${data.imageData}" alt="Chat image" />` : ''}
          ${hasVideo ? `<video class="chat-message-video" src="${data.videoData}" controls preload="metadata"></video>` : ''}
          ${hasGif ? `<img class="chat-message-image" src="${escapeHtml(data.gifUrl)}" alt="GIF" />` : ''}
-         ${safeCaption ? `<div class="chat-message-caption">${safeCaption}</div>` : ''}
-         ${!isSystem && timeStr ? `<div class="chat-message-time">${timeStr}</div>` : ''}
+         ${safeCaption ? `<div class="chat-message-caption chat-message-text">${safeCaption}</div>` : ''}
+         ${linkPreviewHtml}
+         ${!isSystem && timeStr ? `<div class="chat-message-meta-row">${roomBadge}<div class="chat-message-time">${timeStr}</div>${editedMarker}</div>` : ''}
          ${(reactionsHtml || imageReactionsHtml) ? `<div class="chat-reactions">${reactionsHtml}${imageReactionsHtml}</div>` : ''}
-         ${(isSystem && isAdmin) || !isSystem ? `<div class="chat-message-actions">${replyBtn}${reactBtns}${imageReactBtn}${pinBtn}${deleteBtn}</div>` : ''}
+         ${(isSystem && isAdmin) || !isSystem ? `<div class="chat-message-actions">${replyBtn}${reactBtns}${imageReactBtn}${editBtn}${historyBtn}${pinBtn}${deleteBtn}${reportBtn}</div>` : ''}
        `;
 messagesDiv.appendChild(messageDiv);
 });
@@ -3633,26 +7585,37 @@ alert('You are currently muted and cannot send messages.');
 return;
 }
 
+if (!canSendChatNow()) {
+return;
+}
+
 try {
 let resolvedMediaUrl = '';
 if (isValidReactionImageUrl(message)) {
 resolvedMediaUrl = await resolveReactionImageUrl(message);
 }
+const rawLink = resolvedMediaUrl ? '' : extractFirstUrl(message);
+const linkPreview = rawLink ? buildLinkPreviewData(rawLink) : null;
 
 const db = firebase.firestore();
 const msgData = {
 user: currentChatUser,
 message: resolvedMediaUrl ? '' : message,
 color: currentChatColor,
+room: currentChatRoom,
 timestamp: firebase.firestore.FieldValue.serverTimestamp()
 };
 if (resolvedMediaUrl) {
 msgData.imageData = resolvedMediaUrl;
 }
+if (linkPreview) {
+msgData.linkPreview = linkPreview;
+}
 if (currentReplyTo) {
 msgData.replyTo = { user: currentReplyTo.user, text: currentReplyTo.text };
 }
 await db.collection('site_messages').add(msgData);
+lastChatSendAtMs = Date.now();
 incrementUserStat('messagesSent');
 
 input.value = '';
@@ -3661,6 +7624,8 @@ clearReply();
 if (chatInitialized && currentChatUser) {
 clearTimeout(typingTimeout);
 firebase.firestore().collection('typing_status').doc(currentChatUser).set({ typing: false, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+      typingStateIsTrue = false;
+      lastTypingWriteMs = Date.now();
 }
 } catch (err) {
 console.error("Error sending message:", err);
@@ -3708,6 +7673,10 @@ alert('You are currently muted and cannot send messages.');
 return;
 }
 
+if (!canSendChatNow()) {
+return;
+}
+
 try {
 let imageData = '';
 let videoData = '';
@@ -3723,14 +7692,18 @@ const msgData = {
 user: currentChatUser,
 message: caption,
 color: currentChatColor,
+room: currentChatRoom,
 timestamp: firebase.firestore.FieldValue.serverTimestamp()
 };
 if (imageData) msgData.imageData = imageData;
 if (videoData) msgData.videoData = videoData;
+const captionLink = extractFirstUrl(caption);
+if (captionLink) msgData.linkPreview = buildLinkPreviewData(captionLink);
 if (currentReplyTo) {
 msgData.replyTo = { user: currentReplyTo.user, text: currentReplyTo.text };
 }
 await db.collection('site_messages').add(msgData);
+lastChatSendAtMs = Date.now();
 incrementUserStat('messagesSent');
 incrementUserStat('mediaShared');
 
@@ -3740,6 +7713,8 @@ clearReply();
 if (chatInitialized && currentChatUser) {
 clearTimeout(typingTimeout);
 firebase.firestore().collection('typing_status').doc(currentChatUser).set({ typing: false, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+      typingStateIsTrue = false;
+      lastTypingWriteMs = Date.now();
 }
 } catch (err) {
 console.error('Error sending image:', err);
@@ -3868,7 +7843,10 @@ let currentReplyTo = null;
 function setReplyTo(docId) {
 const data = window._chatDocs && window._chatDocs[docId];
 if (!data) return;
-currentReplyTo = { user: data.user || 'unknown', text: data.message || '' };
+currentReplyTo = {
+user: sanitizeNullableText(data.user, 'unknown'),
+text: sanitizeNullableText(data.message, '')
+};
 document.getElementById('reply-preview-bar').style.display = 'flex';
 document.getElementById('reply-preview-text').textContent =
 `Replying to ${currentReplyTo.user}: ${currentReplyTo.text.slice(0, 60)}`;
@@ -4029,7 +8007,7 @@ const ref = db.collection('user_presence').doc(currentChatUser);
 await ref.set({ online: true, lastSeen: firebase.firestore.FieldValue.serverTimestamp() });
 setInterval(async () => {
 await ref.set({ online: true, lastSeen: firebase.firestore.FieldValue.serverTimestamp() });
-}, 15000);
+  }, 30000);
 window.addEventListener('beforeunload', () => {
 ref.set({ online: false, lastSeen: firebase.firestore.FieldValue.serverTimestamp() });
 });
@@ -4082,6 +8060,7 @@ if (!canModerate(currentChatUser)) return;
 try {
 const db = firebase.firestore();
 await db.collection('site_messages').doc(docId).delete();
+await writeAuditLog('delete_message', docId, 'Message deleted by moderator');
 } catch (err) {
 console.error('Error deleting message:', err);
 alert('Failed to delete message.');
@@ -4095,14 +8074,20 @@ const statusDiv = document.getElementById('admin-ban-status');
 if (!username) { statusDiv.textContent = 'Enter a username to mute.'; return; }
 if (isProtectedUsername(username)) { statusDiv.textContent = `${username} cannot be muted.`; return; }
 try {
-const db = firebase.firestore();
+const minutesInput = (prompt('Mute for how many minutes? Leave blank for permanent mute.', '') || '').trim();
+const minutes = minutesInput ? Math.max(1, Math.min(10080, parseInt(minutesInput, 10) || 0)) : 0;
+const expiresAt = minutes ? new Date(Date.now() + minutes * 60000) : null;
+const db = getAdminDb();
 await db.collection('muted_users').doc(username).set({
 muted: true,
 mutedBy: currentChatUser,
-timestamp: firebase.firestore.FieldValue.serverTimestamp()
+reason: minutes ? `Timed mute (${minutes}m)` : 'Muted by admin',
+timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+expiresAt: expiresAt ? firebase.firestore.Timestamp.fromDate(expiresAt) : null
 });
-await postSystemNotice(`${username} was muted.`);
-statusDiv.textContent = `${username} has been muted.`;
+await postSystemNotice(`${username} was muted${minutes ? ` for ${minutes} minute(s)` : ''}.`);
+statusDiv.textContent = `${username} has been muted${minutes ? ` for ${minutes} minute(s)` : ''}.`;
+await writeAuditLog('mute', username, minutes ? `User muted for ${minutes} minutes` : 'User muted');
 document.getElementById('admin-mute-username').value = '';
 } catch (err) {
 statusDiv.textContent = 'Failed to mute user.';
@@ -4115,25 +8100,42 @@ const username = resolveAdminTargetUsername('admin-mute-username');
 const statusDiv = document.getElementById('admin-ban-status');
 if (!username) { statusDiv.textContent = 'Enter a username to unmute.'; return; }
 try {
-const db = firebase.firestore();
+const db = getAdminDb();
 await db.collection('muted_users').doc(username).delete();
 await postSystemNotice(`${username} was unmuted.`);
 statusDiv.textContent = `${username} has been unmuted.`;
+await writeAuditLog('unmute', username, 'User unmuted');
 document.getElementById('admin-mute-username').value = '';
 } catch (err) {
 statusDiv.textContent = 'Failed to unmute user.';
 }
 }
 
-async function isUserMuted(username) {
-if (isProtectedUsername(username)) return false;
+async function getActiveMuteInfo(username) {
+if (isProtectedUsername(username)) return null;
 try {
-const db = firebase.firestore();
+const db = getAdminDb();
 const doc = await db.collection('muted_users').doc(username).get();
-return doc.exists && doc.data().muted === true;
-} catch (err) {
-return false;
+if (!doc.exists) return null;
+const data = doc.data() || {};
+if (data.muted !== true) return null;
+const expiresAt = data.expiresAt && typeof data.expiresAt.toDate === 'function' ? data.expiresAt.toDate() : null;
+if (expiresAt && expiresAt.getTime() <= Date.now()) {
+await db.collection('muted_users').doc(username).delete();
+return null;
 }
+return {
+reason: sanitizeNullableText(data.reason, ''),
+expiresAt,
+mutedBy: normalizeUsername(data.mutedBy || '')
+};
+} catch (err) {
+return null;
+}
+}
+
+async function isUserMuted(username) {
+return !!(await getActiveMuteInfo(username));
 }
 
 async function postSystemNotice(text) {
@@ -4165,16 +8167,25 @@ function onChatInput() {
 if (!chatInitialized || !currentChatUser) return;
 if (isReadOnlyForCurrentUser()) return;
 const db = firebase.firestore();
-db.collection('typing_status').doc(currentChatUser).set({
-typing: true,
-timestamp: firebase.firestore.FieldValue.serverTimestamp()
-});
+  const now = Date.now();
+  if (!typingStateIsTrue || (now - lastTypingWriteMs) > 2500) {
+    db.collection('typing_status').doc(currentChatUser).set({
+      typing: true,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    typingStateIsTrue = true;
+    lastTypingWriteMs = now;
+  }
 clearTimeout(typingTimeout);
 typingTimeout = setTimeout(() => {
-db.collection('typing_status').doc(currentChatUser).set({
-typing: false,
-timestamp: firebase.firestore.FieldValue.serverTimestamp()
-});
+    if (typingStateIsTrue) {
+      db.collection('typing_status').doc(currentChatUser).set({
+        typing: false,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      typingStateIsTrue = false;
+      lastTypingWriteMs = Date.now();
+    }
 }, 5000);
 }
 
@@ -4211,13 +8222,14 @@ const statusDiv = document.getElementById('admin-ban-status');
 if (!username) { statusDiv.textContent = 'Enter a username to kick.'; return; }
 if (isProtectedUsername(username)) { statusDiv.textContent = `${username} cannot be kicked.`; return; }
 try {
-const db = firebase.firestore();
+const db = getAdminDb();
 await db.collection('kicked_users').doc(username).set({
 kicked: true,
 kickedBy: currentChatUser,
 timestamp: firebase.firestore.FieldValue.serverTimestamp()
 });
 statusDiv.textContent = `${username} has been kicked.`;
+await writeAuditLog('kick', username, 'User kicked');
 document.getElementById('admin-kick-username').value = '';
 setTimeout(async () => {
 await db.collection('kicked_users').doc(username).delete();
@@ -4230,7 +8242,7 @@ statusDiv.textContent = 'Failed to kick user.';
 function listenForKick() {
 if (!chatInitialized || !currentChatUser) return;
 if (isProtectedUsername(currentChatUser)) return;
-const db = firebase.firestore();
+const db = getAdminDb();
 db.collection('kicked_users').doc(currentChatUser).onSnapshot(doc => {
 if (doc.exists && doc.data().kicked === true) {
 alert('You have been kicked from the chat by an admin.');
