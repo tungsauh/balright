@@ -3,16 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chud Games</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/lucide@latest"></script>
+<title>chud games</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
 body {
-background: #050505;
-font-family: 'Inter', sans-serif;
+background: #000;
+font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 display: block;
 min-height: 100vh;
 margin: 0;
@@ -363,22 +360,19 @@ justify-content: flex-start;
 }
 
 button {
-padding: 0.75rem 1rem;
-font-size: 0.875rem;
-background-color: #09090b;
+padding: 1rem;           
+font-size: 1rem;         
+background-color: #000;
 color: #fff;
-border: 1px solid #27272a;
-border-radius: 0.75rem;
+border: none;
+border-radius: 0.5rem;   
 cursor: pointer;
-transition: all 0.2s;
-font-family: 'Inter', sans-serif;
-font-weight: 600;
+transition: background-color 0.3s;
 }
 
 button:hover {
-background-color: #18181b;
-color: #fff;
-border-color: #3b82f6;
+background-color: #fff;
+color: #000;
 }
 
 .iframe-container {
@@ -1860,16 +1854,14 @@ background-color: #555;
 }
 
 #admin-menu .admin-menu-panel {
-background: #0a0a0a;
-padding: 1.5rem;
-border-radius: 1rem;
+background: #222;
+padding: 1.25rem;
+border-radius: 0.5rem;
 color: #fff;
 width: min(980px, calc(100vw - 2rem));
 max-height: calc(100vh - 2rem);
 overflow: auto;
-box-shadow: 0 8px 48px rgba(0,0,0,0.8);
-border: 1px solid #27272a;
-font-family: 'Inter', sans-serif;
+box-shadow: 0 8px 32px #000a;
 }
 
 #admin-menu .admin-grid {
@@ -1880,22 +1872,16 @@ margin-top: 1rem;
 }
 
 #admin-menu .admin-section-card {
-background: #18181b;
-border: 1px solid #27272a;
-border-radius: 0.75rem;
-padding: 0.85rem;
-transition: border-color 0.2s;
-}
-#admin-menu .admin-section-card:hover {
-border-color: #3b82f6;
+background: #2b2b2b;
+border: 1px solid #3c3c3c;
+border-radius: 0.5rem;
+padding: 0.75rem;
 }
 
 #admin-menu .admin-section-title {
-color: #3b82f6;
-font-size: 0.85rem;
-font-weight: 700;
+color: #ffb74d;
+font-size: 0.9rem;
 margin-bottom: 0.5rem;
-letter-spacing: 0.02em;
 }
 
 #admin-menu .admin-section-card input,
@@ -2031,585 +2017,16 @@ outline: 2px solid #5865f2;
   margin-right: 0.2rem;
   flex-shrink: 0;
 }
-
-/* ========== REFERENCE-STYLE LOGIN CARD ========== */
-.login-card {
-  background: #09090b;
-  border: 1px solid #1d4ed8;
-  padding: 2.5rem;
-  border-radius: 1.5rem;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: 0 25px 50px -12px rgba(29, 78, 216, 0.25);
-  animation: fadeInUp 0.5s ease-out;
-}
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.login-input {
-  background: #050505;
-  border: 1px solid #27272a;
-  color: white;
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
-  margin-bottom: 1rem;
-  transition: border-color 0.2s;
-  box-sizing: border-box;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.875rem;
-}
-.login-input:focus {
-  outline: none;
-  border-color: #3b82f6;
-}
-.login-btn {
-  background: #2563eb;
-  color: white;
-  width: 100%;
-  padding: 0.75rem;
-  border-radius: 0.75rem;
-  font-weight: 700;
-  transition: all 0.2s;
-  cursor: pointer;
-  border: none;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.95rem;
-}
-.login-btn:hover {
-  background: #1d4ed8;
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4);
-  color: white;
-}
-.login-btn:active {
-  transform: translateY(0);
-}
-.login-btn-secondary {
-  background: #18181b;
-  color: #a1a1aa;
-  width: 100%;
-  padding: 0.75rem;
-  border-radius: 0.75rem;
-  font-weight: 600;
-  transition: all 0.2s;
-  cursor: pointer;
-  border: 1px solid #27272a;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.85rem;
-  margin-top: 0.5rem;
-}
-.login-btn-secondary:hover {
-  background: #27272a;
-  color: #fff;
-  border-color: #3b82f6;
-}
-
-/* ========== REFERENCE-STYLE GAME CARDS ========== */
-.game-card-ref {
-  transition: transform 0.2s;
-  position: relative;
-  background: #09090b;
-  border: 1px solid #27272a;
-  border-radius: 1rem;
-  overflow: hidden;
-}
-.game-card-ref:hover {
-  transform: scale(1.02);
-  border-color: #3b82f6;
-}
-.game-card-ref .card-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  backdrop-filter: blur(4px);
-  pointer-events: none;
-  z-index: 2;
-}
-.game-card-ref:hover .card-overlay {
-  opacity: 1;
-  pointer-events: auto;
-}
-.play-btn-ref {
-  background: #3b82f6;
-  color: white;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.75rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  border: none;
-  cursor: pointer;
-  font-size: 0.875rem;
-}
-.play-btn-ref:hover {
-  transform: scale(1.15);
-  background: #2563eb;
-  box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
-  color: white;
-}
-.play-btn-ref:active {
-  transform: scale(0.95);
-}
-
-/* ========== WISHLIST HEART ========== */
-.wishlist-heart {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 10;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  padding: 0;
-}
-.wishlist-heart:hover {
-  transform: scale(1.15);
-  background: rgba(239,68,68,0.3);
-}
-.wishlist-heart.active {
-  color: #ef4444;
-}
-
-/* ========== VOTE BUTTONS ========== */
-.vote-container {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  z-index: 10;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 9999px;
-  padding: 2px 8px;
-}
-.vote-btn {
-  background: transparent;
-  border: none;
-  color: #71717a;
-  cursor: pointer;
-  padding: 2px;
-  transition: color 0.15s;
-  font-size: 14px;
-  line-height: 1;
-}
-.vote-btn:hover {
-  color: #3b82f6;
-  background: transparent;
-  border: none;
-}
-.vote-btn.voted-up {
-  color: #3b82f6;
-}
-.vote-btn.voted-down {
-  color: #ef4444;
-}
-.vote-count {
-  color: #d4d4d8;
-  font-size: 11px;
-  font-weight: 700;
-  min-width: 16px;
-  text-align: center;
-}
-
-/* ========== CATEGORY FILTER ========== */
-.category-filter-bar {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin-top: 0.75rem;
-  margin-bottom: 0.25rem;
-}
-.category-pill {
-  padding: 0.35rem 0.85rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: 1px solid #27272a;
-  background: transparent;
-  color: #71717a;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.category-pill:hover {
-  border-color: #3b82f6;
-  color: #d4d4d8;
-  background: #18181b;
-}
-.category-pill.active {
-  background: #2563eb;
-  color: white;
-  border-color: #2563eb;
-}
-
-/* ========== HEADER NAV ========== */
-.site-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: rgba(5, 5, 5, 0.85);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid #27272a;
-}
-.site-header-inner {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0.75rem 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-.header-brand {
-  font-size: 1.5rem;
-  font-weight: 900;
-  letter-spacing: -0.03em;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.header-search {
-  flex: 1;
-  max-width: 400px;
-  position: relative;
-}
-.header-search input {
-  width: 100%;
-  background: #18181b;
-  border: 1px solid #27272a;
-  color: white;
-  padding: 0.5rem 0.75rem 0.5rem 2.25rem;
-  border-radius: 0.75rem;
-  font-size: 0.8rem;
-  transition: border-color 0.2s;
-  box-sizing: border-box;
-  font-family: 'Inter', sans-serif;
-}
-.header-search input:focus {
-  outline: none;
-  border-color: #3b82f6;
-}
-.header-search i {
-  position: absolute;
-  left: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #52525b;
-  width: 16px;
-  height: 16px;
-}
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.header-btn {
-  background: transparent;
-  border: 1px solid #27272a;
-  color: #a1a1aa;
-  padding: 0.45rem 0.65rem;
-  border-radius: 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  white-space: nowrap;
-}
-.header-btn:hover {
-  border-color: #3b82f6;
-  color: #fff;
-  background: #18181b;
-}
-.header-btn.active {
-  background: #2563eb;
-  color: white;
-  border-color: #2563eb;
-}
-
-/* ========== POINTS BADGE ========== */
-.points-badge {
-  background: linear-gradient(135deg, #1e3a5f, #1e40af);
-  border: 1px solid #3b82f6;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #93c5fd;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.points-badge:hover {
-  background: linear-gradient(135deg, #1e40af, #2563eb);
-  transform: translateY(-1px);
-}
-
-/* ========== LEADERBOARD ========== */
-.leaderboard-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.92);
-  backdrop-filter: blur(12px);
-  z-index: 3000;
-  display: none;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 2rem;
-  overflow-y: auto;
-  animation: fadeInUp 0.3s ease-out;
-}
-.leaderboard-card {
-  background: #09090b;
-  border: 1px solid #27272a;
-  border-radius: 1.5rem;
-  width: 100%;
-  max-width: 600px;
-  margin-top: 2rem;
-  padding: 2rem;
-}
-.leaderboard-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  background: #18181b;
-  border: 1px solid #27272a;
-  border-radius: 0.75rem;
-  transition: all 0.2s;
-  margin-bottom: 0.5rem;
-}
-.leaderboard-row:hover {
-  border-color: #3b82f6;
-}
-.leaderboard-rank {
-  font-weight: 900;
-  font-size: 1.1rem;
-  min-width: 2rem;
-  text-align: center;
-}
-.rank-1 { color: #fbbf24; }
-.rank-2 { color: #94a3b8; }
-.rank-3 { color: #cd7f32; }
-
-/* ========== SUGGESTIONS PANEL ========== */
-.suggestions-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.92);
-  backdrop-filter: blur(12px);
-  z-index: 3000;
-  display: none;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 2rem;
-  overflow-y: auto;
-  animation: fadeInUp 0.3s ease-out;
-}
-.suggestions-card {
-  background: #09090b;
-  border: 1px solid #27272a;
-  border-radius: 1.5rem;
-  width: 100%;
-  max-width: 700px;
-  margin-top: 2rem;
-  padding: 2rem;
-}
-.suggestion-item {
-  background: #18181b;
-  border: 1px solid #27272a;
-  border-radius: 0.75rem;
-  padding: 1rem;
-  transition: border-color 0.2s;
-  margin-bottom: 0.5rem;
-}
-.suggestion-item:hover {
-  border-color: #3b82f6;
-}
-
-/* ========== WISHLIST PANEL ========== */
-.wishlist-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.92);
-  backdrop-filter: blur(12px);
-  z-index: 3000;
-  display: none;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 2rem;
-  overflow-y: auto;
-  animation: fadeInUp 0.3s ease-out;
-}
-.wishlist-card {
-  background: #09090b;
-  border: 1px solid #27272a;
-  border-radius: 1.5rem;
-  width: 100%;
-  max-width: 800px;
-  margin-top: 2rem;
-  padding: 2rem;
-}
-
-/* ========== ANNOUNCEMENT BAR ========== */
-.announcement-bar {
-  background: linear-gradient(90deg, #1e3a5f, #1e40af, #1e3a5f);
-  border-bottom: 1px solid #3b82f6;
-  padding: 0.5rem 1rem;
-  text-align: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: #93c5fd;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  animation: fadeInUp 0.3s ease-out;
-}
-
-/* ========== CHAT TOGGLE BUTTON ========== */
-.chat-toggle-ref {
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  z-index: 60;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: #2563eb;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4);
-  cursor: pointer;
-  transition: transform 0.2s;
-  border: none;
-  padding: 0;
-}
-.chat-toggle-ref:hover {
-  transform: scale(1.1);
-  background: #3b82f6;
-  color: white;
-}
-
-/* ========== ADMIN PANEL OVERLAY STYLE ========== */
-.admin-overlay-panel {
-  background: #09090b;
-  border: 1px solid #27272a;
-  border-radius: 1.5rem;
-  width: 100%;
-  max-width: 900px;
-  margin: 2rem auto;
-  overflow: hidden;
-}
-.admin-tab-btn {
-  padding: 0.5rem 1rem;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-radius: 0.5rem;
-  transition: all 0.2s;
-  cursor: pointer;
-  border: none;
-}
-.admin-tab-btn.active {
-  background: #2563eb;
-  color: white;
-}
-.admin-tab-btn:not(.active) {
-  background: transparent;
-  color: #71717a;
-}
-.admin-tab-btn:not(.active):hover {
-  color: #d4d4d8;
-  background: #18181b;
-}
-
-/* ========== PROFILE COLOR BORDER ========== */
-.profile-color-border {
-  border-left: 3px solid var(--profile-color, #3b82f6);
-}
-
-/* ========== FEATURED GAME ========== */
-.featured-game-card {
-  background: linear-gradient(135deg, #09090b, #0c1220);
-  border: 1px solid #1d4ed8;
-  border-radius: 1.25rem;
-  overflow: hidden;
-  position: relative;
-  min-height: 200px;
-  display: flex;
-  align-items: flex-end;
-  margin-bottom: 1rem;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-.featured-game-card:hover {
-  border-color: #3b82f6;
-  box-shadow: 0 10px 40px -10px rgba(59, 130, 246, 0.3);
-}
-.featured-game-gradient {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), transparent 60%);
-  z-index: 1;
-}
-.featured-game-content {
-  position: relative;
-  z-index: 2;
-  padding: 1.5rem;
-}
-
-/* ========== SCROLLBAR ========== */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #09090b;
-}
-::-webkit-scrollbar-thumb {
-  background: #27272a;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #3b82f6;
-}
 </style>
 </head>
 <body>
 <!-- Admin Menu -->
-<div id="admin-menu" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:5000; align-items:center; justify-content:center; flex-direction:column;">
+<div id="admin-menu" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); z-index:5000; align-items:center; justify-content:center; flex-direction:column;">
 <div class="admin-menu-panel" style="text-align:left;">
-<h2 style="margin:0 0 1rem 0; font-size:1.25rem; font-weight:900; letter-spacing:-0.02em;"><i data-lucide="shield" style="width:18px; height:18px; display:inline; vertical-align:middle; margin-right:0.5rem; color:#3b82f6;"></i>Admin Panel</h2>
-<input type="text" id="admin-ban-username" placeholder="Username" style="padding:0.6rem 0.75rem; margin:0.5rem 0; width:220px; border:1px solid #27272a; border-radius:0.5rem; background:#09090b; color:#fff; font-family:'Inter',sans-serif;" />
+<h2>Admin Ban Panel</h2>
+<input type="text" id="admin-ban-username" placeholder="Username" style="padding:0.5rem; margin:0.5rem 0; width:220px; border:none; border-radius:0.25rem;" />
 <div style="margin-bottom:0.5rem;">
-<label for="admin-user-list" style="color:#3b82f6; font-weight:600; font-size:0.85rem;">User List:</label>
+<label for="admin-user-list" style="color:#ffb74d;">User List:</label>
 <select id="admin-user-list" style="width:220px; padding:0.5rem; border:none; border-radius:0.25rem; margin-top:0.25rem;" onchange="applySelectedAdminUser(this.value)">
 <option value="">-- Select a user --</option>
 </select>
@@ -2668,17 +2085,8 @@ document.body.style.overflow = 'auto';
 let username = document.getElementById('site-login-username').value.trim().toLowerCase();
 const password = document.getElementById('site-login-password').value;
 const errorDiv = document.getElementById('site-login-error');
-function showLoginError(msg) {
-errorDiv.textContent = msg;
-errorDiv.style.display = 'block';
-}
-function hideLoginError() {
-errorDiv.textContent = '';
-errorDiv.style.display = 'none';
-}
-hideLoginError();
 if (!username || !password) {
-showLoginError('Please enter both username and password.');
+errorDiv.textContent = 'Please enter both username and password.';
 return;
 }
 (async () => {
@@ -2691,16 +2099,13 @@ return;
 }
 const timedBan = await getActiveTimedBan(username);
 if (timedBan) {
-showLoginError(`Temporarily banned until ${timedBan.expiresAt.toLocaleString()}. Reason: ${timedBan.reason}`);
+errorDiv.textContent = `Temporarily banned until ${timedBan.expiresAt.toLocaleString()}. Reason: ${timedBan.reason}`;
 return;
 }
 if (SITE_LOGINS.hasOwnProperty(username) && SITE_LOGINS[username] === password) {
 siteLoginPassed = true;
 localStorage.setItem('userName', username);
 hideSiteLoginModal();
-/* Show header after successful login */
-const headerEl = document.getElementById('site-header');
-if (headerEl) headerEl.style.display = 'block';
 if (canModerate(username)) {
 document.getElementById('admin-menu-btn').style.display = 'block';
 } else {
@@ -2717,10 +2122,8 @@ waitForFirebase(() => {
 initializeChat();
 updateAdminMenuButtonVisibility();
 });
-/* Initialize Lucide icons */
-if (typeof lucide !== 'undefined') lucide.createIcons();
 } else {
-showLoginError('Invalid username or password.');
+errorDiv.textContent = 'Invalid username or password.';
 }
 })();
 }
@@ -2876,18 +2279,18 @@ userList.appendChild(opt);
 </div>
 </div>
 </div>
-<div id="site-login-modal" style="display:flex; position:fixed; inset:0; background:#050505; z-index:4000; align-items:center; justify-content:center; padding:2rem;">
-<div class="login-card" style="text-align:center;">
-<div style="margin-bottom:2rem;">
-<h1 class="text-4xl font-black tracking-tighter mb-2" style="font-size:2.25rem; font-weight:900; letter-spacing:-0.03em; margin:0 0 0.5rem 0;">Chud<span style="color:#3b82f6;">Games</span></h1>
-<p style="color:#71717a; font-size:0.85rem; margin:0;">Please sign in to continue</p>
+<div id="site-login-modal" style="display:flex; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:4000; align-items:center; justify-content:center; flex-direction:column;">
+<div style="background:#222; padding:2.5rem 2rem; border-radius:0.5rem; text-align:center; color:#fff; min-width:300px; box-shadow:0 8px 32px #000a;">
+<h2>Login Required</h2>
+<div style="color:#ff9800; background:#222; border-radius:0.25rem; padding:0.5rem 1rem; margin-bottom:1rem; font-size:1rem;">
+<strong>Do not share your login information with anyone.</strong><br>
+<span style="font-size:0.95rem; color:#ffb74d;">Usernames are converted to lowercase automatically.</span>
 </div>
-<div id="site-login-error" style="display:none; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.5); color:#ef4444; font-size:0.75rem; padding:0.75rem; border-radius:0.5rem; margin-bottom:1rem; text-align:center;"></div>
-<input type="text" id="site-login-username" placeholder="Username" class="login-input" autocomplete="username" />
-<input type="password" id="site-login-password" placeholder="Password" class="login-input" autocomplete="current-password" />
-<button onclick="siteLoginSubmit()" class="login-btn" style="margin-bottom:0.75rem;">Sign In</button>
-<button onclick="window.open('https://forms.gle/GCGPK37mR2aPWuTn7','_blank')" class="login-btn-secondary">Request an Account</button>
-<p style="color:#52525b; font-size:0.7rem; margin-top:1.25rem;">Usernames are converted to lowercase automatically.</p>
+<input type="text" id="site-login-username" placeholder="Username" style="padding:0.5rem; margin:0.5rem 0; width:220px; border:none; border-radius:0.25rem;" autocomplete="username" />
+<input type="password" id="site-login-password" placeholder="Password" style="padding:0.5rem; margin:0.5rem 0; width:220px; border:none; border-radius:0.25rem;" autocomplete="current-password" />
+<button onclick="siteLoginSubmit()" style="padding:0.5rem 1.5rem; background:#000; color:#fff; border:none; border-radius:0.25rem; margin-top:1rem;">Login</button>
+<button onclick="window.open('https://forms.gle/GCGPK37mR2aPWuTn7','_blank')" style="margin-top:1rem; background:#444; color:#fff; border:none; border-radius:0.25rem; padding:0.5rem 1.5rem;">Request an Account</button>
+<div id="site-login-error" style="color:#ff5252; margin-top:0.75rem; min-height:1.5em;"></div>
 </div>
 </div>
 <div id="name-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); z-index:3000; align-items:center; justify-content:center; flex-direction:column;">
@@ -2928,94 +2331,27 @@ userList.appendChild(opt);
 </div>
 </div>
 
-<!-- ========== HEADER NAV BAR ========== -->
-<header class="site-header" id="site-header" style="display:none;">
-<div class="site-header-inner">
-<div style="display:flex; align-items:center; gap:0.75rem;">
-<div class="header-brand">Chud<span style="color:#3b82f6;">Games</span></div>
-<div class="points-badge" onclick="openLeaderboardOverlay()" title="Leaderboard">
-<i data-lucide="trophy" style="width:14px; height:14px;"></i>
-<span id="header-points">0 pts</span>
-</div>
-</div>
-<div class="header-search">
-<i data-lucide="search"></i>
-<input type="text" id="game-search-input" placeholder="Search games..." oninput="filterGamesBySearch()" />
-</div>
-<div class="header-actions">
-<button class="header-btn" onclick="openSuggestionsOverlay()"><i data-lucide="lightbulb" style="width:14px; height:14px;"></i> Suggest</button>
-<button class="header-btn" onclick="openWishlistOverlay()"><i data-lucide="heart" style="width:14px; height:14px;"></i> Wishlist</button>
-<button class="header-btn" onclick="openLeaderboardOverlay()"><i data-lucide="bar-chart-3" style="width:14px; height:14px;"></i> Leaderboard</button>
-<button class="header-btn" onclick="openCustomUrlModal()"><i data-lucide="link" style="width:14px; height:14px;"></i> URL</button>
-<button class="header-btn" onclick="openUpdateNotesModal()"><i data-lucide="scroll-text" style="width:14px; height:14px;"></i> Updates</button>
-<button class="header-btn" onclick="openAdminMenu()"><i data-lucide="shield" style="width:14px; height:14px;"></i> Admin</button>
-</div>
-</div>
-</header>
-
-<!-- ========== ANNOUNCEMENT BAR ========== -->
-<div id="site-announcement-banner" class="announcement-bar" style="display:none;"></div>
-
-<!-- ========== LEADERBOARD OVERLAY ========== -->
-<div class="leaderboard-overlay" id="leaderboard-overlay" onclick="if(event.target===this)closeLeaderboardOverlay()">
-<div class="leaderboard-card">
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
-<h2 style="margin:0; font-size:1.5rem; font-weight:900;">Leaderboard</h2>
-<button onclick="closeLeaderboardOverlay()" style="background:transparent; border:1px solid #27272a; color:#71717a; padding:0.4rem 0.6rem; border-radius:0.5rem; font-size:0.75rem;">Close</button>
-</div>
-<div id="leaderboard-list" style="display:flex; flex-direction:column; gap:0.5rem;">
-<div style="text-align:center; color:#52525b; padding:2rem;">Leaderboard data loading...</div>
-</div>
-</div>
-</div>
-
-<!-- ========== WISHLIST OVERLAY ========== -->
-<div class="wishlist-overlay" id="wishlist-overlay" onclick="if(event.target===this)closeWishlistOverlay()">
-<div class="wishlist-card">
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
-<h2 style="margin:0; font-size:1.5rem; font-weight:900;">My Wishlist</h2>
-<button onclick="closeWishlistOverlay()" style="background:transparent; border:1px solid #27272a; color:#71717a; padding:0.4rem 0.6rem; border-radius:0.5rem; font-size:0.75rem;">Close</button>
-</div>
-<div id="wishlist-games" class="button-container" style="margin:0;">
-<div style="text-align:center; color:#52525b; padding:2rem; grid-column:1/-1;">No games in your wishlist yet. Click the heart icon on any game card to add it.</div>
-</div>
-</div>
-</div>
-
-<!-- ========== SUGGESTIONS OVERLAY ========== -->
-<div class="suggestions-overlay" id="suggestions-overlay" onclick="if(event.target===this)closeSuggestionsOverlay()">
-<div class="suggestions-card">
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
-<h2 style="margin:0; font-size:1.5rem; font-weight:900;">Game Suggestions</h2>
-<button onclick="closeSuggestionsOverlay()" style="background:transparent; border:1px solid #27272a; color:#71717a; padding:0.4rem 0.6rem; border-radius:0.5rem; font-size:0.75rem;">Close</button>
-</div>
-<div style="margin-bottom:1rem; display:flex; gap:0.5rem;">
-<input type="text" id="suggestion-input" placeholder="Suggest a game..." class="login-input" style="margin:0; flex:1;" />
-<button onclick="submitGameSuggestion()" style="background:#2563eb; color:white; border:none; padding:0.5rem 1rem; border-radius:0.75rem; font-weight:700; white-space:nowrap;">Submit</button>
-</div>
-<div id="suggestions-list" style="display:flex; flex-direction:column; gap:0.5rem;">
-<div style="text-align:center; color:#52525b; padding:2rem;">No suggestions yet. Be the first to suggest a game!</div>
-</div>
-</div>
-</div>
-
 <div id="store-shell">
-<div id="featured-game-section"></div>
-
-<!-- ========== CATEGORY FILTER ========== -->
-<div class="category-filter-bar" id="category-filter-bar">
-<button class="category-pill active" onclick="filterByCategory('all')">All Games</button>
-<button class="category-pill" onclick="filterByCategory('action')">Action</button>
-<button class="category-pill" onclick="filterByCategory('puzzle')">Puzzle</button>
-<button class="category-pill" onclick="filterByCategory('racing')">Racing</button>
-<button class="category-pill" onclick="filterByCategory('sandbox')">Sandbox</button>
-<button class="category-pill" onclick="filterByCategory('tools')">Tools</button>
+<div class="store-hero">
+<div class="store-hero-panel">
+<div>
+<div class="store-eyebrow">Library</div>
+<h1>Chud Games</h1>
+</div>
+<div class="store-hero-actions">
+<button onclick="window.open('https://forms.gle/5CBgYQZ6VzrFKS3Y9','_blank')">Suggest a Game</button>
+<button onclick="openCustomUrlModal()">Open URL</button>
+<button class="store-hero-button-secondary" onclick="openUpdateNotesModal()">Update Notes</button>
+</div>
+</div>
 </div>
 
-<div class="store-section-header" style="margin-top:0.75rem;">
+<div id="site-announcement-banner" style="display:none; max-width:none; margin:1rem 0 0 0; background:#1f5f2d; color:#fff; border:1px solid #2f8d46; border-radius:0.75rem; padding:0.85rem 1rem; text-align:center; font-weight:bold;"></div>
+
+<div class="store-section-header">
 <div>
-<div class="store-section-title" style="font-size:1.1rem;">Browse Games</div>
-<div class="store-section-subtitle" style="font-size:0.8rem;">Launch games instantly from your library</div>
+<div class="store-section-title">Browse Games</div>
+<div class="store-section-subtitle">Launch games</div>
 </div>
 <div id="store-library-meta" class="store-library-meta"></div>
 </div>
@@ -3346,11 +2682,11 @@ oninput="onChatInput()"
 </div>
 
 <div style="text-align: center; margin-top: 2rem; margin-bottom: 2rem;">
-<button id="admin-menu-btn" onclick="openAdminMenu()" style="display:none; background:#18181b; color:#fff; border:1px solid #27272a; border-radius:0.75rem; padding:0.75rem 1.5rem; font-size:0.875rem; font-family:'Inter',sans-serif; font-weight:600;"><i data-lucide="shield" style="width:14px; height:14px; display:inline; vertical-align:middle; margin-right:0.35rem; color:#3b82f6;"></i>Admin</button>
+<button id="admin-menu-btn" onclick="openAdminMenu()" style="display:none; background:#d32f2f; color:#fff; border:none; border-radius:0.5rem; padding:0.75rem 1.5rem; font-size:1rem;">Admin Menu</button>
 </div>
 
-<div id="profile-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:6500; align-items:center; justify-content:center;">
-<div style="background:#0a0a0a; width:min(38rem, calc(100vw - 2rem)); max-height:calc(100vh - 2rem); overflow:auto; padding:1.5rem; border-radius:1rem; color:#fff; box-shadow:0 8px 48px rgba(0,0,0,0.8); border:1px solid #27272a; font-family:'Inter',sans-serif;">
+<div id="profile-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.78); z-index:6500; align-items:center; justify-content:center;">
+<div style="background:#222; width:min(38rem, calc(100vw - 2rem)); max-height:calc(100vh - 2rem); overflow:auto; padding:1.5rem; border-radius:0.8rem; color:#fff; box-shadow:0 8px 32px rgba(0,0,0,0.6);">
 <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem;">
 <div>
 <h2 style="margin:0;">Profile</h2>
@@ -3379,8 +2715,8 @@ oninput="onChatInput()"
 </div>
 </div>
 
-<div id="leaderboard-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:6500; align-items:center; justify-content:center;">
-<div style="background:#0a0a0a; width:min(46rem, calc(100vw - 2rem)); max-height:calc(100vh - 2rem); overflow:auto; padding:1.5rem; border-radius:1rem; color:#fff; box-shadow:0 8px 48px rgba(0,0,0,0.8); border:1px solid #27272a; font-family:'Inter',sans-serif;">
+<div id="leaderboard-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.78); z-index:6500; align-items:center; justify-content:center;">
+<div style="background:#222; width:min(46rem, calc(100vw - 2rem)); max-height:calc(100vh - 2rem); overflow:auto; padding:1.5rem; border-radius:0.8rem; color:#fff; box-shadow:0 8px 32px rgba(0,0,0,0.6);">
 <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem;">
 <h2 style="margin:0;">🏆 Leaderboard</h2>
 <button onclick="closeLeaderboardModal()" style="padding:0.45rem 0.8rem;">Close</button>
@@ -4581,129 +3917,37 @@ winner = candidate;
 return winner;
 }
 
-/* Game categories for filtering */
-const GAME_CATEGORIES = {
-'Slope': 'action', 'Tung Tung Sahur': 'action', 'Escape Road': 'racing', 'Escape Road 2': 'racing',
-'Duck': 'action', 'Minecraft': 'sandbox', 'worldguessr': 'puzzle', 'Infinite Craft': 'sandbox',
-'2v2.io': 'action', 'FNAF Launcher': 'action', 'Yoked': 'action', 'Brotato': 'action',
-'Hope': 'action', 'Forest': 'action', 'Lucid': 'puzzle', 'Beanweb': 'tools',
-'Zombie': 'action', 'Calcslover': 'tools', 'MathGPT': 'tools',
-'Youtube (Unblock All Videos)': 'tools', 'Wikirace': 'puzzle'
-};
-let currentCategoryFilter = 'all';
-let currentSearchFilter = '';
-let gameWishlist = JSON.parse(localStorage.getItem('gameWishlist') || '[]');
-let gameVotes = JSON.parse(localStorage.getItem('gameVotes') || '{}');
-
-function getGameCategory(name) {
-return GAME_CATEGORIES[name] || 'action';
-}
-
-function filterByCategory(category) {
-currentCategoryFilter = category;
-document.querySelectorAll('.category-pill').forEach(btn => {
-btn.classList.toggle('active', btn.textContent.toLowerCase().replace(' ', '').includes(category === 'all' ? 'allgames' : category));
-});
-renderGameStorefront();
-}
-
-function filterGamesBySearch() {
-const input = document.getElementById('game-search-input');
-currentSearchFilter = (input ? input.value : '').trim().toLowerCase();
-renderGameStorefront();
-}
-
-function toggleWishlist(gameId) {
-const idx = gameWishlist.indexOf(gameId);
-if (idx >= 0) gameWishlist.splice(idx, 1);
-else gameWishlist.push(gameId);
-localStorage.setItem('gameWishlist', JSON.stringify(gameWishlist));
-renderGameStorefront();
-}
-
-function isInWishlist(gameId) {
-return gameWishlist.includes(gameId);
-}
-
-function voteGame(gameId, direction) {
-const current = gameVotes[gameId] || 0;
-if (direction === 'up') gameVotes[gameId] = current === 1 ? 0 : 1;
-else gameVotes[gameId] = current === -1 ? 0 : -1;
-localStorage.setItem('gameVotes', JSON.stringify(gameVotes));
-renderGameStorefront();
-}
-
-function getGameVoteScore(gameId) {
-return gameVotes[gameId] || 0;
-}
-
-function renderFeaturedGame() {
-const section = document.getElementById('featured-game-section');
-if (!section) return;
-const gamesList = getPlayableGames();
-if (!gamesList.length) { section.innerHTML = ''; return; }
-let best = gamesList[0];
-let bestScore = getGameVoteScore(best.id);
-for (const g of gamesList) {
-const s = getGameVoteScore(g.id);
-if (s > bestScore) { best = g; bestScore = s; }
-}
-const thumb = getGameSelectedThumbnail(best);
-section.innerHTML = `<div class="featured-game-card" onclick="openGame(${best.index})">
-<div style="position:absolute; inset:0; background-image:url('${escapeHtml(thumb)}'); background-size:cover; background-position:center; opacity:0.3;"></div>
-<div class="featured-game-gradient"></div>
-<div class="featured-game-content">
-<div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.1em; color:#93c5fd; font-weight:700; margin-bottom:0.5rem;">
-<i data-lucide="star" style="width:12px; height:12px; display:inline;"></i> Featured Game
-</div>
-<h2 style="margin:0; font-size:1.5rem; font-weight:900;">${escapeHtml(best.name)}</h2>
-<p style="margin:0.25rem 0 0; color:#a1a1aa; font-size:0.85rem;">${escapeHtml(getGameSummary(best))}</p>
-</div>
-</div>`;
-if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
 function renderGameStorefront() {
 const gameButtons = document.getElementById('game-buttons');
 const meta = document.getElementById('store-library-meta');
 if (!gameButtons) return;
-let gamesList = getPlayableGames();
-if (currentCategoryFilter !== 'all') {
-gamesList = gamesList.filter(g => getGameCategory(g.name) === currentCategoryFilter);
-}
-if (currentSearchFilter) {
-gamesList = gamesList.filter(g => g.name.toLowerCase().includes(currentSearchFilter));
-}
+const gamesList = getPlayableGames();
 if (meta) {
-meta.textContent = `${gamesList.length} game${gamesList.length === 1 ? '' : 's'}`;
+meta.textContent = `${gamesList.length} games • ${getActiveThumbnailPollCount()} live thumbnail polls`;
 }
-renderFeaturedGame();
 gameButtons.innerHTML = gamesList.map((game) => {
 const state = getGameThumbnailPollState(game.id) || {};
 const thumb = getGameSelectedThumbnail(game);
-const category = getGameCategory(game.name);
-const wishlisted = isInWishlist(game.id);
-const voteScore = getGameVoteScore(game.id);
-return `<article class="game-card-ref" data-category="${category}">
+const hasSelection = !!(state.selectedThumbnail && state.selectedThumbnail.url);
+const pollLabel = state.pollActive ? 'Poll Live' : (hasSelection ? 'Locked Choice' : '');
+const pollClass = state.pollActive ? 'thumbnail-poll-chip is-live' : (hasSelection ? 'game-thumb-win-badge' : 'thumbnail-poll-chip');
+const totalVotes = getTotalThumbnailVoteCount(state);
+return `<article class="game-store-card">
 <div class="game-store-thumb" style="background-image:url('${escapeHtml(thumb)}')">
-<div class="vote-container">
-<button class="vote-btn ${voteScore > 0 ? 'voted-up' : ''}" onclick="event.stopPropagation();voteGame('${game.id}','up')" title="Upvote">&#9650;</button>
-<span class="vote-count">${voteScore}</span>
-<button class="vote-btn ${voteScore < 0 ? 'voted-down' : ''}" onclick="event.stopPropagation();voteGame('${game.id}','down')" title="Downvote">&#9660;</button>
-</div>
-<button class="wishlist-heart ${wishlisted ? 'active' : ''}" onclick="event.stopPropagation();toggleWishlist('${game.id}')" title="${wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}">
-${wishlisted ? '&#10084;' : '&#9825;'}
-</button>
-<div class="card-overlay">
-<button class="play-btn-ref" onclick="openGame(${game.index})">&#9654; Play</button>
+<div class="game-store-thumb-top">
+${pollLabel ? `<span class="${pollClass}">${escapeHtml(pollLabel)}</span>` : ''}
 </div>
 </div>
 <div class="game-store-content">
 <div class="game-store-title-row">
 <h3 class="game-store-title">${escapeHtml(game.name)}</h3>
-<span style="font-size:0.65rem; color:#71717a; text-transform:uppercase; letter-spacing:0.05em; background:#18181b; padding:0.15rem 0.5rem; border-radius:9999px; border:1px solid #27272a;">${category}</span>
+<span class="thumbnail-poll-chip">${totalVotes} vote${totalVotes === 1 ? '' : 's'}</span>
 </div>
 <p class="game-store-description">${escapeHtml(getGameSummary(game))}</p>
+<div class="game-store-footer">
+<button onclick="openGame(${game.index})">Play Now</button>
+<button class="secondary-button" onclick="openGameThumbnailPollModal('${game.id}')">${state.pollActive ? 'Vote Thumbnail' : 'Thumbnail Poll'}</button>
+</div>
 </div>
 </article>`;
 }).join('');
@@ -9542,152 +8786,6 @@ location.reload();
 }
 });
 }
-
-/* ========== LEADERBOARD OVERLAY ========== */
-function openLeaderboardOverlay() {
-const overlay = document.getElementById('leaderboard-overlay');
-if (!overlay) return;
-overlay.style.display = 'flex';
-renderLeaderboard();
-}
-function closeLeaderboardOverlay() {
-const overlay = document.getElementById('leaderboard-overlay');
-if (overlay) overlay.style.display = 'none';
-}
-function renderLeaderboard() {
-const list = document.getElementById('leaderboard-list');
-if (!list) return;
-const scores = {};
-const gamesList = getPlayableGames();
-for (const g of gamesList) {
-const v = getGameVoteScore(g.id);
-if (v > 0) scores[g.name] = (scores[g.name] || 0) + v;
-}
-const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]).slice(0, 10);
-if (!sorted.length) {
-list.innerHTML = '<p style="color:#71717a; text-align:center; padding:2rem;">No votes yet. Vote on games to see the leaderboard!</p>';
-return;
-}
-list.innerHTML = sorted.map(([name, score], i) => {
-const medals = ['🥇', '🥈', '🥉'];
-const medal = i < 3 ? medals[i] : `<span style="color:#52525b; font-weight:700; width:1.5rem; display:inline-block; text-align:center;">${i + 1}</span>`;
-return `<div style="display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1rem; background:#18181b; border-radius:0.75rem; border:1px solid #27272a;">
-<div style="display:flex; align-items:center; gap:0.75rem;">
-<span style="font-size:1.25rem;">${medal}</span>
-<span style="font-weight:600;">${escapeHtml(name)}</span>
-</div>
-<span style="color:#3b82f6; font-weight:700;">${score} pts</span>
-</div>`;
-}).join('');
-}
-
-/* ========== WISHLIST OVERLAY ========== */
-function openWishlistOverlay() {
-const overlay = document.getElementById('wishlist-overlay');
-if (!overlay) return;
-overlay.style.display = 'flex';
-renderWishlistPanel();
-}
-function closeWishlistOverlay() {
-const overlay = document.getElementById('wishlist-overlay');
-if (overlay) overlay.style.display = 'none';
-}
-function renderWishlistPanel() {
-const list = document.getElementById('wishlist-list');
-if (!list) return;
-const gamesList = getPlayableGames().filter(g => isInWishlist(g.id));
-if (!gamesList.length) {
-list.innerHTML = '<p style="color:#71717a; text-align:center; padding:2rem;">Your wishlist is empty. Click the heart on any game card to add it!</p>';
-return;
-}
-list.innerHTML = gamesList.map(game => {
-const thumb = getGameSelectedThumbnail(game);
-return `<div style="display:flex; align-items:center; gap:1rem; padding:0.75rem 1rem; background:#18181b; border-radius:0.75rem; border:1px solid #27272a;">
-<div style="width:48px; height:48px; border-radius:0.5rem; background-image:url('${escapeHtml(thumb)}'); background-size:cover; background-position:center; flex-shrink:0;"></div>
-<div style="flex:1; min-width:0;">
-<div style="font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(game.name)}</div>
-<div style="font-size:0.75rem; color:#71717a;">${getGameCategory(game.name)}</div>
-</div>
-<button onclick="openGame(${game.index})" style="padding:0.4rem 0.75rem; font-size:0.75rem; background:#2563eb; color:#fff; border:none; border-radius:0.5rem; cursor:pointer; font-weight:600;">Play</button>
-<button onclick="toggleWishlist('${game.id}')" style="padding:0.4rem 0.5rem; font-size:0.75rem; background:transparent; color:#ef4444; border:1px solid #27272a; border-radius:0.5rem; cursor:pointer;" title="Remove">✕</button>
-</div>`;
-}).join('');
-}
-
-/* ========== SUGGESTIONS OVERLAY ========== */
-let gameSuggestions = JSON.parse(localStorage.getItem('gameSuggestions') || '[]');
-function openSuggestionsOverlay() {
-const overlay = document.getElementById('suggestions-overlay');
-if (!overlay) return;
-overlay.style.display = 'flex';
-renderSuggestionsList();
-}
-function closeSuggestionsOverlay() {
-const overlay = document.getElementById('suggestions-overlay');
-if (overlay) overlay.style.display = 'none';
-}
-function submitGameSuggestion() {
-const input = document.getElementById('suggestion-input');
-if (!input) return;
-const name = input.value.trim();
-if (!name) return;
-const suggestion = {
-name: name,
-by: currentChatUser || 'anonymous',
-votes: 1,
-timestamp: Date.now()
-};
-gameSuggestions.push(suggestion);
-localStorage.setItem('gameSuggestions', JSON.stringify(gameSuggestions));
-input.value = '';
-renderSuggestionsList();
-}
-function voteSuggestion(index) {
-if (gameSuggestions[index]) {
-gameSuggestions[index].votes = (gameSuggestions[index].votes || 0) + 1;
-localStorage.setItem('gameSuggestions', JSON.stringify(gameSuggestions));
-renderSuggestionsList();
-}
-}
-function renderSuggestionsList() {
-const list = document.getElementById('suggestions-list');
-if (!list) return;
-if (!gameSuggestions.length) {
-list.innerHTML = '<p style="color:#71717a; text-align:center; padding:1rem;">No suggestions yet. Be the first!</p>';
-return;
-}
-const sorted = [...gameSuggestions].sort((a, b) => (b.votes || 0) - (a.votes || 0));
-list.innerHTML = sorted.map((s, i) => {
-const origIdx = gameSuggestions.indexOf(s);
-return `<div style="display:flex; align-items:center; justify-content:space-between; padding:0.6rem 0.75rem; background:#18181b; border-radius:0.5rem; border:1px solid #27272a;">
-<div>
-<span style="font-weight:600;">${escapeHtml(s.name)}</span>
-<span style="font-size:0.7rem; color:#52525b; margin-left:0.5rem;">by ${escapeHtml(s.by)}</span>
-</div>
-<div style="display:flex; align-items:center; gap:0.5rem;">
-<span style="color:#3b82f6; font-weight:700; font-size:0.85rem;">${s.votes || 0}</span>
-<button onclick="voteSuggestion(${origIdx})" style="padding:0.25rem 0.5rem; font-size:0.7rem; background:#09090b; color:#a1a1aa; border:1px solid #27272a; border-radius:0.375rem; cursor:pointer;">▲</button>
-</div>
-</div>`;
-}).join('');
-}
-
-/* ========== CATEGORY FILTER PILL INIT ========== */
-function initCategoryPills() {
-const bar = document.getElementById('category-filter-bar');
-if (!bar) return;
-const cats = ['all', 'action', 'racing', 'sandbox', 'puzzle', 'tools'];
-bar.innerHTML = cats.map(c => {
-const label = c === 'all' ? 'All Games' : c.charAt(0).toUpperCase() + c.slice(1);
-return `<button class="category-pill ${c === 'all' ? 'active' : ''}" onclick="filterByCategory('${c}')">${label}</button>`;
-}).join('');
-}
-
-/* ========== INIT ON DOM READY ========== */
-document.addEventListener('DOMContentLoaded', function() {
-initCategoryPills();
-if (typeof lucide !== 'undefined') lucide.createIcons();
-});
 
 </script>
 </body>
