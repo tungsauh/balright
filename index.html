@@ -1995,6 +1995,31 @@ max-height: 300px;
 overflow-y: auto;
 }
 
+.gif-pagination {
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 0.5rem;
+margin-top: 0.75rem;
+}
+
+.gif-pagination button {
+padding: 0.55rem 0.8rem;
+font-size: 0.85rem;
+}
+
+.gif-pagination button:disabled {
+opacity: 0.45;
+cursor: not-allowed;
+}
+
+.gif-page-status {
+flex: 1;
+text-align: center;
+font-size: 0.8rem;
+color: #a8b3c7;
+}
+
 .gif-thumb {
 width: 100%;
 aspect-ratio: 1;
@@ -2676,6 +2701,11 @@ oninput="onChatInput()"
         <button onclick="sendGifUrlFromInput()" style="padding:0.65rem 0.9rem; white-space:nowrap;">Send URL</button>
       </div>
       <div id="gif-grid" class="gif-grid"></div>
+      <div class="gif-pagination">
+        <button id="gif-prev-btn" type="button" onclick="changeGifPage(-1)" disabled>Previous</button>
+        <div id="gif-page-status" class="gif-page-status">Page 1</div>
+        <button id="gif-next-btn" type="button" onclick="changeGifPage(1)" disabled>Next</button>
+      </div>
     </div>
   </div>
 </div>
@@ -7693,6 +7723,13 @@ if (tab === 'gif') {
 }
 
 let gifSearchTimer = null;
+const GIF_PAGE_SIZE = 24;
+let _gifResults = [];
+let _gifQuery = 'trending';
+let _gifOffset = 0;
+let _gifTotalCount = 0;
+let _gifLoading = false;
+
 function hasGiphySearchConfigured() {
 return !!GIPHY_API_KEY && GIPHY_API_KEY !== 'YOUR_GIPHY_API_KEY';
 }
@@ -7700,7 +7737,46 @@ return !!GIPHY_API_KEY && GIPHY_API_KEY !== 'YOUR_GIPHY_API_KEY';
 function onGifSearchInput() {
 clearTimeout(gifSearchTimer);
 const query = document.getElementById('gif-search-input').value.trim();
-gifSearchTimer = setTimeout(() => searchGiphyGifs(query || 'trending'), 400);
+gifSearchTimer = setTimeout(() => searchGiphyGifs(query || 'trending', 0), 400);
+}
+
+function updateGifPagination() {
+const prevBtn = document.getElementById('gif-prev-btn');
+const nextBtn = document.getElementById('gif-next-btn');
+const status = document.getElementById('gif-page-status');
+if (!prevBtn || !nextBtn || !status) return;
+
+const pageNumber = Math.floor(_gifOffset / GIF_PAGE_SIZE) + 1;
+const hasResults = _gifResults.length > 0;
+const hasPrevious = _gifOffset > 0;
+const hasNext = _gifTotalCount > 0
+  ? _gifOffset + _gifResults.length < _gifTotalCount
+  : _gifResults.length === GIF_PAGE_SIZE;
+
+prevBtn.disabled = _gifLoading || !hasPrevious;
+nextBtn.disabled = _gifLoading || !hasResults || !hasNext;
+
+if (_gifLoading) {
+  status.textContent = `Loading page ${pageNumber}...`;
+  return;
+}
+
+if (!hasResults) {
+  status.textContent = _gifQuery === 'trending' ? 'No trending GIFs found' : 'No GIFs found';
+  return;
+}
+
+const totalPages = _gifTotalCount > 0 ? Math.max(1, Math.ceil(_gifTotalCount / GIF_PAGE_SIZE)) : null;
+status.textContent = totalPages
+  ? `Page ${pageNumber} of ${totalPages}`
+  : `Page ${pageNumber}`;
+}
+
+function changeGifPage(direction) {
+if (_gifLoading) return;
+const nextOffset = Math.max(0, _gifOffset + direction * GIF_PAGE_SIZE);
+if (nextOffset === _gifOffset) return;
+searchGiphyGifs(_gifQuery, nextOffset);
 }
 
 async function sendGifUrlFromInput() {
@@ -7722,27 +7798,40 @@ await sendGifMessage(resolvedUrl);
 input.value = '';
 }
 
-let _gifResults = [];
-async function searchGiphyGifs(query) {
+async function searchGiphyGifs(query, offset = 0) {
 const grid = document.getElementById('gif-grid');
+_gifQuery = query || 'trending';
+_gifOffset = Math.max(0, offset);
 if (!hasGiphySearchConfigured()) {
 grid.innerHTML = '<div style="color:#ffca28;padding:1rem;text-align:center;grid-column:1/-1;">GIF search is not configured yet. Paste a Giphy or direct GIF URL above.</div>';
+_gifResults = [];
+_gifTotalCount = 0;
+updateGifPagination();
 return;
 }
+
+_gifLoading = true;
+updateGifPagination();
 grid.innerHTML = '<div style="color:#999;padding:1rem;text-align:center;grid-column:1/-1;">Loading…</div>';
 try {
-  const isTrending = !query || query === 'trending';
+  const isTrending = !_gifQuery || _gifQuery === 'trending';
   const endpoint = isTrending
-    ? `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=24&rating=g`
-    : `https://api.giphy.com/v1/gifs/search?q=${encodeURIComponent(query)}&api_key=${GIPHY_API_KEY}&limit=24&rating=g`;
+    ? `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=${GIF_PAGE_SIZE}&offset=${_gifOffset}&rating=g`
+    : `https://api.giphy.com/v1/gifs/search?q=${encodeURIComponent(_gifQuery)}&api_key=${GIPHY_API_KEY}&limit=${GIF_PAGE_SIZE}&offset=${_gifOffset}&rating=g`;
   const res = await fetch(endpoint);
   if (!res.ok) throw new Error('Giphy API error: ' + res.status + ' - ' + res.statusText);
   const json = await res.json();
   _gifResults = json.data || [];
+  _gifTotalCount = Math.max(_gifResults.length, ((json.pagination && json.pagination.total_count) || 0));
   renderGifGrid(_gifResults);
 } catch (err) {
   console.error('GIF search error:', err);
+  _gifResults = [];
+  _gifTotalCount = 0;
   grid.innerHTML = '<div style="color:#f66;padding:1rem;text-align:center;grid-column:1/-1;">Failed to load GIFs.</div>';
+} finally {
+  _gifLoading = false;
+  updateGifPagination();
 }
 }
 
