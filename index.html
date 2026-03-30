@@ -6,35 +6,156 @@
 <title>chud games</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
 body {
-background: #000;
-font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+background:
+radial-gradient(circle at top left, rgba(53, 102, 255, 0.18), transparent 24%),
+radial-gradient(circle at top right, rgba(64, 159, 255, 0.1), transparent 20%),
+#05070c;
+font-family: 'Bahnschrift', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 display: block;
 min-height: 100vh;
 margin: 0;
-color: #fff;
+color: #f5f7fb;
 overflow-x: hidden;
 }
 
 h1 {
 color: #ffffff;
-font-size: clamp(2.4rem, 4vw, 4rem);
+font-size: clamp(1.5rem, 2.4vw, 2.15rem);
 margin: 0;
-letter-spacing: 0.01em;
+letter-spacing: -0.02em;
+}
+
+#site-login-modal {
+background: #000 !important;
+padding: 1rem;
+box-sizing: border-box;
+}
+
+.site-login-card {
+width: min(22rem, calc(100vw - 2rem));
+padding: 1.75rem 1.55rem 1.35rem;
+border-radius: 1.15rem;
+background: #000;
+border: 1px solid rgba(55, 97, 255, 0.72);
+box-shadow: 0 0 0 1px rgba(29, 51, 126, 0.35), 0 18px 60px rgba(0, 0, 0, 0.52);
+text-align: center;
+color: #fff;
+}
+
+.site-login-brand {
+font-size: 2rem;
+font-weight: 800;
+letter-spacing: -0.04em;
+line-height: 1;
+}
+
+.site-login-brand-accent {
+color: #4d7dff;
+}
+
+.site-login-subtitle {
+margin-top: 0.45rem;
+color: #71809b;
+font-size: 0.8rem;
+}
+
+.site-login-warning {
+margin-top: 1.15rem;
+padding: 0.7rem 0.85rem;
+border-radius: 0.55rem;
+border: 1px solid rgba(141, 43, 43, 0.7);
+background: rgba(63, 15, 15, 0.45);
+color: #e35f5f;
+font-size: 0.76rem;
+min-height: 1rem;
+}
+
+.site-login-stack {
+display: grid;
+gap: 0.7rem;
+margin-top: 0.7rem;
+}
+
+.site-login-field {
+width: 100%;
+padding: 0.82rem 0.9rem;
+border-radius: 0.65rem;
+border: 1px solid rgba(39, 48, 68, 0.98);
+background: rgba(3, 5, 10, 0.92);
+color: #f5f7fb;
+font-size: 0.9rem;
+box-sizing: border-box;
+outline: none;
+transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.site-login-field::placeholder {
+color: #566174;
+}
+
+.site-login-field:focus {
+border-color: rgba(69, 113, 255, 0.95);
+box-shadow: 0 0 0 1px rgba(69, 113, 255, 0.18);
+}
+
+.site-login-primary {
+width: 100%;
+margin-top: 0.8rem;
+padding: 0.82rem 1rem;
+border-radius: 0.72rem;
+background: linear-gradient(180deg, #4f83ff 0%, #3c68ea 100%);
+border: 1px solid rgba(100, 141, 255, 0.95);
+color: #fff;
+font-size: 0.92rem;
+font-weight: 700;
+box-shadow: 0 10px 24px rgba(49, 91, 223, 0.28);
+}
+
+.site-login-primary:hover {
+background: linear-gradient(180deg, #6996ff 0%, #4a76ee 100%);
+color: #fff;
+}
+
+.site-login-footer {
+margin-top: 0.8rem;
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 0.25rem;
+flex-wrap: wrap;
+font-size: 0.74rem;
+color: #66748b;
+}
+
+.site-login-link {
+padding: 0;
+background: transparent !important;
+border: none !important;
+color: #3f7cff !important;
+font-size: 0.74rem;
+font-weight: 700;
+box-shadow: none !important;
+}
+
+.site-login-link:hover {
+background: transparent !important;
+color: #78a2ff !important;
 }
 
 .button-container {
 display: grid;
-grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-gap: 1rem;
-width: min(1280px, calc(100vw - 2rem));
-margin: 1.2rem auto 0 auto;
+grid-template-columns: repeat(auto-fill, minmax(205px, 1fr));
+gap: 0.95rem;
+width: min(1320px, calc(100vw - 2.5rem));
+margin: 0.9rem auto 0 auto;
 }
 
 #store-shell {
-width: min(1280px, calc(100vw - 2rem));
-margin: 1.4rem auto 2rem auto;
+width: min(1320px, calc(100vw - 2.5rem));
+margin: 1rem auto 2.5rem auto;
 }
 
 .store-hero {
@@ -43,47 +164,95 @@ display: block;
 
 .store-hero-panel,
 .store-feature-card {
-background: linear-gradient(180deg, rgba(20, 32, 49, 0.94), rgba(15, 24, 34, 0.98));
-border: 1px solid rgba(94, 132, 171, 0.22);
+background: rgba(9, 11, 18, 0.96);
+border: 1px solid rgba(56, 67, 91, 0.7);
 border-radius: 1rem;
-box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+box-shadow: 0 20px 48px rgba(0, 0, 0, 0.38);
 overflow: hidden;
 }
 
 .store-hero-panel {
-padding: 1.4rem;
+padding: 0.95rem 1.15rem;
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 1rem;
+min-height: auto;
+flex-direction: row;
+position: relative;
+}
+
+.store-hero-panel > div:first-child {
 display: flex;
 flex-direction: column;
-justify-content: space-between;
-min-height: 280px;
+gap: 0.25rem;
+min-width: 0;
+}
+
+.store-hero-panel h1 {
+background: linear-gradient(90deg, #ffffff 0%, #95b8ff 50%, #4d7dff 100%);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+background-clip: text;
 }
 
 .store-eyebrow {
-font-size: 0.78rem;
-letter-spacing: 0.16em;
+display: inline-flex;
+align-items: center;
+padding: 0.24rem 0.55rem;
+border-radius: 999px;
+border: 1px solid rgba(64, 112, 255, 0.45);
+background: rgba(23, 42, 94, 0.55);
+font-size: 0.65rem;
+letter-spacing: 0.14em;
 text-transform: uppercase;
-color: #7eb7ff;
+color: #8fb1ff;
 font-weight: 700;
+width: fit-content;
 }
 
 .store-hero-copy {
-max-width: 42rem;
-margin-top: 0.75rem;
-color: #c4d3e3;
-font-size: 1rem;
-line-height: 1.65;
+display: none;
 }
 
 .store-hero-actions {
 display: flex;
-gap: 0.75rem;
+gap: 0.55rem;
 flex-wrap: wrap;
-margin-top: 1.25rem;
+margin-top: 0;
+justify-content: flex-end;
+}
+
+.store-hero-actions button {
+padding: 0.7rem 0.95rem;
+font-size: 0.78rem;
+border-radius: 0.8rem;
+background: #11151d;
+border: 1px solid rgba(45, 55, 76, 0.9);
+color: #e8eef8;
+line-height: 1;
+}
+
+.store-hero-actions button:hover {
+background: #1a2230;
+color: #fff;
+}
+
+.store-hero-actions button:first-child {
+background: linear-gradient(180deg, #4f83ff 0%, #3268f0 100%);
+border-color: rgba(105, 148, 255, 0.95);
+color: #fff;
+box-shadow: 0 10px 24px rgba(50, 104, 240, 0.35);
+}
+
+.store-hero-actions button:first-child:hover {
+background: linear-gradient(180deg, #6695ff 0%, #4477f1 100%);
+color: #fff;
 }
 
 .store-hero-button-secondary {
-background: #000;
-border: 1px solid rgba(255, 255, 255, 0.12);
+background: #11151d;
+border: 1px solid rgba(45, 55, 76, 0.9);
 }
 
 .store-feature-card {
@@ -137,56 +306,71 @@ line-height: 1.45;
 }
 
 .store-section-header {
-margin-top: 1.4rem;
+margin-top: 1rem;
 display: flex;
 justify-content: space-between;
-align-items: end;
+align-items: center;
 gap: 1rem;
 flex-wrap: wrap;
+padding: 0.85rem 1rem;
+background: rgba(9, 11, 18, 0.94);
+border: 1px solid rgba(56, 67, 91, 0.66);
+border-radius: 0.95rem;
 }
 
 .store-section-title {
-font-size: 1.3rem;
+font-size: 1.08rem;
 font-weight: 700;
 }
 
 .store-section-subtitle,
 .store-library-meta {
-font-size: 0.86rem;
-color: #9db2c9;
+font-size: 0.8rem;
+color: #8f9db5;
+}
+
+.store-library-meta {
+padding: 0.45rem 0.7rem;
+border-radius: 999px;
+background: #11151d;
+border: 1px solid rgba(42, 49, 68, 0.95);
 }
 
 .game-store-card {
-background: linear-gradient(180deg, rgba(18, 29, 44, 0.96), rgba(13, 21, 32, 0.98));
-border: 1px solid rgba(110, 147, 184, 0.18);
-border-radius: 0.95rem;
+background: linear-gradient(180deg, rgba(17, 20, 27, 0.98), rgba(11, 13, 18, 0.99));
+border: 1px solid rgba(37, 43, 58, 0.95);
+border-radius: 1rem;
 overflow: hidden;
 display: flex;
 flex-direction: column;
 min-height: 100%;
-box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
+box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3);
 transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .game-store-card:hover {
-transform: translateY(-4px);
-box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28);
-border-color: rgba(147, 193, 240, 0.32);
+transform: translateY(-3px);
+box-shadow: 0 20px 36px rgba(0, 0, 0, 0.35);
+border-color: rgba(85, 118, 191, 0.82);
 }
 
 .game-store-thumb {
 position: relative;
-aspect-ratio: 16 / 9;
+aspect-ratio: 1.08 / 1;
 background-size: cover;
 background-position: center;
-border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+margin: 0.6rem 0.6rem 0;
+border-radius: 0.82rem;
+overflow: hidden;
+border: 1px solid rgba(33, 38, 52, 0.95);
+background-color: #080a0f;
 }
 
 .game-store-thumb::after {
 content: '';
 position: absolute;
 inset: 0;
-background: linear-gradient(180deg, rgba(6, 12, 18, 0.1), rgba(6, 12, 18, 0.58));
+background: linear-gradient(180deg, rgba(4, 7, 12, 0.08), rgba(4, 7, 12, 0.5));
 }
 
 .game-store-thumb-top,
@@ -216,39 +400,43 @@ align-items: flex-end;
 .game-thumb-win-badge {
 display: inline-flex;
 align-items: center;
-padding: 0.2rem 0.5rem;
+padding: 0.22rem 0.48rem;
 border-radius: 999px;
-font-size: 0.68rem;
+font-size: 0.62rem;
 font-weight: 700;
 letter-spacing: 0.04em;
 text-transform: uppercase;
 }
 
 .game-store-chip {
-background: rgba(9, 19, 30, 0.74);
-color: #d8e7f8;
+background: rgba(12, 15, 22, 0.8);
+color: #f2f5fb;
 border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .thumbnail-poll-chip {
-background: rgba(21, 101, 192, 0.82);
-color: #fff;
+background: rgba(26, 30, 39, 0.9);
+color: #b7c1d6;
+border: 1px solid rgba(58, 66, 84, 0.88);
 }
 
 .thumbnail-poll-chip.is-live {
-background: rgba(239, 108, 0, 0.88);
+background: rgba(52, 104, 240, 0.9);
+color: #fff;
+border-color: rgba(90, 136, 255, 0.96);
 }
 
 .game-thumb-win-badge {
-background: rgba(67, 160, 71, 0.88);
+background: rgba(234, 179, 8, 0.92);
 color: #fff;
+border: 1px solid rgba(255, 215, 64, 0.95);
 }
 
 .game-store-content {
-padding: 1rem;
+padding: 0.8rem 0.8rem 0.9rem;
 display: flex;
 flex-direction: column;
-gap: 0.65rem;
+gap: 0.46rem;
 flex: 1;
 }
 
@@ -256,20 +444,25 @@ flex: 1;
 display: flex;
 justify-content: space-between;
 align-items: start;
-gap: 0.6rem;
+gap: 0.5rem;
 }
 
 .game-store-title {
-font-size: 1.02rem;
+font-size: 0.92rem;
 font-weight: 700;
 margin: 0;
 }
 
 .game-store-description {
 margin: 0;
-font-size: 0.85rem;
-line-height: 1.5;
-color: #bbcad9;
+font-size: 0.74rem;
+line-height: 1.45;
+color: #8f9bb0;
+display: -webkit-box;
+-webkit-line-clamp: 2;
+-webkit-box-orient: vertical;
+overflow: hidden;
+min-height: 2.15rem;
 }
 
 .game-store-meta-row {
@@ -278,28 +471,34 @@ justify-content: space-between;
 align-items: center;
 gap: 0.75rem;
 flex-wrap: wrap;
-font-size: 0.75rem;
-color: #86a1bb;
+font-size: 0.68rem;
+color: #6d788c;
 }
 
 .game-store-footer {
 display: flex;
-gap: 0.55rem;
+gap: 0.45rem;
 flex-wrap: wrap;
 margin-top: auto;
 }
 
 .game-store-footer button {
 flex: 1;
-min-width: 120px;
-padding: 0.72rem 0.85rem;
-font-size: 0.82rem;
+min-width: 96px;
+padding: 0.66rem 0.72rem;
+font-size: 0.74rem;
+font-weight: 700;
+border-radius: 0.75rem;
+background: linear-gradient(180deg, #4f83ff 0%, #3268f0 100%);
+border: 1px solid rgba(105, 148, 255, 0.95);
+color: #fff;
 }
 
 .game-store-footer .secondary-button {
-background: #000;
+background: #11151d;
 color: #d7e6f7;
-border: 1px solid rgba(255, 255, 255, 0.1);
+border: 1px solid rgba(43, 51, 69, 0.95);
+box-shadow: none;
 }
 
 .thumbnail-vote-grid {
@@ -361,47 +560,58 @@ justify-content: flex-start;
 
 .store-toolbar {
 display: grid;
-grid-template-columns: minmax(0, 2fr) minmax(180px, 0.9fr) auto;
+grid-template-columns: minmax(0, 1.8fr) minmax(170px, 0.7fr) auto;
 gap: 0.75rem;
-margin-top: 1rem;
+margin-top: 0.8rem;
 align-items: center;
+padding: 0.8rem 0.9rem;
+background: rgba(9, 11, 18, 0.94);
+border: 1px solid rgba(56, 67, 91, 0.66);
+border-radius: 0.95rem;
 }
 
 .store-toolbar input,
 .store-toolbar select {
 width: 100%;
-padding: 0.72rem 0.85rem;
-border-radius: 0.75rem;
-border: 1px solid rgba(126, 156, 189, 0.2);
-background: rgba(8, 14, 22, 0.92);
+padding: 0.8rem 0.9rem;
+border-radius: 0.8rem;
+border: 1px solid rgba(40, 48, 66, 0.95);
+background: #0c1017;
 color: #eef4fb;
-font-size: 0.92rem;
+font-size: 0.84rem;
 box-sizing: border-box;
+}
+
+.store-toolbar input::placeholder {
+color: #6d7689;
 }
 
 .store-toggle-row {
 display: flex;
 gap: 0.6rem;
 flex-wrap: wrap;
+justify-content: flex-end;
 }
 
 .store-toggle-chip {
 display: inline-flex;
 align-items: center;
 gap: 0.35rem;
-padding: 0.7rem 0.95rem;
+padding: 0.74rem 1rem;
 border-radius: 999px;
-border: 1px solid rgba(130, 160, 192, 0.18);
-background: rgba(11, 18, 28, 0.94);
+border: 1px solid rgba(45, 54, 73, 0.95);
+background: #11151d;
 color: #d5e4f5;
-font-size: 0.82rem;
+font-size: 0.76rem;
+font-weight: 700;
 cursor: pointer;
 }
 
 .store-toggle-chip.is-active {
-background: #173652;
-border-color: rgba(169, 211, 255, 0.34);
+background: linear-gradient(180deg, #4f83ff 0%, #3268f0 100%);
+border-color: rgba(105, 148, 255, 0.95);
 color: #fff;
+box-shadow: 0 10px 22px rgba(50, 104, 240, 0.25);
 }
 
 .store-shelf {
@@ -756,6 +966,15 @@ font-size: 0.78rem;
 }
 
 @media (max-width: 900px) {
+.store-hero-panel {
+flex-direction: column;
+align-items: flex-start;
+}
+
+.store-hero-actions {
+justify-content: flex-start;
+}
+
 .store-toolbar {
 grid-template-columns: 1fr;
 }
@@ -780,11 +999,11 @@ grid-template-columns: 1fr;
 
 @media (max-width: 640px) {
 #store-shell {
-width: min(100vw - 1rem, 1280px);
+width: min(100vw - 1rem, 1320px);
 }
 
 .button-container {
-width: min(100vw - 1rem, 1280px);
+width: min(100vw - 1rem, 1320px);
 grid-template-columns: 1fr;
 }
 
@@ -1957,6 +2176,9 @@ font-size: 1.1rem;
 }
 
 .leaderboard-username {
+display: flex;
+align-items: center;
+gap: 0.5rem;
 color: #ddd;
 overflow: hidden;
 text-overflow: ellipsis;
@@ -1966,6 +2188,21 @@ cursor: pointer;
 
 .leaderboard-username:hover {
 text-decoration: underline;
+}
+
+.leaderboard-identity {
+display: flex;
+align-items: center;
+gap: 0.45rem;
+min-width: 0;
+overflow: hidden;
+}
+
+.leaderboard-name-copy {
+min-width: 0;
+overflow: hidden;
+text-overflow: ellipsis;
+white-space: nowrap;
 }
 
 .leaderboard-level {
@@ -2017,6 +2254,7 @@ background: #ef6c00;
 background: #ec407a;
 }
 
+.custom-tag.tag-contributor,
 .custom-tag.tag-cool-boy {
 background: #1e88e5;
 }
@@ -2110,9 +2348,59 @@ padding: 0.05rem 0.35rem;
 }
 
 .chat-message-user {
+display: inline-flex;
+align-items: center;
+gap: 0.45rem;
 font-weight: bold;
 font-size: 0.85rem;
 margin-bottom: 0.25rem;
+}
+
+.inline-profile-avatar {
+width: 1.45rem;
+height: 1.45rem;
+border-radius: 999px;
+overflow: hidden;
+border: 1px solid rgba(255,255,255,0.16);
+background: linear-gradient(135deg, #1f1f1f 0%, #111 100%);
+display: inline-flex;
+align-items: center;
+justify-content: center;
+flex: 0 0 auto;
+box-shadow: 0 0 0 1px rgba(0,0,0,0.28);
+}
+
+.inline-profile-avatar img {
+width: 100%;
+height: 100%;
+object-fit: cover;
+display: block;
+}
+
+.inline-profile-avatar-fallback {
+width: 100%;
+height: 100%;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+font-size: 0.62rem;
+font-weight: 700;
+letter-spacing: 0.04em;
+color: #90caf9;
+text-transform: uppercase;
+}
+
+.inline-profile-avatar.leaderboard-avatar {
+width: 1.8rem;
+height: 1.8rem;
+}
+
+.inline-profile-avatar.leaderboard-avatar .inline-profile-avatar-fallback {
+font-size: 0.68rem;
+}
+
+.chat-message-user-text {
+min-width: 0;
 }
 
 .chat-user-link {
@@ -2840,6 +3128,15 @@ if (userList) userList.innerHTML = '<option value="">-- Select a user --</option
 </div>
 </div>
 
+<div class="admin-section-card" data-admin-scope="admin">
+<div class="admin-section-title">UI Poll Votes</div>
+<div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+<button onclick="loadAdminUiPollVotes()" style="padding:0.45rem 0.8rem; background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Refresh Votes</button>
+<button onclick="restartUiUpdatePoll()" style="padding:0.45rem 0.8rem; background:#8e0000; color:#fff; border:none; border-radius:0.25rem;">Restart Vote</button>
+</div>
+<div id="admin-ui-poll-votes" style="margin-top:0.6rem; max-height:260px; overflow:auto; background:#1b1b1b; border:1px solid #333; border-radius:0.35rem; padding:0.6rem; color:#ddd; font-size:0.82rem;"></div>
+</div>
+
 <div class="admin-section-card" data-admin-scope="owner">
 <div class="admin-section-title">Role Permissions</div>
 <div style="font-size:0.8rem; color:#bbb;">Toggle what each role can do.</div>
@@ -2960,17 +3257,19 @@ if (userList) userList.innerHTML = '<option value="">-- Select a user --</option
 </div>
 </div>
 <div id="site-login-modal" style="display:flex; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:4000; align-items:center; justify-content:center; flex-direction:column;">
-<div style="background:#222; padding:2.5rem 2rem; border-radius:0.5rem; text-align:center; color:#fff; min-width:300px; box-shadow:0 8px 32px #000a;">
-<h2>Login Required</h2>
-<div style="color:#ff9800; background:#222; border-radius:0.25rem; padding:0.5rem 1rem; margin-bottom:1rem; font-size:1rem;">
-<strong>Do not share your login information with anyone.</strong><br>
-<span style="font-size:0.95rem; color:#ffb74d;">Usernames are converted to lowercase automatically.</span>
+<div class="site-login-card">
+<div class="site-login-brand">Chud<span class="site-login-brand-accent">Games</span></div>
+<div class="site-login-subtitle">Please sign in to continue</div>
+<div id="site-login-error" class="site-login-warning">Do not share your login information with anyone.</div>
+<div class="site-login-stack">
+<input type="text" id="site-login-username" class="site-login-field" placeholder="Username" autocomplete="username" />
+<input type="password" id="site-login-password" class="site-login-field" placeholder="Password" autocomplete="current-password" />
 </div>
-<input type="text" id="site-login-username" placeholder="Username" style="padding:0.5rem; margin:0.5rem 0; width:220px; border:none; border-radius:0.25rem;" autocomplete="username" />
-<input type="password" id="site-login-password" placeholder="Password" style="padding:0.5rem; margin:0.5rem 0; width:220px; border:none; border-radius:0.25rem;" autocomplete="current-password" />
-<button onclick="siteLoginSubmit()" style="padding:0.5rem 1.5rem; background:#000; color:#fff; border:none; border-radius:0.25rem; margin-top:1rem;">Login</button>
-<button onclick="openLoginRequestModal()" style="margin-top:1rem; background:#444; color:#fff; border:none; border-radius:0.25rem; padding:0.5rem 1.5rem;">Request an Account</button>
-<div id="site-login-error" style="color:#ff5252; margin-top:0.75rem; min-height:1.5em;"></div>
+<button class="site-login-primary" onclick="siteLoginSubmit()">Sign In</button>
+<div class="site-login-footer">
+<span>Don't have an account?</span>
+<button class="site-login-link" onclick="openLoginRequestModal()">Sign Up</button>
+</div>
 </div>
 </div>
 <div id="name-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); z-index:3000; align-items:center; justify-content:center; flex-direction:column;">
@@ -3022,6 +3321,8 @@ if (userList) userList.innerHTML = '<option value="">-- Select a user --</option
 <button onclick="openGameSubmissionModal()">Suggest a Game</button>
 <button onclick="openCustomUrlModal()">Open URL</button>
 <button class="store-hero-button-secondary" onclick="openUpdateNotesModal()">Update Notes</button>
+<button class="store-hero-button-secondary" onclick="openUiUpdatePollModal()">UI Poll</button>
+<button class="store-hero-button-secondary" onclick="openCreditsModal()">Credits</button>
 </div>
 </div>
 </div>
@@ -3373,7 +3674,12 @@ oninput="onChatInput()"
 <div id="profile-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.78); z-index:6500; align-items:center; justify-content:center;">
 <div style="background:#222; width:min(38rem, calc(100vw - 2rem)); max-height:calc(100vh - 2rem); overflow:auto; padding:1.5rem; border-radius:0.8rem; color:#fff; box-shadow:0 8px 32px rgba(0,0,0,0.6);">
 <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem;">
-<div>
+<div style="display:flex; align-items:flex-start; gap:0.9rem; min-width:0;">
+<div id="profile-avatar-wrap" style="width:4.6rem; height:4.6rem; border-radius:1rem; background:#151515; border:1px solid #3a3a3a; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+<img id="profile-avatar-image" alt="Profile picture" style="width:100%; height:100%; object-fit:cover; display:none;" />
+<div id="profile-avatar-fallback" style="font-size:1.45rem; font-weight:700; color:#90caf9; letter-spacing:0.04em;">?</div>
+</div>
+<div style="min-width:0;">
 <h2 style="margin:0;">Profile</h2>
 <div id="profile-username" style="margin-top:0.2rem; color:#bbb;"></div>
 <div id="profile-level" style="margin-top:0.4rem; color:#66bb6a; font-weight:bold; font-size:1.1rem;"></div>
@@ -3382,6 +3688,7 @@ oninput="onChatInput()"
 </div>
 <div id="profile-level-progress-text" style="margin-top:0.25rem; color:#9ccc65; font-size:0.78rem;"></div>
 <div id="profile-role" style="margin-top:0.25rem; color:#90caf9; font-size:0.82rem;"></div>
+</div>
 </div>
 <div style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
 <button id="profile-dm-btn" onclick="openDMFromProfile()" style="padding:0.35rem 0.65rem; background:#1565c0; color:#fff; border:none; border-radius:0.3rem; font-size:0.85rem; display:none;">💬 DM</button>
@@ -3431,6 +3738,34 @@ oninput="onChatInput()"
 <p style="margin:0 0 0.75rem 0;">A quick look at what changed.</p>
 <ul id="update-notes-list" style="margin:0; padding-left:1.2rem;"></ul>
 <div id="update-notes-meta" style="margin-top:0.75rem; color:#888; font-size:0.82rem;"></div>
+</div>
+</div>
+</div>
+
+<div id="ui-update-poll-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.78); z-index:6500; align-items:center; justify-content:center;">
+<div style="background:#222; width:min(32rem, calc(100vw - 2rem)); max-height:calc(100vh - 2rem); overflow:auto; padding:1.5rem; border-radius:0.8rem; color:#fff; box-shadow:0 8px 32px rgba(0,0,0,0.6);">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:1rem;">
+<h2 style="margin:0;">UI Poll</h2>
+<button onclick="closeUiUpdatePollModal()" style="padding:0.45rem 0.8rem;">Close</button>
+</div>
+<div style="margin-top:0.8rem; color:#ddd; font-size:1rem; line-height:1.5;">Should i update my ui?</div>
+<div style="display:flex; gap:0.75rem; margin-top:1rem; flex-wrap:wrap;">
+<button onclick="voteOnUiUpdatePoll('yes')" style="padding:0.6rem 1.1rem; background:#2e7d32; color:#fff; border:none; border-radius:0.35rem;">Yes</button>
+<button onclick="voteOnUiUpdatePoll('no')" style="padding:0.6rem 1.1rem; background:#8e0000; color:#fff; border:none; border-radius:0.35rem;">No</button>
+</div>
+<div id="ui-update-poll-status" style="margin-top:0.9rem; color:#9fb0c2; font-size:0.9rem;"></div>
+</div>
+</div>
+
+<div id="credits-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.78); z-index:6500; align-items:center; justify-content:center;">
+<div style="background:#222; width:min(32rem, calc(100vw - 2rem)); max-height:calc(100vh - 2rem); overflow:auto; padding:1.5rem; border-radius:0.8rem; color:#fff; box-shadow:0 8px 32px rgba(0,0,0,0.6);">
+<div style="display:flex; justify-content:space-between; align-items:center; gap:1rem;">
+<h2 style="margin:0;">Credits</h2>
+<button onclick="closeCreditsModal()" style="padding:0.45rem 0.8rem;">Close</button>
+</div>
+<div style="margin-top:0.95rem; color:#ddd; line-height:1.65; font-size:0.98rem;">
+<div><strong>kaiden</strong> owner</div>
+<div style="margin-top:0.45rem;"><strong>jeremy_wade/kyler</strong> contributor</div>
 </div>
 </div>
 </div>
@@ -3790,9 +4125,16 @@ reviewSubmissions: false
 const PROFILE_TAGS = {
 'dont give admin': { label: 'Dont Give Admin', className: 'tag-dont-give-admin' },
 'femboy': { label: 'femboy', className: 'tag-femboy' },
-'cool boy': { label: 'cool boy', className: 'tag-cool-boy' },
+'contributor': { label: 'contributor', className: 'tag-contributor' },
 'gnb': { label: 'GNB', className: 'tag-gnb' },
 'bitch': { label: 'bitch', className: 'tag-bitch' }
+};
+const PROFILE_TAG_ALIASES = {
+'cool boy': 'contributor',
+'cool-boy': 'contributor',
+'cool_boy': 'contributor',
+'tag-cool-boy': 'contributor',
+'tag-contributor': 'contributor'
 };
 const DEFAULT_UPDATE_NOTES = [
 'Default thumbnails are plain black now.',
@@ -3833,7 +4175,8 @@ return sanitizeNullableText(value, '').toLowerCase();
 }
 
 function sanitizeProfileTag(value) {
-const tag = String(value || '').trim().toLowerCase();
+const rawTag = String(value || '').trim().toLowerCase();
+const tag = PROFILE_TAG_ALIASES[rawTag] || rawTag;
 return PROFILE_TAGS[tag] ? tag : '';
 }
 
@@ -3865,6 +4208,21 @@ const selected = value === normalizedSelectedTag ? 'selected' : '';
 options.push(`<option value="${value}" ${selected}>${escapeHtml(data.label)}</option>`);
 });
 return options.join('');
+}
+
+function refreshTagDependentUi() {
+if (currentProfileViewUser && document.getElementById('profile-modal')?.style.display === 'flex') {
+renderProfileModal(currentProfileViewUser);
+if (canModerate(currentChatUser)) {
+renderProfileFlags(currentProfileViewUser);
+}
+}
+if (document.getElementById('leaderboard-modal')?.style.display === 'flex') {
+loadLeaderboard();
+}
+if (document.getElementById('chat-container')) {
+loadChatMessages();
+}
 }
 
 function getRoleRank(role) {
@@ -3982,6 +4340,7 @@ loadMessageReports();
 loadAppealsQueue();
 loadAuditLogs();
 loadAdminAnalytics();
+loadAdminUiPollVotes();
 loadAdminRoomManager();
 loadAdminAccountManager();
 listenForGameSubmissions();
@@ -4645,6 +5004,8 @@ const USER_PROFILES_COLLECTION = 'user_profiles';
 const GAME_SUBMISSIONS_COLLECTION = 'game_submissions';
 const LOGIN_REQUESTS_COLLECTION = 'login_requests';
 const SITE_ACTIVITY_COLLECTION = 'site_activity';
+const SITE_POLLS_COLLECTION = 'site_polls';
+const UI_UPDATE_POLL_DOC_ID = 'ui_update';
 const MAX_LOCAL_NOTIFICATIONS = 80;
 const MAX_ACTIVITY_ITEMS = 30;
 const GAME_FEATURED_SCORES = {
@@ -4696,6 +5057,13 @@ let localNotificationCache = [];
 let localProfileCache = {};
 let userProfileCache = {};
 let currentProfileEditorVisible = false;
+let pendingProfileAvatarData = null;
+let profileGifSearchTimer = null;
+let profileGifResults = [];
+let profileGifQuery = 'trending';
+let profileGifOffset = 0;
+let profileGifTotalCount = 0;
+let profileGifLoading = false;
 let storeFilters = {
 search: '',
 sort: 'featured',
@@ -4841,6 +5209,7 @@ return normalizeUsername(currentChatUser || getUserName() || '');
 function getProfileDefaults(username) {
 return {
 bio: '',
+avatarData: '',
 favoriteGameId: '',
 favoriteGameName: '',
 joinLabel: new Date().toLocaleDateString(),
@@ -4850,6 +5219,19 @@ username: normalizeUsername(username)
 };
 }
 
+function sanitizeProfileAvatar(value) {
+const avatar = typeof value === 'string' ? value.trim() : '';
+if (!avatar) return '';
+if (/^data:image\/(gif|png|jpe?g|webp);base64,/i.test(avatar)) return avatar;
+if (isValidReactionImageUrl(avatar) && isDirectImageUrl(avatar)) return avatar;
+return '';
+}
+
+function getProfileAvatarFallbackText(username) {
+const key = normalizeUsername(username);
+return key ? key.slice(0, 2).toUpperCase() : '?';
+}
+
 function getCachedProfile(username) {
 const key = normalizeUsername(username);
 if (!key) return getProfileDefaults('');
@@ -4857,6 +5239,32 @@ const localStore = localProfileCache || {};
 const localData = localStore[key] || {};
 const remoteData = userProfileCache[key] || {};
 return { ...getProfileDefaults(key), ...localData, ...remoteData, username: key };
+}
+
+function renderInlineProfileAvatarHtml(username, extraClass = '') {
+const key = normalizeUsername(username);
+const avatarData = sanitizeProfileAvatar(getCachedProfile(key).avatarData);
+const className = `inline-profile-avatar${extraClass ? ` ${extraClass}` : ''}`;
+const fallback = escapeHtml(getProfileAvatarFallbackText(key));
+const label = escapeHtml(key || 'user');
+if (avatarData) {
+return `<span class="${className}" data-profile-avatar-user="${label}"><img src="${escapeHtml(avatarData)}" alt="${label} avatar" loading="lazy" /></span>`;
+}
+return `<span class="${className}" data-profile-avatar-user="${label}"><span class="inline-profile-avatar-fallback">${fallback}</span></span>`;
+}
+
+function refreshInlineProfileAvatars(targetUsername = '') {
+const normalizedTarget = normalizeUsername(targetUsername);
+const avatarNodes = document.querySelectorAll('[data-profile-avatar-user]');
+avatarNodes.forEach((node) => {
+const nodeUser = normalizeUsername(node.getAttribute('data-profile-avatar-user') || '');
+if (normalizedTarget && nodeUser !== normalizedTarget) return;
+const avatarData = sanitizeProfileAvatar(getCachedProfile(nodeUser).avatarData);
+const fallback = getProfileAvatarFallbackText(nodeUser);
+node.innerHTML = avatarData
+? `<img src="${escapeHtml(avatarData)}" alt="${escapeHtml(nodeUser || 'user')} avatar" loading="lazy" />`
+: `<span class="inline-profile-avatar-fallback">${escapeHtml(fallback)}</span>`;
+});
 }
 
 function getProfileBadges(profileUserKey, stats, profile) {
@@ -5957,6 +6365,7 @@ try {
       const data = doc.data() || {};
       userProfileCache[key] = {
         bio: sanitizeNullableText(data.bio, '').slice(0, 220),
+        avatarData: sanitizeProfileAvatar(data.avatarData),
         favoriteGameId: sanitizeNullableText(data.favoriteGameId, '').slice(0, 120),
         favoriteGameName: sanitizeNullableText(data.favoriteGameName, '').slice(0, 80),
         joinLabel: sanitizeNullableText(data.joinLabel, ''),
@@ -5986,16 +6395,238 @@ editBtn.style.display = isOwnProfile ? 'inline-block' : 'none';
 saveBtn.style.display = isOwnProfile && currentProfileEditorVisible ? 'inline-block' : 'none';
 editPanelEl.style.display = isOwnProfile && currentProfileEditorVisible ? 'grid' : 'none';
 if (isOwnProfile && currentProfileEditorVisible) {
+  pendingProfileAvatarData = pendingProfileAvatarData === null ? sanitizeProfileAvatar(profile.avatarData) : pendingProfileAvatarData;
   editPanelEl.innerHTML = `
+    <div style="display:flex; gap:0.9rem; align-items:flex-start; flex-wrap:wrap;">
+      <div style="width:5rem; height:5rem; border-radius:1rem; overflow:hidden; border:1px solid #3a3a3a; background:#151515; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+        <img id="profile-edit-avatar-preview" alt="Profile picture preview" src="${escapeHtml(pendingProfileAvatarData || '')}" style="width:100%; height:100%; object-fit:cover; ${pendingProfileAvatarData ? '' : 'display:none;'}" />
+        <div id="profile-edit-avatar-fallback" style="font-size:1.1rem; color:#90caf9; font-weight:700; ${pendingProfileAvatarData ? 'display:none;' : ''}">No PFP</div>
+      </div>
+      <div style="display:grid; gap:0.45rem; min-width:min(14rem, 100%); flex:1 1 14rem;">
+        <input id="profile-avatar-upload" type="file" accept="image/*,.gif" onchange="handleProfilePictureSelected(event)" />
+        <div style="display:flex; gap:0.45rem; flex-wrap:wrap; align-items:center;">
+          <input id="profile-avatar-url" type="text" placeholder="Paste GIF URL" value="${escapeHtml((pendingProfileAvatarData && !pendingProfileAvatarData.startsWith('data:image/')) ? pendingProfileAvatarData : '')}" style="flex:1 1 12rem; min-width:12rem;" />
+          <button type="button" onclick="applyProfilePictureUrl()" style="padding:0.4rem 0.7rem; background:#1565c0; color:#fff; border:none; border-radius:0.35rem;">Use GIF URL</button>
+        </div>
+        <div style="display:grid; gap:0.45rem;">
+          <input id="profile-gif-search-input" type="text" placeholder="Search GIFs" oninput="onProfileGifSearchInput()" />
+          <div id="profile-gif-grid" class="gif-grid" style="max-height:220px; overflow:auto; background:#101820; border:1px solid #2d3a48; border-radius:0.6rem; padding:0.55rem;"></div>
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:0.5rem; flex-wrap:wrap;">
+            <button id="profile-gif-prev-btn" type="button" onclick="changeProfileGifPage(-1)" style="padding:0.4rem 0.7rem; background:#37474f; color:#fff; border:none; border-radius:0.35rem;">Previous</button>
+            <div id="profile-gif-page-status" style="font-size:0.78rem; color:#9fb0c2;">Page 1</div>
+            <button id="profile-gif-next-btn" type="button" onclick="changeProfileGifPage(1)" style="padding:0.4rem 0.7rem; background:#37474f; color:#fff; border:none; border-radius:0.35rem;">Next</button>
+          </div>
+        </div>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+          <button type="button" onclick="removeProfilePicture()" style="padding:0.4rem 0.7rem; background:#5d4037; color:#fff; border:none; border-radius:0.35rem;">Remove Picture</button>
+        </div>
+        <div id="profile-avatar-status" style="font-size:0.78rem; color:#9fb0c2;">Use an image upload or paste a direct GIF/Giphy URL for your profile picture.</div>
+      </div>
+    </div>
     <textarea id="profile-edit-bio" maxlength="220" placeholder="Short bio">${escapeHtml(profile.bio || '')}</textarea>`;
+  renderProfileGifSearchResults();
+  if (!profileGifResults.length) searchProfileGifs('trending');
   return;
 }
+pendingProfileAvatarData = null;
 editPanelEl.innerHTML = '';
 }
 
 function toggleProfileEditor() {
 currentProfileEditorVisible = !currentProfileEditorVisible;
+if (!currentProfileEditorVisible) pendingProfileAvatarData = null;
 renderProfileModal(currentProfileViewUser || getStatsUserKey());
+}
+
+async function handleProfilePictureSelected(event) {
+const input = event && event.target;
+const file = input && input.files && input.files[0];
+const preview = document.getElementById('profile-edit-avatar-preview');
+const fallback = document.getElementById('profile-edit-avatar-fallback');
+const urlInput = document.getElementById('profile-avatar-url');
+const status = document.getElementById('profile-avatar-status');
+if (!file) return;
+if (status) status.textContent = 'Processing picture...';
+try {
+const avatarData = sanitizeProfileAvatar(await compressChatImage(file));
+if (!avatarData) throw new Error('Could not use that image for your profile picture.');
+pendingProfileAvatarData = avatarData;
+if (preview) {
+preview.src = avatarData;
+preview.style.display = 'block';
+}
+if (fallback) fallback.style.display = 'none';
+if (urlInput) urlInput.value = '';
+if (status) status.textContent = 'Profile picture ready to save.';
+} catch (err) {
+if (status) status.textContent = err && err.message ? err.message : 'Could not use that file.';
+} finally {
+if (input) input.value = '';
+}
+}
+
+async function applyProfilePictureUrl() {
+const input = document.getElementById('profile-avatar-url');
+const preview = document.getElementById('profile-edit-avatar-preview');
+const fallback = document.getElementById('profile-edit-avatar-fallback');
+const status = document.getElementById('profile-avatar-status');
+const rawUrl = normalizeReactionImageUrl(input ? input.value : '');
+if (!rawUrl) {
+if (status) status.textContent = 'Paste a GIF URL first.';
+return;
+}
+if (status) status.textContent = 'Resolving GIF URL...';
+try {
+const resolvedUrl = await resolveReactionImageUrl(rawUrl);
+const avatarData = sanitizeProfileAvatar(resolvedUrl);
+if (!avatarData) {
+throw new Error('Could not use that GIF URL. Try a direct .gif link or a standard Giphy share link.');
+}
+pendingProfileAvatarData = avatarData;
+if (input) input.value = avatarData;
+if (preview) {
+preview.src = avatarData;
+preview.style.display = 'block';
+}
+if (fallback) fallback.style.display = 'none';
+if (status) status.textContent = 'GIF profile picture ready to save.';
+} catch (err) {
+if (status) status.textContent = err && err.message ? err.message : 'Could not use that GIF URL.';
+}
+}
+
+function onProfileGifSearchInput() {
+clearTimeout(profileGifSearchTimer);
+const input = document.getElementById('profile-gif-search-input');
+const query = input ? input.value.trim() : '';
+profileGifSearchTimer = setTimeout(() => searchProfileGifs(query || 'trending', 0), 350);
+}
+
+function updateProfileGifPagination() {
+const prevBtn = document.getElementById('profile-gif-prev-btn');
+const nextBtn = document.getElementById('profile-gif-next-btn');
+const status = document.getElementById('profile-gif-page-status');
+if (!prevBtn || !nextBtn || !status) return;
+const pageNumber = Math.floor(profileGifOffset / 12) + 1;
+const hasResults = profileGifResults.length > 0;
+const hasPrevious = profileGifOffset > 0;
+const hasNext = profileGifTotalCount > 0
+? profileGifOffset + profileGifResults.length < profileGifTotalCount
+: profileGifResults.length === 12;
+prevBtn.disabled = profileGifLoading || !hasPrevious;
+nextBtn.disabled = profileGifLoading || !hasResults || !hasNext;
+if (profileGifLoading) {
+status.textContent = `Loading page ${pageNumber}...`;
+return;
+}
+if (!hasResults) {
+status.textContent = profileGifQuery === 'trending' ? 'No trending GIFs found' : 'No GIFs found';
+return;
+}
+const totalPages = profileGifTotalCount > 0 ? Math.max(1, Math.ceil(profileGifTotalCount / 12)) : null;
+status.textContent = totalPages ? `Page ${pageNumber} of ${totalPages}` : `Page ${pageNumber}`;
+}
+
+function changeProfileGifPage(direction) {
+if (profileGifLoading) return;
+const nextOffset = Math.max(0, profileGifOffset + direction * 12);
+if (nextOffset === profileGifOffset) return;
+searchProfileGifs(profileGifQuery || 'trending', nextOffset);
+}
+
+function renderProfileGifSearchResults() {
+const grid = document.getElementById('profile-gif-grid');
+if (!grid) return;
+if (!hasGiphySearchConfigured()) {
+grid.innerHTML = '<div style="color:#ffca28;padding:0.75rem;text-align:center;grid-column:1/-1;">GIF search is not configured yet.</div>';
+updateProfileGifPagination();
+return;
+}
+if (!profileGifResults.length) {
+grid.innerHTML = '<div style="color:#999;padding:0.75rem;text-align:center;grid-column:1/-1;">Search for a GIF or load trending results.</div>';
+updateProfileGifPagination();
+return;
+}
+grid.innerHTML = profileGifResults.map((gif, i) => {
+const images = gif.images || {};
+const thumbUrl = (images.fixed_height_small && images.fixed_height_small.url) ||
+                 (images.fixed_height && images.fixed_height.url) || '';
+if (!thumbUrl) return '';
+return `<img class="gif-thumb" src="${escapeHtml(thumbUrl)}" alt="GIF" loading="lazy" onclick="useProfileGifFromIndex(${i})" />`;
+}).join('') || '<div style="color:#999;padding:0.75rem;text-align:center;grid-column:1/-1;">No GIFs found.</div>';
+updateProfileGifPagination();
+}
+
+async function searchProfileGifs(query = 'trending', offset = 0) {
+const grid = document.getElementById('profile-gif-grid');
+if (!grid) return;
+profileGifQuery = (query || 'trending').trim() || 'trending';
+profileGifOffset = Math.max(0, offset);
+if (!hasGiphySearchConfigured()) {
+renderProfileGifSearchResults();
+return;
+}
+profileGifLoading = true;
+updateProfileGifPagination();
+grid.innerHTML = '<div style="color:#999;padding:0.75rem;text-align:center;grid-column:1/-1;">Loading GIFs...</div>';
+try {
+const cleanedQuery = profileGifQuery;
+const isTrending = cleanedQuery === 'trending';
+const endpoint = isTrending
+? `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=12&offset=${profileGifOffset}&rating=g`
+: `https://api.giphy.com/v1/gifs/search?q=${encodeURIComponent(cleanedQuery)}&api_key=${GIPHY_API_KEY}&limit=12&offset=${profileGifOffset}&rating=g`;
+const res = await fetch(endpoint);
+if (!res.ok) throw new Error(`Giphy API error: ${res.status}`);
+const json = await res.json();
+profileGifResults = Array.isArray(json.data) ? json.data : [];
+profileGifTotalCount = Math.max(profileGifResults.length, ((json.pagination && json.pagination.total_count) || 0));
+renderProfileGifSearchResults();
+} catch (err) {
+console.error('Profile GIF search failed:', err);
+profileGifResults = [];
+profileGifTotalCount = 0;
+grid.innerHTML = '<div style="color:#f66;padding:0.75rem;text-align:center;grid-column:1/-1;">Failed to load GIFs.</div>';
+updateProfileGifPagination();
+} finally {
+profileGifLoading = false;
+updateProfileGifPagination();
+}
+}
+
+function useProfileGifFromIndex(index) {
+const gif = profileGifResults[index];
+if (!gif) return;
+const images = gif.images || {};
+const gifUrl = (images.original && images.original.url) ||
+               (images.fixed_height && images.fixed_height.url) || '';
+if (!gifUrl) return;
+pendingProfileAvatarData = sanitizeProfileAvatar(gifUrl);
+const preview = document.getElementById('profile-edit-avatar-preview');
+const fallback = document.getElementById('profile-edit-avatar-fallback');
+const status = document.getElementById('profile-avatar-status');
+const urlInput = document.getElementById('profile-avatar-url');
+if (preview && pendingProfileAvatarData) {
+preview.src = pendingProfileAvatarData;
+preview.style.display = 'block';
+}
+if (fallback) fallback.style.display = 'none';
+if (urlInput) urlInput.value = pendingProfileAvatarData;
+if (status) status.textContent = 'GIF profile picture ready to save.';
+}
+
+function removeProfilePicture() {
+pendingProfileAvatarData = '';
+const preview = document.getElementById('profile-edit-avatar-preview');
+const fallback = document.getElementById('profile-edit-avatar-fallback');
+const urlInput = document.getElementById('profile-avatar-url');
+const status = document.getElementById('profile-avatar-status');
+if (preview) {
+preview.src = '';
+preview.style.display = 'none';
+}
+if (fallback) fallback.style.display = 'block';
+if (urlInput) urlInput.value = '';
+if (status) status.textContent = 'Profile picture removed. Save to keep this change.';
 }
 
 async function saveProfileDetails() {
@@ -6004,6 +6635,7 @@ if (!key || currentProfileViewUser !== key) return;
 const bioEl = document.getElementById('profile-edit-bio');
 const nextProfile = {
   ...getCachedProfile(key),
+  avatarData: sanitizeProfileAvatar(pendingProfileAvatarData === null ? getCachedProfile(key).avatarData : pendingProfileAvatarData),
   favoriteGameId: '',
   favoriteGameName: '',
   bio: sanitizeNullableText(bioEl && bioEl.value, '').slice(0, 220),
@@ -6027,6 +6659,7 @@ const nextProfile = {
     }
   } catch (_) {}
   currentProfileEditorVisible = false;
+  pendingProfileAvatarData = null;
   renderProfileModal(key);
   addSiteActivity('profile', `${key} updated their profile`, nextProfile.bio || 'Profile details changed');
   pushNotification({ type: 'profile', title: 'Profile updated', body: 'Your profile details were saved.', read: false });
@@ -6202,6 +6835,7 @@ const gameButtons = document.getElementById('game-buttons');
 const meta = document.getElementById('store-library-meta');
 if (!gameButtons) return;
 const gamesList = getStoreGames();
+syncStoreFilterControls();
 if (meta) {
 meta.textContent = `${gamesList.length} games • ${getActiveThumbnailPollCount()} live thumbnail polls`;
 }
@@ -6749,6 +7383,7 @@ const firebaseConfig = {
 apiKey: "AIzaSyC9SMr54yXr0uk0M7JEeuawj0J98IylU20",
 authDomain: "balright--chat.firebaseapp.com",
 projectId: "balright--chat",
+databaseURL: "https://balright--chat-default-rtdb.firebaseio.com",
 storageBucket: "balright--chat.firebasestorage.app",
 messagingSenderId: "233595240223",
 appId: "1:233595240223:web:8477fa939d4491d375fa2a"
@@ -6808,16 +7443,40 @@ const archiveApp = ensureFirebaseApp(archiveFirebaseConfig, ARCHIVE_APP_NAME);
 return archiveApp ? archiveApp.firestore() : null;
 }
 
+function isRealtimeDbConfigReady(config) {
+return !!(config && config.apiKey && config.projectId && config.appId && config.databaseURL);
+}
+
+function getPrimaryRealtimeDb() {
+const defaultApp = getDefaultFirebaseApp();
+if (!defaultApp || !isRealtimeDbConfigReady(firebaseConfig) || typeof defaultApp.database !== 'function') return null;
+try {
+return defaultApp.database();
+} catch (err) {
+return null;
+}
+}
+
+function getRealtimeTimestampValue() {
+return firebase.database.ServerValue.TIMESTAMP;
+}
+
+function getSafeRealtimeKey(value) {
+return normalizeUsername(value).replace(/[.#$\[\]/]/g, '_');
+}
+
 function renderAdminProjectStatus() {
 const el = document.getElementById('admin-project-status');
 if (!el) return;
 
 const mainReady = isFirebaseConfigReady(firebaseConfig);
+const realtimeReady = isRealtimeDbConfigReady(firebaseConfig);
 const adminReady = isFirebaseConfigReady(adminFirebaseConfig);
 const archiveReady = isFirebaseConfigReady(archiveFirebaseConfig);
 
 el.innerHTML = [
 `<div><strong>Main Chat Project:</strong> ${mainReady ? firebaseConfig.projectId : 'Not configured'}</div>`,
+`<div><strong>Realtime DB:</strong> ${realtimeReady ? 'Configured' : 'Not configured (typing and online presence will stay on Firestore until databaseURL is added)'}</div>`,
 `<div><strong>Admin Project:</strong> ${adminReady ? adminFirebaseConfig.projectId : 'Not configured'}${adminReady ? '' : ' (falling back to main project)'}</div>`,
 `<div><strong>Archive Project:</strong> ${archiveReady ? archiveFirebaseConfig.projectId : 'Not configured'}${archiveReady ? '' : ' (archive backup disabled)'}</div>`
 ].join('');
@@ -6834,6 +7493,12 @@ let chatUnreadCount = 0;
 let typingTimeout = null;
 let lastTypingWriteMs = 0;
 let typingStateIsTrue = false;
+let typingUsersCache = {};
+let typingUsersRealtimeRef = null;
+let typingUsersRealtimeHandler = null;
+let onlineUsersRealtimeRef = null;
+let onlineUsersRealtimeHandler = null;
+let realtimePresenceHeartbeatInterval = null;
 let currentPinnedMessage = null;
 let lastGlobalAlertKey = localStorage.getItem('lastGlobalAlertKey') || '';
 let roleCache = {};
@@ -7078,6 +7743,7 @@ currentChatRoom = room.id;
 localStorage.setItem('chatRoom', currentChatRoom);
 clearReply();
 renderChatRoomSummary();
+renderTypingIndicator();
 loadChatMessages();
 }
 
@@ -7555,11 +8221,14 @@ document.getElementById('profile-modal').style.display = 'flex';
 
 function closeProfileModal() {
 document.getElementById('profile-modal').style.display = 'none';
+pendingProfileAvatarData = null;
 }
 
 function renderProfileModal(profileUserKey = '') {
 const usernameEl = document.getElementById('profile-username');
 const roleEl = document.getElementById('profile-role');
+const avatarImageEl = document.getElementById('profile-avatar-image');
+const avatarFallbackEl = document.getElementById('profile-avatar-fallback');
 const levelProgressBarEl = document.getElementById('profile-level-progress-bar');
 const levelProgressTextEl = document.getElementById('profile-level-progress-text');
 const statsGrid = document.getElementById('profile-stat-grid');
@@ -7574,6 +8243,19 @@ const profile = getCachedProfile(resolvedUserKey);
 const unlocked = getUnlockedAchievements(stats, resolvedUserKey);
 const isKaidenProfile = resolvedUserKey === 'kaiden';
 usernameEl.textContent = resolvedUserKey ? `@${resolvedUserKey}` : 'Not logged in';
+if (avatarImageEl && avatarFallbackEl) {
+const avatarData = sanitizeProfileAvatar(profile.avatarData);
+if (avatarData) {
+avatarImageEl.src = avatarData;
+avatarImageEl.style.display = 'block';
+avatarFallbackEl.style.display = 'none';
+} else {
+avatarImageEl.src = '';
+avatarImageEl.style.display = 'none';
+avatarFallbackEl.textContent = resolvedUserKey ? resolvedUserKey.slice(0, 2).toUpperCase() : '?';
+avatarFallbackEl.style.display = 'flex';
+}
+}
 if (roleEl) {
 roleEl.textContent = resolvedUserKey ? `Role: ${getUserRole(resolvedUserKey).toUpperCase()}` : '';
 }
@@ -7686,14 +8368,23 @@ if (!trustedEl || !offenderEl || !tagEl || !noteEl) return;
 
 try {
 const db = getAdminDb();
+const nextTag = sanitizeProfileTag(tagEl.value);
 await db.collection(USER_FLAGS_COLLECTION).doc(targetUser).set({
 trusted: !!trustedEl.checked,
 offender: !!offenderEl.checked,
-tag: sanitizeProfileTag(tagEl.value),
+tag: nextTag,
 note: noteEl.value.trim().slice(0, 500),
 updatedBy: currentChatUser,
 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
 }, { merge: true });
+if (nextTag) {
+  userTagCache[targetUser] = nextTag;
+} else {
+  delete userTagCache[targetUser];
+}
+refreshTagDependentUi();
+renderProfileModal(targetUser);
+renderProfileFlags(targetUser);
 const statusDiv = document.getElementById('admin-ban-status');
 if (statusDiv) statusDiv.textContent = `Saved flags for ${targetUser}.`;
  addSiteActivity('moderation_flag', `${currentChatUser} updated flags for ${targetUser}`, noteEl.value.trim().slice(0, 120));
@@ -7781,6 +8472,201 @@ loadUpdateNotes();
 
 function closeUpdateNotesModal() {
 document.getElementById('update-notes-modal').style.display = 'none';
+}
+
+function openUiUpdatePollModal() {
+document.getElementById('ui-update-poll-modal').style.display = 'flex';
+loadUiUpdatePollState();
+renderUiUpdatePollStatus();
+}
+
+function closeUiUpdatePollModal() {
+document.getElementById('ui-update-poll-modal').style.display = 'none';
+}
+
+let uiUpdatePollCache = null;
+let uiUpdatePollLoading = false;
+
+function getUiUpdatePollRef() {
+return getPrimaryDb().collection(SITE_POLLS_COLLECTION).doc(UI_UPDATE_POLL_DOC_ID);
+}
+
+function normalizeUiUpdatePollData(data = {}) {
+const votes = data && typeof data.votes === 'object' && data.votes ? data.votes : {};
+const normalizedVotes = {};
+Object.keys(votes).forEach((key) => {
+const username = normalizeUsername(key);
+const value = votes[key] === 'yes' ? 'yes' : (votes[key] === 'no' ? 'no' : '');
+if (username && value) normalizedVotes[username] = value;
+});
+return {
+question: sanitizeNullableText(data.question, 'Should i update my ui?') || 'Should i update my ui?',
+votes: normalizedVotes,
+updatedBy: sanitizeNullableText(data.updatedBy, ''),
+updatedAtMs: getTimestampMs(data.updatedAt) || Number(data.updatedAtMs) || 0
+};
+}
+
+function getUiUpdatePollSummary(data = uiUpdatePollCache) {
+const state = normalizeUiUpdatePollData(data || {});
+const entries = Object.entries(state.votes);
+const yesVotes = entries.filter(([, value]) => value === 'yes');
+const noVotes = entries.filter(([, value]) => value === 'no');
+return {
+state,
+entries,
+yesCount: yesVotes.length,
+noCount: noVotes.length,
+totalCount: entries.length,
+recentEntries: entries.sort((a, b) => a[0].localeCompare(b[0]))
+};
+}
+
+function renderUiUpdatePollStatus() {
+const status = document.getElementById('ui-update-poll-status');
+if (!status) return;
+if (!currentChatUser) {
+status.textContent = 'Log in to vote.';
+return;
+}
+const summary = getUiUpdatePollSummary();
+const myVote = summary.state.votes[normalizeUsername(currentChatUser)] || '';
+if (uiUpdatePollLoading && !summary.totalCount && !myVote) {
+status.textContent = 'Loading current votes...';
+return;
+}
+if (myVote) {
+status.textContent = `Your vote: ${myVote}. Current totals: ${summary.yesCount} yes / ${summary.noCount} no.`;
+return;
+}
+status.textContent = `Pick yes or no. Current totals: ${summary.yesCount} yes / ${summary.noCount} no.`;
+}
+
+function renderAdminUiPollVotes() {
+const container = document.getElementById('admin-ui-poll-votes');
+if (!container) return;
+if (!canAdminSettings(currentChatUser)) {
+container.textContent = 'Insufficient permissions.';
+return;
+}
+if (uiUpdatePollLoading && !uiUpdatePollCache) {
+container.textContent = 'Loading votes...';
+return;
+}
+const summary = getUiUpdatePollSummary();
+const updatedText = summary.state.updatedAtMs ? new Date(summary.state.updatedAtMs).toLocaleString() : 'No votes yet';
+const voteList = summary.recentEntries.length
+? summary.recentEntries.map(([username, value]) => `<div style="display:flex; justify-content:space-between; gap:0.75rem; padding:0.3rem 0; border-bottom:1px solid #2b2b2b;"><span>${escapeHtml(username)}</span><strong style="color:${value === 'yes' ? '#81c784' : '#ef9a9a'};">${escapeHtml(value)}</strong></div>`).join('')
+: '<div style="color:#78909c;">No votes recorded yet.</div>';
+container.innerHTML = `
+<div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:0.55rem; margin-bottom:0.75rem;">
+<div style="background:#233238; border:1px solid #35515b; border-radius:0.4rem; padding:0.55rem;"><div style="color:#90caf9; font-size:0.74rem;">Question</div><div style="margin-top:0.25rem; color:#fff; font-weight:600;">${escapeHtml(summary.state.question)}</div></div>
+<div style="background:#1f3525; border:1px solid #355b3d; border-radius:0.4rem; padding:0.55rem;"><div style="color:#a5d6a7; font-size:0.74rem;">Yes</div><div style="margin-top:0.25rem; color:#fff; font-size:1.2rem; font-weight:700;">${summary.yesCount}</div></div>
+<div style="background:#3a2222; border:1px solid #5b3535; border-radius:0.4rem; padding:0.55rem;"><div style="color:#ef9a9a; font-size:0.74rem;">No</div><div style="margin-top:0.25rem; color:#fff; font-size:1.2rem; font-weight:700;">${summary.noCount}</div></div>
+</div>
+<div style="margin-bottom:0.6rem; color:#9fb0c2;">Total votes: ${summary.totalCount} · Updated: ${escapeHtml(updatedText)}</div>
+<div>${voteList}</div>`;
+}
+
+async function loadUiUpdatePollState() {
+uiUpdatePollLoading = true;
+renderUiUpdatePollStatus();
+renderAdminUiPollVotes();
+try {
+const doc = await getUiUpdatePollRef().get();
+uiUpdatePollCache = doc.exists ? normalizeUiUpdatePollData(doc.data() || {}) : normalizeUiUpdatePollData({});
+} catch (err) {
+console.error('Failed to load UI poll votes:', err);
+if (!uiUpdatePollCache) uiUpdatePollCache = normalizeUiUpdatePollData({});
+} finally {
+uiUpdatePollLoading = false;
+renderUiUpdatePollStatus();
+renderAdminUiPollVotes();
+}
+}
+
+async function voteOnUiUpdatePoll(vote) {
+const normalizedVote = vote === 'yes' ? 'yes' : 'no';
+const status = document.getElementById('ui-update-poll-status');
+if (!currentChatUser) {
+renderUiUpdatePollStatus();
+return;
+}
+uiUpdatePollLoading = true;
+if (status) status.textContent = 'Saving vote...';
+renderUiUpdatePollStatus();
+renderAdminUiPollVotes();
+try {
+const pollRef = getUiUpdatePollRef();
+const pollSnap = await pollRef.get();
+const pollData = pollSnap.exists ? normalizeUiUpdatePollData(pollSnap.data() || {}) : normalizeUiUpdatePollData({});
+const nextVotes = { ...(pollData.votes || {}) };
+nextVotes[normalizeUsername(currentChatUser)] = normalizedVote;
+await pollRef.set({
+question: 'Should i update my ui?',
+votes: nextVotes,
+updatedBy: currentChatUser,
+updatedAtMs: Date.now(),
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+uiUpdatePollCache = normalizeUiUpdatePollData({
+...pollData,
+question: 'Should i update my ui?',
+votes: nextVotes,
+updatedBy: currentChatUser,
+updatedAtMs: Date.now()
+});
+if (status) status.textContent = `Your vote: ${normalizedVote}. Saved.`;
+await loadUiUpdatePollState();
+} catch (err) {
+console.error('Failed to save UI poll vote:', err);
+uiUpdatePollLoading = false;
+if (status) status.textContent = 'Could not save vote right now.';
+renderUiUpdatePollStatus();
+renderAdminUiPollVotes();
+}
+}
+
+function loadAdminUiPollVotes() {
+renderAdminUiPollVotes();
+loadUiUpdatePollState();
+}
+
+async function restartUiUpdatePoll() {
+if (!canAdminSettings(currentChatUser)) return;
+if (!confirm('Restart the UI poll and clear all current votes?')) return;
+uiUpdatePollLoading = true;
+renderUiUpdatePollStatus();
+renderAdminUiPollVotes();
+try {
+await getUiUpdatePollRef().set({
+question: 'Should i update my ui?',
+votes: {},
+updatedBy: currentChatUser,
+updatedAtMs: Date.now(),
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+uiUpdatePollCache = normalizeUiUpdatePollData({
+question: 'Should i update my ui?',
+votes: {},
+updatedBy: currentChatUser,
+updatedAtMs: Date.now()
+});
+await loadUiUpdatePollState();
+} catch (err) {
+console.error('Failed to restart UI poll:', err);
+uiUpdatePollLoading = false;
+renderUiUpdatePollStatus();
+renderAdminUiPollVotes();
+}
+}
+
+function openCreditsModal() {
+document.getElementById('credits-modal').style.display = 'flex';
+}
+
+function closeCreditsModal() {
+document.getElementById('credits-modal').style.display = 'none';
 }
 
 function openModalById(modalId) {
@@ -8066,9 +8952,40 @@ next[normalizeUsername(doc.id)] = tag;
 }
 });
 userTagCache = next;
+refreshTagDependentUi();
 });
 } catch (err) {
 console.error('Failed to load user tag cache:', err);
+}
+}
+
+async function loadUserProfileCache() {
+try {
+const db = getAdminDb();
+db.collection(USER_PROFILES_COLLECTION).onSnapshot(snapshot => {
+const next = {};
+snapshot.forEach(doc => {
+const data = doc.data() || {};
+const key = normalizeUsername(doc.id);
+if (!key) return;
+next[key] = {
+bio: sanitizeNullableText(data.bio, '').slice(0, 220),
+avatarData: sanitizeProfileAvatar(data.avatarData),
+favoriteGameId: sanitizeNullableText(data.favoriteGameId, '').slice(0, 120),
+favoriteGameName: sanitizeNullableText(data.favoriteGameName, '').slice(0, 80),
+joinLabel: sanitizeNullableText(data.joinLabel, ''),
+updatedAtMs: data.updatedAt && typeof data.updatedAt.toDate === 'function' ? data.updatedAt.toDate().getTime() : (data.updatedAtMs || 0),
+createdAtMs: data.createdAt && typeof data.createdAt.toDate === 'function' ? data.createdAt.toDate().getTime() : (data.createdAtMs || Date.now())
+};
+});
+userProfileCache = next;
+refreshInlineProfileAvatars();
+if (currentProfileViewUser && document.getElementById('profile-modal')?.style.display === 'flex') {
+renderProfileModal(currentProfileViewUser);
+}
+});
+} catch (err) {
+console.error('Failed to load user profile cache:', err);
 }
 }
 
@@ -10017,7 +10934,7 @@ const levelDisplay = entry.level;
 const profileTarget = encodeURIComponent(entry.username);
 return `<div class="leaderboard-entry">
        <div class="leaderboard-rank">${medal}</div>
-  <div class="leaderboard-username" onclick="openUserProfileFromChat('${profileTarget}', event)">${getStatusDotHtml(entry.username)}${escapeHtml(entry.username)}${ownerTag}${customTag}</div>
+  <div class="leaderboard-username" onclick="openUserProfileFromChat('${profileTarget}', event)"><span class="leaderboard-identity">${getStatusDotHtml(entry.username)}${renderInlineProfileAvatarHtml(entry.username, 'leaderboard-avatar')}<span class="leaderboard-name-copy">${escapeHtml(entry.username)}${ownerTag}${customTag}</span></span></div>
        <div class="leaderboard-level">LVL ${levelDisplay}</div>
        <div class="leaderboard-points">${entry.points.toLocaleString()} pts</div>
      </div>`;
@@ -10222,6 +11139,7 @@ listenForSiteActivity();
 listenForGameSubmissions();
 loadRoleCache();
 loadUserTagCache();
+loadUserProfileCache();
 loadModerationSettings();
 startActivityHeartbeat();
 loadActivityStatuses();
@@ -10839,9 +11757,10 @@ const ownerTag = !isSystem ? getOwnerTagHtml(displayUser) : '';
 const customTag = !isSystem ? getUserTagHtml(displayUser) : '';
 const profileTarget = encodeURIComponent(normalizeUsername(displayUser || 'unknown'));
 const nameColor = isSystem ? '' : (/^#[0-9a-fA-F]{3,8}$/.test(messageColor) ? messageColor : (isOwn ? '#1565c0' : '#5f6368'));
+const avatarHtml = !isSystem ? renderInlineProfileAvatarHtml(displayUser) : '';
 messageDiv.innerHTML = `
          ${replyHtml}
-         ${isSystem ? '' : `<div class="chat-message-user chat-user-link" style="color:${nameColor}" onclick="openUserProfileFromChat('${profileTarget}', event)">${escapeHtml(displayUser)}${ownerTag}${customTag}</div>`}
+         ${isSystem ? '' : `<div class="chat-message-user chat-user-link" style="color:${nameColor}" onclick="openUserProfileFromChat('${profileTarget}', event)">${avatarHtml}<span class="chat-message-user-text">${escapeHtml(displayUser)}${ownerTag}${customTag}</span></div>`}
          ${hasImage ? `<img class="chat-message-image" src="${data.imageData}" alt="Chat image" />` : ''}
          ${hasVideo ? `<video class="chat-message-video" src="${data.videoData}" controls preload="metadata"></video>` : ''}
          ${hasGif ? `<img class="chat-message-image" src="${escapeHtml(data.gifUrl)}" alt="GIF" />` : ''}
@@ -10936,9 +11855,9 @@ input.focus();
 clearReply();
 if (chatInitialized && currentChatUser) {
 clearTimeout(typingTimeout);
-db.collection('typing_status').doc(currentChatUser).set({ typing: false, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
-      typingStateIsTrue = false;
-      lastTypingWriteMs = Date.now();
+writeTypingState(false);
+typingStateIsTrue = false;
+lastTypingWriteMs = Date.now();
 }
 } catch (err) {
 console.error("Error sending message:", err);
@@ -11024,9 +11943,9 @@ captionInput.focus();
 clearReply();
 if (chatInitialized && currentChatUser) {
 clearTimeout(typingTimeout);
-db.collection('typing_status').doc(currentChatUser).set({ typing: false, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
-      typingStateIsTrue = false;
-      lastTypingWriteMs = Date.now();
+writeTypingState(false);
+typingStateIsTrue = false;
+lastTypingWriteMs = Date.now();
 }
 } catch (err) {
 console.error('Error sending image:', err);
@@ -11313,6 +12232,34 @@ console.error('Error toggling image reaction:', err);
 
 async function registerOnlinePresence() {
 if (!chatInitialized || !currentChatUser) return;
+const realtimeDb = getPrimaryRealtimeDb();
+if (realtimeDb) {
+try {
+const ref = realtimeDb.ref(`user_presence/${getSafeRealtimeKey(currentChatUser)}`);
+const writePresence = () => ref.set({
+online: true,
+lastSeen: getRealtimeTimestampValue(),
+username: normalizeUsername(currentChatUser)
+});
+await writePresence();
+realtimeDb.ref('.info/connected').on('value', (snapshot) => {
+if (snapshot.val() !== true) return;
+ref.onDisconnect().remove();
+writePresence().catch(() => {});
+});
+if (realtimePresenceHeartbeatInterval) clearInterval(realtimePresenceHeartbeatInterval);
+realtimePresenceHeartbeatInterval = setInterval(() => {
+writePresence().catch(() => {});
+}, 60000);
+window.addEventListener('beforeunload', () => {
+ref.remove().catch(() => {});
+});
+return;
+} catch (err) {
+console.error('Error registering Realtime Database presence:', err);
+}
+}
+
 try {
 const db = getPrimaryDb();
 const ref = db.collection('user_presence').doc(currentChatUser);
@@ -11330,6 +12277,34 @@ console.error('Error registering presence:', err);
 
 function loadOnlineUsers() {
 if (!chatInitialized) return;
+const realtimeDb = getPrimaryRealtimeDb();
+if (realtimeDb) {
+if (onlineUsersRealtimeRef && onlineUsersRealtimeHandler) {
+onlineUsersRealtimeRef.off('value', onlineUsersRealtimeHandler);
+}
+onlineUsersRealtimeRef = realtimeDb.ref('user_presence');
+onlineUsersRealtimeHandler = (snapshot) => {
+const now = Date.now();
+const onlineUsers = [];
+snapshot.forEach((child) => {
+const data = child.val() || {};
+const username = normalizeUsername(data.username || child.key || '');
+if (!username) return;
+const lastSeen = Number(data.lastSeen) || 0;
+if (data.online && now - lastSeen < 120000) {
+onlineUsers.push(username);
+}
+});
+window._onlineUsers = onlineUsers;
+const btn = document.getElementById('chat-online-btn');
+if (btn) btn.textContent = `🟢 ${onlineUsers.length}`;
+const panel = document.getElementById('online-users-panel');
+if (panel && panel.style.display !== 'none') renderOnlineUsers(onlineUsers);
+};
+onlineUsersRealtimeRef.on('value', onlineUsersRealtimeHandler);
+return;
+}
+
 const db = getPrimaryDb();
 db.collection('user_presence').onSnapshot(snapshot => {
 const now = Date.now();
@@ -11544,48 +12519,18 @@ badge.style.display = 'none';
 }
 }
 
-function onChatInput() {
-if (!chatInitialized || !currentChatUser) return;
-if (isReadOnlyForCurrentUser()) return;
-const db = getPrimaryDb();
-  const now = Date.now();
-  if (!typingStateIsTrue || (now - lastTypingWriteMs) > 2500) {
-    db.collection('typing_status').doc(currentChatUser).set({
-      typing: true,
-      timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    typingStateIsTrue = true;
-    lastTypingWriteMs = now;
-  }
-clearTimeout(typingTimeout);
-typingTimeout = setTimeout(() => {
-    if (typingStateIsTrue) {
-      db.collection('typing_status').doc(currentChatUser).set({
-        typing: false,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      typingStateIsTrue = false;
-      lastTypingWriteMs = Date.now();
-    }
-}, 5000);
-}
-
-function loadTypingUsers() {
-if (!chatInitialized) return;
-const db = getPrimaryDb();
-db.collection('typing_status').onSnapshot(snapshot => {
-const now = Date.now();
-const typers = [];
-snapshot.forEach(doc => {
-if (doc.id === currentChatUser) return;
-const data = doc.data();
-if (data.typing && data.timestamp) {
-const ts = data.timestamp.toDate ? data.timestamp.toDate().getTime() : 0;
-if (now - ts < 5000) typers.push(doc.id);
-}
-});
+function renderTypingIndicator() {
 const indicator = document.getElementById('typing-indicator');
 if (!indicator) return;
+const now = Date.now();
+const currentUserKey = normalizeUsername(currentChatUser);
+const typers = Object.values(typingUsersCache || {})
+.filter((entry) => entry && normalizeUsername(entry.username || '') !== currentUserKey)
+.filter((entry) => normalizeUsername(entry.room || 'general') === normalizeUsername(currentChatRoom || 'general'))
+.filter((entry) => entry.typing !== false && now - (Number(entry.timestamp) || 0) < 5000)
+.map((entry) => normalizeUsername(entry.username || ''))
+.filter(Boolean);
+
 if (typers.length === 0) {
 indicator.textContent = '';
 } else if (typers.length === 1) {
@@ -11593,6 +12538,106 @@ indicator.textContent = `${typers[0]} is typing...`;
 } else {
 indicator.textContent = `${typers.slice(0, -1).join(', ')} and ${typers[typers.length - 1]} are typing...`;
 }
+}
+
+async function writeTypingState(isTyping) {
+if (!chatInitialized || !currentChatUser) return;
+const realtimeDb = getPrimaryRealtimeDb();
+if (realtimeDb) {
+try {
+const ref = realtimeDb.ref(`typing_status/${getSafeRealtimeKey(currentChatUser)}`);
+if (isTyping) {
+await ref.set({
+typing: true,
+room: currentChatRoom,
+timestamp: getRealtimeTimestampValue(),
+username: normalizeUsername(currentChatUser)
+});
+} else {
+await ref.remove();
+}
+return;
+} catch (err) {
+console.error('Error writing typing state to Realtime Database:', err);
+}
+}
+
+try {
+const db = getPrimaryDb();
+await db.collection('typing_status').doc(currentChatUser).set({
+typing: !!isTyping,
+room: currentChatRoom,
+timestamp: firebase.firestore.FieldValue.serverTimestamp()
+});
+} catch (err) {
+console.error('Error writing typing state to Firestore:', err);
+}
+}
+
+function onChatInput() {
+if (!chatInitialized || !currentChatUser) return;
+if (isReadOnlyForCurrentUser()) return;
+const now = Date.now();
+if (!typingStateIsTrue || (now - lastTypingWriteMs) > 2500) {
+writeTypingState(true);
+typingStateIsTrue = true;
+lastTypingWriteMs = now;
+}
+clearTimeout(typingTimeout);
+typingTimeout = setTimeout(() => {
+if (typingStateIsTrue) {
+writeTypingState(false);
+typingStateIsTrue = false;
+lastTypingWriteMs = Date.now();
+}
+}, 5000);
+}
+
+function loadTypingUsers() {
+if (!chatInitialized) return;
+const realtimeDb = getPrimaryRealtimeDb();
+if (realtimeDb) {
+if (typingUsersRealtimeRef && typingUsersRealtimeHandler) {
+typingUsersRealtimeRef.off('value', typingUsersRealtimeHandler);
+}
+typingUsersRealtimeRef = realtimeDb.ref('typing_status');
+typingUsersRealtimeHandler = (snapshot) => {
+const next = {};
+snapshot.forEach((child) => {
+const data = child.val() || {};
+const username = normalizeUsername(data.username || child.key || '');
+if (!username) return;
+next[username] = {
+typing: data.typing !== false,
+room: normalizeUsername(data.room || 'general'),
+timestamp: Number(data.timestamp) || 0,
+username
+};
+});
+typingUsersCache = next;
+renderTypingIndicator();
+};
+typingUsersRealtimeRef.on('value', typingUsersRealtimeHandler);
+return;
+}
+
+const db = getPrimaryDb();
+db.collection('typing_status').onSnapshot(snapshot => {
+const next = {};
+snapshot.forEach(doc => {
+const data = doc.data() || {};
+const username = normalizeUsername(doc.id || data.username || '');
+if (!username) return;
+const ts = data.timestamp && data.timestamp.toDate ? data.timestamp.toDate().getTime() : 0;
+next[username] = {
+typing: data.typing !== false,
+room: normalizeUsername(data.room || 'general'),
+timestamp: ts,
+username
+};
+});
+typingUsersCache = next;
+renderTypingIndicator();
 });
 }
 
