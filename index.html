@@ -159,6 +159,16 @@ color: #78a2ff !important;
 background: rgba(0, 0, 0, 0.88) !important;
 backdrop-filter: blur(8px);
 }
+#admin-menu .admin-section-card textarea {
+min-height: 5.2rem;
+padding: 0.6rem 0.72rem;
+border-radius: 0.45rem;
+border: 1px solid #3b3b3b;
+background: #131313;
+color: #fff;
+resize: vertical;
+font: inherit;
+}
 
 #name-modal > div,
 #profile-modal > div,
@@ -236,30 +246,6 @@ color: #566174;
 outline: none;
 border-color: rgba(69, 113, 255, 0.95) !important;
 box-shadow: 0 0 0 1px rgba(69, 113, 255, 0.18);
-}
-
-#profile-flags-panel,
-.profile-section,
-.friends-inbox-section,
-#friend-requests-section,
-.message-preview-card,
-.modal-history-item,
-.activity-feed-item,
-.notification-item,
-.submission-card,
-.admin-section-card,
-.admin-compact-card,
-.room-member-row,
-.store-mini-card,
-.analytics-section,
-.analytics-card,
-.analytics-mini-card,
-.dm-sidebar,
-.dm-conversation-item,
-.dm-conversation-item.is-active,
-.dm-conversation-item:hover {
-background: rgba(10, 14, 22, 0.94) !important;
-border-color: rgba(44, 54, 76, 0.92) !important;
 }
 
 .site-request-card {
@@ -582,6 +568,12 @@ text-transform: uppercase;
 background: rgba(12, 15, 22, 0.8);
 color: #f2f5fb;
 border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.game-store-chip.is-new {
+background: rgba(234, 179, 8, 0.94);
+color: #1b1300;
+border-color: rgba(255, 221, 87, 0.96);
 }
 
 .thumbnail-poll-chip {
@@ -2976,6 +2968,7 @@ cursor: pointer;
 }
 
 #admin-menu .admin-section-card input,
+#admin-menu .admin-section-card textarea,
 #admin-menu .admin-section-card select,
 #admin-menu .admin-section-card button {
 width: 100%;
@@ -3437,6 +3430,18 @@ if (userList) userList.innerHTML = '<option value="">-- Select a user --</option
 <button onclick="adminRestartLeaderboard()" style="padding:0.5rem 1rem; background:#8b0000; color:#fff; border:none; border-radius:0.25rem;">Restart Leaderboard</button>
 </div>
 
+<div class="admin-section-card" data-admin-scope="owner" data-admin-section-id="game-bios">
+<div class="admin-section-heading">
+<div class="admin-section-title">Game Bios</div>
+<button class="admin-section-toggle" type="button" onclick="toggleAdminSectionCard('game-bios')">Minimize</button>
+</div>
+<div class="admin-section-body">
+<div class="admin-note-text">Owner only. Edit storefront bios for built-in and approved community games.</div>
+<button onclick="renderAdminGameBioManager()" style="padding:0.45rem 0.8rem; background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Refresh Bios</button>
+<div id="admin-game-bio-manager" class="admin-compact-list"></div>
+</div>
+</div>
+
 <div class="admin-section-card" data-admin-scope="admin">
 <div class="admin-section-title">Appeals</div>
 <button onclick="loadAppealsQueue()" style="padding:0.45rem 0.8rem; background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Refresh Appeals</button>
@@ -3610,6 +3615,15 @@ if (userList) userList.innerHTML = '<option value="">-- Select a user --</option
 <div class="overlay-subtle" style="margin-top:0.45rem;">Users can upload one thumbnail each while the poll is live. Images are compressed before they are saved.</div>
 <div class="overlay-actions" style="margin-top:0.65rem;">
 <button onclick="submitGameThumbnailUpload()">Upload Thumbnail</button>
+</div>
+</div>
+<div id="game-thumbnail-admin-override-wrap" class="overlay-field" style="display:none;">
+<label for="game-thumbnail-admin-override-input">Admin Thumbnail Override</label>
+<input id="game-thumbnail-admin-override-input" type="file" accept="image/*" />
+<div class="overlay-subtle" style="margin-top:0.45rem;">Admin or owner can force the storefront art for this game immediately. Leave the poll system intact or clear the override later.</div>
+<div class="overlay-actions" style="margin-top:0.65rem;">
+<button onclick="submitAdminGameThumbnailOverride()">Apply Override</button>
+<button onclick="clearAdminGameThumbnailOverride()" class="secondary-button">Clear Override</button>
 </div>
 </div>
 <div id="game-thumbnail-poll-candidates" class="thumbnail-vote-grid"></div>
@@ -4629,6 +4643,7 @@ loadAuditLogs();
 loadAdminAnalytics();
 loadAdminRoomManager();
 loadAdminAccountManager();
+renderAdminGameBioManager();
 listenForGameSubmissions();
 listenForLoginRequests();
 loadGameSubmissionsOnce();
@@ -5310,6 +5325,9 @@ const games = [
 {name: '2v2.io', url: 'https://2v2.io'},
 {name: 'FNAF Launcher', url: 'https://irv77.github.io/FnafLauncher'},
 {name: 'Yoked', url: 'https://files.twoplayergames.org/files/games/o6/get-yoked/index.html'},
+{name: 'Getting Over It', url: 'https://rawcdn.githack.com/genizy/web-port/main/getting-over-it/index.html'},
+{name: 'Buckshot Roulette', url: 'https://rawcdn.githack.com/genizy/web-port/main/buckshot-roulette/index.html'},
+{name: 'Bendy', url: 'https://rawcdn.githack.com/genizy/web-port/main/bendy/index.html'},
 {name: 'Brotato', url: 'https://mathcalulator.b-cdn.net/games/game/?id=brotato'},
 {name: 'Hope', url: 'https://hope.takh.ee/g.html'},
 {name: 'Forest', url: 'https://forest.cautinvestitor.ro.cdn.cloudflare.net/'},
@@ -5336,6 +5354,7 @@ const LOCAL_ACTIVITY_STORAGE_KEY = 'site_activity_feed_v1';
 const LOCAL_PROFILE_STORAGE_KEY = 'site_profiles_v1';
 const USER_PROFILES_COLLECTION = 'user_profiles';
 const GAME_SUBMISSIONS_COLLECTION = 'game_submissions';
+const GAME_METADATA_COLLECTION = 'game_metadata';
 const LOGIN_REQUESTS_COLLECTION = 'login_requests';
 const SITE_ACTIVITY_COLLECTION = 'site_activity';
 const MAX_LOCAL_NOTIFICATIONS = 80;
@@ -5353,6 +5372,9 @@ worldguessr: 8,
 '2v2.io': 7,
 'FNAF Launcher': 6,
 Yoked: 6,
+'Getting Over It': 8,
+'Buckshot Roulette': 9,
+'Bendy': 8,
 Brotato: 9,
 Hope: 6,
 Forest: 5,
@@ -5363,9 +5385,17 @@ Calcslover: 4,
 MathGPT: 4,
 'Youtube (Unblock All Videos)': 8
 };
+const GAME_METADATA_FALLBACK = {
+'Getting Over It': { createdAtMs: Date.UTC(2026, 2, 31) },
+'Buckshot Roulette': { createdAtMs: Date.UTC(2026, 2, 31) },
+'Bendy': { createdAtMs: Date.UTC(2026, 2, 31) }
+};
+const GAME_NEW_BADGE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 
 let communityGameSubmissionsCache = [];
 let communitySubmissionsUnsub = null;
+let builtInGameMetadataCache = {};
+let builtInGameMetadataUnsub = null;
 let gameSubmissionsLoaded = false;
 let gameSubmissionsLoading = false;
 let loginRequestsCache = [];
@@ -5485,11 +5515,45 @@ function saveLocalProfileStore(store) {
 writeJsonStorage(LOCAL_PROFILE_STORAGE_KEY, store);
 }
 
+function normalizeBuiltInGameMetadata(data) {
+const source = data || {};
+return {
+featured: typeof source.featured === 'number' ? source.featured : null,
+description: typeof source.description === 'string' ? source.description.trim() : '',
+createdAtMs: source.createdAt && typeof source.createdAt.toDate === 'function' ? source.createdAt.toDate().getTime() : (typeof source.createdAtMs === 'number' ? source.createdAtMs : 0),
+newUntilMs: source.newUntil && typeof source.newUntil.toDate === 'function' ? source.newUntil.toDate().getTime() : (typeof source.newUntilMs === 'number' ? source.newUntilMs : 0)
+};
+}
+
+function getBuiltInGameMetadataKey(game) {
+if (!game) return '';
+return normalizeRoomId(game.name || game.id || '');
+}
+
+function getBuiltInGameMetadata(game) {
+const key = getBuiltInGameMetadataKey(game);
+return key ? (builtInGameMetadataCache[key] || null) : null;
+}
+
 function getGameMetadata(game) {
 if (!game) return { featured: 0 };
+const serverMeta = getBuiltInGameMetadata(game) || {};
+const fallbackMeta = GAME_METADATA_FALLBACK[game.name] || {};
 return {
-featured: typeof game.featured === 'number' ? game.featured : (GAME_FEATURED_SCORES[game.name] || 0)
+featured: typeof game.featured === 'number' ? game.featured : (typeof serverMeta.featured === 'number' ? serverMeta.featured : (GAME_FEATURED_SCORES[game.name] || 0)),
+description: typeof game.description === 'string' && game.description.trim() ? game.description.trim() : (serverMeta.description || ''),
+createdAtMs: typeof game.createdAtMs === 'number' && game.createdAtMs > 0 ? game.createdAtMs : (serverMeta.createdAtMs || fallbackMeta.createdAtMs || 0),
+newUntilMs: typeof game.newUntilMs === 'number' && game.newUntilMs > 0 ? game.newUntilMs : (serverMeta.newUntilMs || fallbackMeta.newUntilMs || 0)
 };
+}
+
+function isGameRecentlyAdded(game) {
+if (!game) return false;
+if (typeof game.newUntilMs === 'number' && game.newUntilMs > 0) {
+return Date.now() <= game.newUntilMs;
+}
+if (typeof game.createdAtMs !== 'number' || game.createdAtMs <= 0) return false;
+return (Date.now() - game.createdAtMs) <= GAME_NEW_BADGE_WINDOW_MS;
 }
 
 function getStoreGames() {
@@ -5498,8 +5562,10 @@ const meta = getGameMetadata(game);
 return {
 ...game,
 source: 'builtin',
-description: getGameSummary(game),
+description: meta.description || getGameSummary(game),
 featured: meta.featured,
+createdAtMs: meta.createdAtMs,
+newUntilMs: meta.newUntilMs,
 submitter: ''
 };
 });
@@ -5509,6 +5575,7 @@ const community = communityGameSubmissionsCache
     const id = normalizeRoomId(item.id || `${item.title}-${item.submittedBy || 'community'}`);
     const game = {
       id: `community-${id}`,
+      submissionId: item.id,
       index: null,
       name: String(item.title || '').trim(),
       url: String(item.url || '').trim(),
@@ -6183,6 +6250,7 @@ try {
   gameSubmissionsLoaded = true;
   updateReviewQueueBadges();
   renderGameStorefront();
+  renderAdminGameBioManager();
   renderSubmissionQueue();
 } catch (err) {
   updateReviewQueueBadges();
@@ -6196,6 +6264,115 @@ try {
 
 function getPendingGameSubmissionCount() {
 return communityGameSubmissionsCache.filter((item) => normalizeReviewStatus(item && item.status) === 'pending').length;
+}
+
+function listenForBuiltInGameMetadata() {
+try {
+  const db = getAdminDb();
+  if (builtInGameMetadataUnsub) builtInGameMetadataUnsub();
+  builtInGameMetadataUnsub = db.collection(GAME_METADATA_COLLECTION)
+    .limit(120)
+    .onSnapshot((snapshot) => {
+      const nextCache = {};
+      snapshot.docs.forEach((doc) => {
+        const data = doc.data() || {};
+        const key = normalizeRoomId(data.name || data.gameName || doc.id || '');
+        if (!key) return;
+        nextCache[key] = normalizeBuiltInGameMetadata(data);
+      });
+      builtInGameMetadataCache = nextCache;
+      renderGameStorefront();
+      renderAdminGameBioManager();
+    });
+} catch (_) {
+  builtInGameMetadataCache = {};
+}
+}
+
+function getAdminGameBioInputId(gameId) {
+return `admin-game-bio-${normalizeRoomId(gameId || '')}`;
+}
+
+function renderAdminGameBioManager() {
+const container = document.getElementById('admin-game-bio-manager');
+if (!container) return;
+if (!canManageRoles(currentChatUser)) {
+  container.textContent = 'Insufficient permissions.';
+  return;
+}
+const games = getStoreGames().slice().sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+if (!games.length) {
+  container.innerHTML = '<div class="submission-empty">No games available.</div>';
+  return;
+}
+container.innerHTML = games.map((game) => {
+  const encodedId = encodeURIComponent(game.id || '');
+  const inputId = getAdminGameBioInputId(game.id);
+  const sourceLabel = game.source === 'community' ? 'Community game' : 'Built-in game';
+  return `<div class="admin-compact-card">
+  <div style="display:flex; justify-content:space-between; gap:0.6rem; align-items:flex-start; flex-wrap:wrap;">
+    <div>
+      <div style="font-weight:bold; color:#ffca28;">${escapeHtml(game.name || 'Untitled')}</div>
+      <div style="color:#90a4ae; font-size:0.76rem; margin-top:0.18rem;">${escapeHtml(sourceLabel)}</div>
+    </div>
+    <button onclick="adminSaveGameBio('${encodedId}')" style="width:auto; padding:0.45rem 0.85rem; background:#1565c0; color:#fff; border:none; border-radius:0.25rem;">Save Bio</button>
+  </div>
+  <textarea id="${escapeHtml(inputId)}" maxlength="280" placeholder="Leave blank to reset ${escapeHtml(game.name || 'this game')} to its default bio."></textarea>
+</div>`;
+}).join('');
+}
+
+async function adminSaveGameBio(encodedGameId) {
+if (!canManageRoles(currentChatUser)) return;
+const gameId = decodeURIComponent(encodedGameId || '');
+const game = getStoreGameById(gameId);
+const statusDiv = document.getElementById('admin-ban-status');
+if (!game) {
+  if (statusDiv) statusDiv.textContent = 'Could not find that game.';
+  return;
+}
+const input = document.getElementById(getAdminGameBioInputId(game.id));
+const nextDescription = sanitizeNullableText(input ? input.value : '', '').slice(0, 280);
+try {
+  const db = getAdminDb();
+  if (game.source === 'community') {
+    const submissionId = String(game.submissionId || '').trim();
+    if (!submissionId) throw new Error('Missing community submission id.');
+    await db.collection(GAME_SUBMISSIONS_COLLECTION).doc(submissionId).set({
+      description: nextDescription,
+      updatedBy: currentChatUser,
+      updatedAtMs: Date.now(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    communityGameSubmissionsCache = communityGameSubmissionsCache.map((entry) => entry && entry.id === submissionId ? {
+      ...entry,
+      description: nextDescription,
+      updatedBy: currentChatUser,
+      updatedAtMs: Date.now()
+    } : entry);
+  } else {
+    const metadataId = normalizeRoomId(game.name || game.id || '');
+    await db.collection(GAME_METADATA_COLLECTION).doc(metadataId).set({
+      name: game.name,
+      gameName: game.name,
+      description: nextDescription,
+      updatedBy: currentChatUser,
+      updatedAtMs: Date.now(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    builtInGameMetadataCache[metadataId] = {
+      ...(builtInGameMetadataCache[metadataId] || {}),
+      description: nextDescription
+    };
+  }
+  await writeAuditLog('edit_game_bio', game.name || game.id, `${nextDescription ? 'Updated' : 'Reset'} ${game.source || 'builtin'} game bio`);
+  if (input) input.value = '';
+  if (statusDiv) statusDiv.textContent = nextDescription ? `Saved bio for ${game.name}.` : `Reset bio for ${game.name}.`;
+  renderGameStorefront();
+  renderAdminGameBioManager();
+} catch (err) {
+  if (statusDiv) statusDiv.textContent = 'Failed to save game bio.';
+}
 }
 
 function getPendingLoginRequestCount() {
@@ -6277,6 +6454,7 @@ try {
       gameSubmissionsLoaded = true;
       updateReviewQueueBadges();
       renderGameStorefront();
+      renderAdminGameBioManager();
       renderSubmissionQueue();
     });
 } catch (_) {
@@ -7110,6 +7288,9 @@ Slope: 'An endless downhill reflex test with almost no room for mistakes.',
 Minecraft: 'Launch straight into a browser sandbox and start building.',
 'Escape Road': 'High-speed getaway driving with simple controls and fast runs.',
 'Infinite Craft': 'Mix elements until the recipe tree gets completely out of hand.',
+'Getting Over It': 'A precision climbing run where one slip can undo everything.',
+'Buckshot Roulette': 'A tense single-shell horror gamble built around timing and nerve.',
+'Bendy': 'A first-person horror port built around exploration, ink, and old studio ruins.',
 'Youtube (Unblock All Videos)': 'Watch videos in the same launcher without leaving the site.'
 };
 return summaries[game.name] || `Launch ${game.name} instantly from your library.`;
@@ -7201,8 +7382,16 @@ function getGameThumbnailPollState(gameId) {
 return gameThumbnailPollsCache[normalizeUsername(gameId)] || null;
 }
 
+function getGameThumbnailOverride(state) {
+return state && state.overrideThumbnail && state.overrideThumbnail.url ? state.overrideThumbnail : null;
+}
+
 function getGameSelectedThumbnail(game) {
 const state = getGameThumbnailPollState(game.id);
+const overrideThumb = getGameThumbnailOverride(state);
+if (overrideThumb) {
+return overrideThumb.url;
+}
 if (state && state.selectedThumbnail && state.selectedThumbnail.url) {
 return state.selectedThumbnail.url;
 }
@@ -7249,15 +7438,18 @@ meta.textContent = `${gamesList.length} games • ${getActiveThumbnailPollCount(
 gameButtons.innerHTML = gamesList.map((game) => {
 const state = getGameThumbnailPollState(game.id) || {};
 const thumb = game.thumbnailUrl || getGameSelectedThumbnail(game);
+const overrideThumb = getGameThumbnailOverride(state);
 const hasSelection = !!(state.selectedThumbnail && state.selectedThumbnail.url);
-const pollLabel = state.pollActive ? 'Poll Live' : (hasSelection ? 'Locked Choice' : '');
-const pollClass = state.pollActive ? 'thumbnail-poll-chip is-live' : (hasSelection ? 'game-thumb-win-badge' : 'thumbnail-poll-chip');
+const pollLabel = overrideThumb ? 'Admin Pick' : (state.pollActive ? 'Poll Live' : (hasSelection ? 'Locked Choice' : ''));
+const pollClass = overrideThumb ? 'game-store-chip' : (state.pollActive ? 'thumbnail-poll-chip is-live' : (hasSelection ? 'game-thumb-win-badge' : 'thumbnail-poll-chip'));
 const totalVotes = getTotalThumbnailVoteCount(state);
 const subtitle = getGameSubtitle(game);
+const isNew = isGameRecentlyAdded(game);
 return `<article class="game-store-card">
 <div class="game-store-thumb">
 <img src="${escapeHtml(thumb)}" alt="${escapeHtml(game.name)} thumbnail" loading="lazy" />
 <div class="game-store-thumb-top">
+${isNew ? '<span class="game-store-chip is-new">New</span>' : ''}
 ${pollLabel ? `<span class="${pollClass}">${escapeHtml(pollLabel)}</span>` : ''}
 </div>
 </div>
@@ -7319,33 +7511,42 @@ const subtitle = document.getElementById('game-thumbnail-poll-subtitle');
 const selected = document.getElementById('game-thumbnail-poll-selected');
 const uploadWrap = document.getElementById('game-thumbnail-upload-wrap');
 const uploadInput = document.getElementById('game-thumbnail-upload-input');
+const overrideWrap = document.getElementById('game-thumbnail-admin-override-wrap');
+const overrideInput = document.getElementById('game-thumbnail-admin-override-input');
 const candidates = document.getElementById('game-thumbnail-poll-candidates');
 const adminActions = document.getElementById('game-thumbnail-poll-admin-actions');
 const status = document.getElementById('game-thumbnail-poll-status');
-if (!title || !subtitle || !selected || !uploadWrap || !uploadInput || !candidates || !adminActions || !status) return;
+if (!title || !subtitle || !selected || !uploadWrap || !uploadInput || !overrideWrap || !overrideInput || !candidates || !adminActions || !status) return;
 if (!game) {
 title.textContent = 'Thumbnail Poll';
 subtitle.textContent = 'Game not found.';
 selected.textContent = '';
 uploadWrap.style.display = 'none';
 uploadInput.value = '';
+overrideWrap.style.display = 'none';
+overrideInput.value = '';
 adminActions.innerHTML = '';
 candidates.innerHTML = '';
 return;
 }
 const state = getGameThumbnailPollState(game.id) || {};
 const options = getGameThumbnailUploadCandidates(state);
+const overrideThumb = getGameThumbnailOverride(state);
 const selectedThumb = state.selectedThumbnail || null;
 title.textContent = `${game.name} Thumbnail Poll`;
 subtitle.textContent = state.pollActive
 ? 'Users can upload thumbnails and vote for the one that should become the permanent card art. It stays locked until an admin starts another poll.'
 : 'No live poll right now. The selected thumbnail stays in place until an admin restarts the poll.';
-selected.textContent = selectedThumb
+selected.textContent = overrideThumb
+? `Admin override active: ${overrideThumb.label || 'Forced thumbnail'}`
+: (selectedThumb
 ? `Current chosen thumbnail: ${selectedThumb.label || 'Selected thumbnail'}`
-: (state.pollActive ? 'No thumbnail locked yet. Users can upload thumbnails below.' : 'No thumbnail has been locked yet.');
+: (state.pollActive ? 'No thumbnail locked yet. Users can upload thumbnails below.' : 'No thumbnail has been locked yet.'));
 status.textContent = '';
 uploadWrap.style.display = state.pollActive ? 'block' : 'none';
 uploadInput.disabled = !state.pollActive;
+overrideWrap.style.display = canAdminSettings(currentChatUser) ? 'block' : 'none';
+overrideInput.value = '';
 adminActions.innerHTML = canAdminSettings(currentChatUser)
 ? `${state.pollActive && options.length ? `<button onclick="finalizeGameThumbnailPoll('${game.id}')" style="background:#2e7d32; color:#fff;">Finalize Winner</button>` : ''}<button onclick="startGameThumbnailPoll('${game.id}')" style="background:#1565c0; color:#fff;">${state.pollActive ? 'Restart Poll' : 'Start Poll'}</button>`
 : '';
@@ -7408,12 +7609,66 @@ gameName: game.name,
 candidates: [],
 pollActive: true,
 votes: {},
+overrideThumbnail: existingData.overrideThumbnail || null,
 selectedThumbnail: existingData.selectedThumbnail || null,
 revision: (parseInt(existingData.revision, 10) || 0) + 1,
 startedBy: currentChatUser,
 startedAt: firebase.firestore.FieldValue.serverTimestamp(),
 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
 });
+}
+
+async function submitAdminGameThumbnailOverride() {
+if (!canAdminSettings(currentChatUser) || !activeGameThumbnailPollId) return;
+const status = document.getElementById('game-thumbnail-poll-status');
+const input = document.getElementById('game-thumbnail-admin-override-input');
+if (status) status.textContent = '';
+const file = input && input.files && input.files[0];
+if (!file) {
+if (status) status.textContent = 'Choose an image file to apply as the override.';
+return;
+}
+try {
+if (status) status.textContent = 'Compressing override thumbnail...';
+const compressedThumbnail = await compressGameThumbnailImage(file);
+const game = getStoreGameById(activeGameThumbnailPollId);
+if (!game) throw new Error('Game not found.');
+await getAdminDb().collection(GAME_THUMBNAIL_POLLS_COLLECTION).doc(game.id).set({
+gameName: game.name,
+overrideThumbnail: {
+id: `override-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+label: `${currentChatUser} override`,
+url: compressedThumbnail,
+uploadedBy: normalizeUsername(currentChatUser),
+uploadedByName: currentChatUser,
+uploadedAtMs: Date.now(),
+source: 'admin-override'
+},
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+await writeAuditLog('set_game_thumbnail_override', game.name || game.id, 'Applied admin thumbnail override');
+if (input) input.value = '';
+if (status) status.textContent = 'Admin thumbnail override applied.';
+} catch (err) {
+if (status) status.textContent = err && err.message ? err.message : 'Failed to apply override thumbnail.';
+}
+}
+
+async function clearAdminGameThumbnailOverride() {
+if (!canAdminSettings(currentChatUser) || !activeGameThumbnailPollId) return;
+const game = getStoreGameById(activeGameThumbnailPollId);
+const status = document.getElementById('game-thumbnail-poll-status');
+if (!game) return;
+try {
+await getAdminDb().collection(GAME_THUMBNAIL_POLLS_COLLECTION).doc(game.id).set({
+overrideThumbnail: null,
+updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+await writeAuditLog('clear_game_thumbnail_override', game.name || game.id, 'Cleared admin thumbnail override');
+if (status) status.textContent = 'Admin thumbnail override cleared.';
+} catch (err) {
+if (status) status.textContent = 'Failed to clear override thumbnail.';
+}
 }
 
 async function submitGameThumbnailUpload() {
@@ -11368,6 +11623,7 @@ loadOnlineUsers();
 loadTypingUsers();
 listenForGameThumbnailPolls();
 listenForSiteActivity();
+listenForBuiltInGameMetadata();
 listenForGameSubmissions();
 loadRoleCache();
 loadUserTagCache();
