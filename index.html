@@ -3068,6 +3068,30 @@ background: #43a047;
 background: #8b5cf6;
 }
 
+.custom-tag.tag-most-money {
+background: linear-gradient(135deg, #f4b400 0%, #c68b00 100%);
+}
+
+.custom-tag.tag-most-active {
+background: linear-gradient(135deg, #26a69a 0%, #00796b 100%);
+}
+
+.custom-tag.tag-least-active {
+background: linear-gradient(135deg, #8d6e63 0%, #5d4037 100%);
+}
+
+.custom-tag.tag-broke-chud {
+background: linear-gradient(135deg, #546e7a 0%, #37474f 100%);
+}
+
+.custom-tag.tag-hot-hand {
+background: linear-gradient(135deg, #ff7043 0%, #ef6c00 100%);
+}
+
+.custom-tag.tag-cold-table {
+background: linear-gradient(135deg, #42a5f5 0%, #1565c0 100%);
+}
+
 .party-action-row {
 display: flex;
 justify-content: center;
@@ -3627,6 +3651,12 @@ box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
 display: none;
 }
 
+#admin-menu .admin-section-body {
+display: flex;
+flex-direction: column;
+min-height: 0;
+}
+
 #admin-menu .admin-section-heading {
 display: flex;
 align-items: center;
@@ -3981,6 +4011,8 @@ document.addEventListener('DOMContentLoaded', function() {
 var userList = document.getElementById('admin-user-list');
 if (typeof bootHighValueFeatureState === 'function') bootHighValueFeatureState();
 if (typeof renderGameStorefront === 'function') renderGameStorefront();
+if (typeof initializeAdminSectionCards === 'function') initializeAdminSectionCards();
+if (typeof scheduleDynamicLeaderboardTagRefresh === 'function') scheduleDynamicLeaderboardTagRefresh(50);
 if (userList) userList.innerHTML = '<option value="">-- Select a user --</option>';
 });
 </script>
@@ -4118,6 +4150,67 @@ if (userList) userList.innerHTML = '<option value="">-- Select a user --</option
 <div class="admin-section-title">Leaderboard</div>
 <div style="font-size:0.8rem; color:#bbb; margin-bottom:0.35rem;">Reset all saved leaderboard points and levels for everyone.</div>
 <button onclick="adminRestartLeaderboard()" style="padding:0.5rem 1rem; background:#8b0000; color:#fff; border:none; border-radius:0.25rem;">Restart Leaderboard</button>
+</div>
+
+<div class="admin-section-card" data-admin-scope="owner">
+<div class="admin-section-title">Casino Controls</div>
+<div class="admin-note-text">Owner only. View and override casino balance and bankruptcy totals.</div>
+<div class="admin-inline-input-row" style="margin-top:0.55rem;">
+<input type="text" id="admin-casino-username" placeholder="Casino username" />
+<button onclick="loadAdminCasinoManager()" style="background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Load</button>
+<button onclick="adminCasinoUseSelectedUser()" style="background:#37474f; color:#fff; border:none; border-radius:0.25rem;">Use Selected User</button>
+</div>
+<div class="admin-inline-input-row">
+<input type="number" id="admin-casino-balance-set" placeholder="Set balance" />
+<button onclick="adminUpdateCasinoBalance('set')" style="background:#1565c0; color:#fff; border:none; border-radius:0.25rem;">Set Balance</button>
+</div>
+<div class="admin-inline-input-row">
+<input type="number" id="admin-casino-balance-adjust" placeholder="Adjust balance (+/-)" />
+<button onclick="adminUpdateCasinoBalance('adjust')" style="background:#6a1b9a; color:#fff; border:none; border-radius:0.25rem;">Adjust Balance</button>
+</div>
+<div class="admin-inline-input-row">
+<input type="number" id="admin-casino-bankruptcies-input" min="0" placeholder="Set bankruptcies" />
+<button onclick="adminSetCasinoBankruptcies()" style="background:#ef6c00; color:#fff; border:none; border-radius:0.25rem;">Set Bankruptcies</button>
+</div>
+<div class="admin-note-text" style="margin-top:0.7rem;">Game chance tuning</div>
+<div style="font-size:0.76rem; color:#9fb0c2; margin-bottom:0.35rem;">Blackjack uses the dealer stand value. Roulette boosts or lowers the selected outcome. Slots use per-symbol chances behind the scenes.</div>
+<div class="admin-inline-input-row">
+<div style="display:grid; gap:0.2rem; flex:1 1 150px; min-width:0;">
+<label for="admin-casino-blackjack-stand" style="font-size:0.72rem; color:#9fb0c2; font-weight:600;">Blackjack dealer stands on</label>
+<input type="number" id="admin-casino-blackjack-stand" min="15" max="19" placeholder="Dealer stands on" />
+</div>
+<div style="display:grid; gap:0.2rem; flex:1 1 150px; min-width:0;">
+<label for="admin-casino-roulette-boost" style="font-size:0.72rem; color:#9fb0c2; font-weight:600;">Roulette selected boost %</label>
+<input type="number" id="admin-casino-roulette-boost" min="-80" max="300" placeholder="Roulette selected boost %" />
+</div>
+</div>
+<div class="admin-inline-input-row">
+<div style="display:grid; gap:0.2rem; flex:1 1 120px; min-width:0;">
+<label for="admin-casino-slot-weight-7" style="font-size:0.72rem; color:#9fb0c2; font-weight:600;">7 chance</label>
+<input type="number" id="admin-casino-slot-weight-7" min="1" max="50" placeholder="7 chance" />
+</div>
+<div style="display:grid; gap:0.2rem; flex:1 1 120px; min-width:0;">
+<label for="admin-casino-slot-weight-bar" style="font-size:0.72rem; color:#9fb0c2; font-weight:600;">BAR chance</label>
+<input type="number" id="admin-casino-slot-weight-bar" min="1" max="50" placeholder="BAR chance" />
+</div>
+<div style="display:grid; gap:0.2rem; flex:1 1 120px; min-width:0;">
+<label for="admin-casino-slot-weight-cherry" style="font-size:0.72rem; color:#9fb0c2; font-weight:600;">CHERRY chance</label>
+<input type="number" id="admin-casino-slot-weight-cherry" min="1" max="50" placeholder="CHERRY chance" />
+</div>
+</div>
+<div class="admin-inline-input-row">
+<div style="display:grid; gap:0.2rem; flex:1 1 120px; min-width:0;">
+<label for="admin-casino-slot-weight-star" style="font-size:0.72rem; color:#9fb0c2; font-weight:600;">STAR chance</label>
+<input type="number" id="admin-casino-slot-weight-star" min="1" max="50" placeholder="STAR chance" />
+</div>
+<div style="display:grid; gap:0.2rem; flex:1 1 120px; min-width:0;">
+<label for="admin-casino-slot-weight-bell" style="font-size:0.72rem; color:#9fb0c2; font-weight:600;">BELL chance</label>
+<input type="number" id="admin-casino-slot-weight-bell" min="1" max="50" placeholder="BELL chance" />
+</div>
+<button onclick="adminSaveCasinoGameSettings()" style="background:#00695c; color:#fff; border:none; border-radius:0.25rem;">Save Chances</button>
+</div>
+<div id="admin-casino-status" class="admin-note-text" style="margin-top:0.5rem;"></div>
+<div id="admin-casino-manager" class="admin-scroll-panel" style="max-height:220px; margin-top:0.55rem;"></div>
 </div>
 
 <div class="admin-section-card" data-admin-scope="admin">
@@ -4275,6 +4368,8 @@ if (userList) userList.innerHTML = '<option value="">-- Select a user --</option
 </div>
 <div class="store-hero-actions">
 <button onclick="openGameSubmissionModal()">Suggest a Game</button>
+<button onclick="openCasinoModal()">Casino</button>
+<button onclick="openCasinoLeaderboardModal()">Casino Leaderboard</button>
 <button onclick="openCustomUrlModal()">Open URL</button>
 <button class="store-hero-button-secondary" onclick="openCreditsModal()">Credits</button>
 </div>
@@ -4793,7 +4888,7 @@ oninput="onChatInput()"
 </div>
 <div style="margin-top:0.95rem; color:#ddd; line-height:1.65; font-size:0.98rem;">
 <div><strong>kaiden - owner</strong></div>
-<div style="margin-top:0.45rem;"><strong>jeremy_wade/kyler - contributed</strong> the profile improvements, UI rework, and game suggestions/login to server (makes it easier to approve and add logins/games)</div>
+<div style="margin-top:0.45rem;"><strong>jeremy_wade/kyler - contributed</strong> the profile improvements, UI rework, and game suggestions/login to server (makes it easier to approve and add logins/games), and the casino idea.</div>
 </div>
 </div>
 </div>
@@ -5175,6 +5270,2268 @@ oninput="onChatInput()"
 </div>
 
 <script>
+// --- Casino Modal and Logic ---
+function getCasinoPlayerKey() {
+  return String(currentChatUser || (typeof getUserName === 'function' ? getUserName() : '') || '').trim().toLowerCase();
+}
+
+function getCasinoPlayerDisplayName() {
+  return String(currentChatUser || (typeof getUserName === 'function' ? getUserName() : '') || 'Guest').trim() || 'Guest';
+}
+
+function syncCasinoModalOverflow() {
+  const anyCasinoModalOpen = ['casino-modal', 'casino-leaderboard-modal'].some((id) => {
+    const node = document.getElementById(id);
+    return !!(node && node.style.display === 'flex');
+  });
+  document.body.style.overflow = anyCasinoModalOpen ? 'hidden' : 'auto';
+}
+
+function getCasinoBalanceCollection() {
+  return getCasinoDb().collection('casino_balances');
+}
+
+function getCasinoActivityCollection() {
+  return getCasinoDb().collection(CASINO_ACTIVITY_COLLECTION);
+}
+
+function getCasinoConfigCollection() {
+  return getCasinoDb().collection(CASINO_CONFIG_COLLECTION);
+}
+
+function getCasinoGameSettingsDoc() {
+  return getCasinoConfigCollection().doc(CASINO_GAME_SETTINGS_DOC_ID);
+}
+
+const CASINO_BAILOUT_COOLDOWN_MS = 60 * 60 * 1000;
+
+function getDefaultCasinoGameSettings() {
+  return {
+    blackjackDealerStandValue: 17,
+    rouletteSelectedBoostPct: 0,
+    slotsSymbolWeights: { ...SLOT_SYMBOL_DEFAULT_WEIGHTS }
+  };
+}
+
+function normalizeCasinoGameSettingsData(data = {}) {
+  const defaults = getDefaultCasinoGameSettings();
+  const rawWeights = (data && typeof data.slotsSymbolWeights === 'object' && data.slotsSymbolWeights) ? data.slotsSymbolWeights : {};
+  const normalizedWeights = {};
+  Object.keys(defaults.slotsSymbolWeights).forEach((symbol) => {
+    const fallback = defaults.slotsSymbolWeights[symbol];
+    normalizedWeights[symbol] = Math.max(1, Math.min(50, Math.floor(Number(rawWeights[symbol] ?? fallback) || fallback)));
+  });
+  return {
+    blackjackDealerStandValue: Math.max(15, Math.min(19, Math.floor(Number(data.blackjackDealerStandValue ?? defaults.blackjackDealerStandValue) || defaults.blackjackDealerStandValue))),
+    rouletteSelectedBoostPct: Math.max(-80, Math.min(300, Math.floor(Number(data.rouletteSelectedBoostPct ?? defaults.rouletteSelectedBoostPct) || 0))),
+    slotsSymbolWeights: normalizedWeights
+  };
+}
+
+function getCachedCasinoGameSettings() {
+  if (!casinoGameSettingsCache) {
+    casinoGameSettingsCache = getDefaultCasinoGameSettings();
+  }
+  return normalizeCasinoGameSettingsData(casinoGameSettingsCache);
+}
+
+async function loadCasinoGameSettings(force = false) {
+  if (!force && casinoGameSettingsCache) {
+    return getCachedCasinoGameSettings();
+  }
+  if (!force && casinoGameSettingsLoadPromise) return casinoGameSettingsLoadPromise;
+  casinoGameSettingsLoadPromise = (async () => {
+    try {
+      const doc = await getCasinoGameSettingsDoc().get();
+      const nextSettings = normalizeCasinoGameSettingsData(doc.exists ? (doc.data() || {}) : {});
+      casinoGameSettingsCache = nextSettings;
+      if (!doc.exists) {
+        await getCasinoGameSettingsDoc().set(nextSettings, { merge: true });
+      }
+    } catch (_) {
+      casinoGameSettingsCache = getCachedCasinoGameSettings();
+    }
+    return getCachedCasinoGameSettings();
+  })().finally(() => {
+    casinoGameSettingsLoadPromise = null;
+  });
+  return casinoGameSettingsLoadPromise;
+}
+
+async function saveCasinoGameSettings(settings) {
+  const normalized = normalizeCasinoGameSettingsData(settings);
+  await getCasinoGameSettingsDoc().set(normalized, { merge: true });
+  casinoGameSettingsCache = normalized;
+  return normalized;
+}
+
+function getSlotWeightEntries(settings = getCachedCasinoGameSettings()) {
+  const weights = settings.slotsSymbolWeights || SLOT_SYMBOL_DEFAULT_WEIGHTS;
+  const total = Math.max(1, Object.values(weights).reduce((sum, value) => sum + Math.max(1, Number(value) || 0), 0));
+  return Object.keys(SLOT_SYMBOL_DEFAULT_WEIGHTS).map((symbol) => ({
+    symbol,
+    weight: Math.max(1, Number(weights[symbol] || SLOT_SYMBOL_DEFAULT_WEIGHTS[symbol])),
+    pct: Math.round((Math.max(1, Number(weights[symbol] || SLOT_SYMBOL_DEFAULT_WEIGHTS[symbol])) / total) * 1000) / 10
+  }));
+}
+
+function pickWeightedSlotSymbol(settings = getCachedCasinoGameSettings()) {
+  const entries = getSlotWeightEntries(settings);
+  const total = entries.reduce((sum, entry) => sum + entry.weight, 0);
+  let roll = Math.random() * total;
+  for (const entry of entries) {
+    roll -= entry.weight;
+    if (roll <= 0) return entry.symbol;
+  }
+  return entries[entries.length - 1].symbol;
+}
+
+function getSlotSymbolEmoji(symbol) {
+  return SLOT_SYMBOL_EMOJIS[symbol] || SLOT_SYMBOL_EMOJIS['?'];
+}
+
+function getCasinoCardLabel(card) {
+  if (!card) return '🂠';
+  return `${card.rank}${card.suit}`;
+}
+
+function isCasinoRedSuit(card) {
+  return !!(card && (card.suit === '♥' || card.suit === '♦'));
+}
+
+function renderCasinoPlayingCard(card, options = {}) {
+  const hidden = !!options.hidden;
+  const compact = !!options.compact;
+  const selectable = !!options.selectable;
+  const selected = !!options.selected;
+  const label = hidden ? '🂠' : getCasinoCardLabel(card);
+  const accentColor = hidden ? '#1d2b3b' : (isCasinoRedSuit(card) ? '#b71c1c' : '#111');
+  const baseStyle = `display:inline-flex; align-items:center; justify-content:center; flex-direction:column; min-width:${compact ? '3.05rem' : '3.7rem'}; min-height:${compact ? '4.05rem' : '5rem'}; padding:${compact ? '0.45rem 0.42rem' : '0.65rem 0.55rem'}; border-radius:0.75rem; background:linear-gradient(180deg, #ffffff 0%, #eef4fb 100%); color:${accentColor}; font-weight:800; border:2px solid ${selected ? '#ff7043' : '#d7dee8'}; box-shadow:${selected ? '0 0 0 2px rgba(255,112,67,0.28), 0 14px 24px rgba(0,0,0,0.14)' : '0 14px 24px rgba(0,0,0,0.14)'}; letter-spacing:0.03em;`;
+  if (!selectable) {
+    return `<span style="${baseStyle}">${escapeHtml(label)}</span>`;
+  }
+  return `<button onclick="togglePokerDiscard(${Number(options.index) || 0})" style="${baseStyle}; cursor:pointer;">${escapeHtml(label)}</button>`;
+}
+
+function renderCasinoCardRow(cards, options = {}) {
+  const hiddenSecond = !!options.hiddenSecond;
+  const hidden = !!options.hidden;
+  const compact = !!options.compact;
+  const selectable = !!options.selectable;
+  const selectedIndexes = Array.isArray(options.selectedIndexes) ? options.selectedIndexes : [];
+  return (Array.isArray(cards) ? cards : []).map((card, index) => renderCasinoPlayingCard(card, {
+    hidden: hidden || (hiddenSecond && index === 1),
+    compact,
+    selectable,
+    selected: selectedIndexes.includes(index),
+    index
+  })).join('');
+}
+
+function getRoulettePockets() {
+  return Array.from({ length: 15 }, (_, value) => ({
+    value,
+    color: value === 0 ? 'green' : (value % 2 === 0 ? 'black' : 'red')
+  }));
+}
+
+function renderRouletteVisualization(state = rouletteVisualState) {
+  const node = document.getElementById('roulette-visual');
+  if (!node) return;
+  const activeValue = Number.isInteger(state.activeValue) ? state.activeValue : null;
+  const winningValue = Number.isInteger(state.winningValue) ? state.winningValue : null;
+  node.innerHTML = `
+    <div style="display:grid; gap:0.7rem; width:min(34rem, 100%);">
+      <div style="padding:0.9rem; border-radius:1rem; background:radial-gradient(circle at top, rgba(56,142,60,0.36) 0%, rgba(8,20,12,0.95) 72%); border:1px solid #244028; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.04); display:grid; gap:0.7rem;">
+        <div style="display:flex; justify-content:space-between; gap:0.6rem; align-items:center; flex-wrap:wrap; font-size:0.78rem; color:#c7d4e2;">
+          <span>Ball ${state.spinning ? 'spinning...' : (winningValue != null ? `stopped on ${winningValue}` : 'waiting for spin')}</span>
+          <span>${state.selectedChoice ? `Bet: ${escapeHtml(String(state.selectedChoice).toUpperCase())}` : 'Pick a color to spin'}</span>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(15, minmax(0, 1fr)); gap:0.3rem; align-items:center;">
+          ${getRoulettePockets().map((pocket) => {
+            const isActive = activeValue === pocket.value;
+            const isWinner = winningValue === pocket.value;
+            const background = pocket.color === 'red' ? '#b71c1c' : (pocket.color === 'black' ? '#12161d' : '#2e7d32');
+            return `<div style="min-height:3.25rem; border-radius:0.72rem; display:flex; align-items:center; justify-content:center; font-weight:800; color:#fff; background:${background}; border:2px solid ${isWinner ? '#f6d365' : isActive ? '#90caf9' : 'rgba(255,255,255,0.12)'}; box-shadow:${isWinner ? '0 0 0 2px rgba(246,211,101,0.28), 0 14px 28px rgba(0,0,0,0.22)' : isActive ? '0 0 0 2px rgba(144,202,249,0.2)' : 'none'}; transform:${isActive ? 'translateY(-2px)' : 'none'}; transition:transform 120ms ease, box-shadow 120ms ease;">${pocket.value}</div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div style="display:flex; justify-content:center; gap:0.6rem; flex-wrap:wrap; font-size:0.8rem; color:#9fb0c2;">
+        <span style="padding:0.35rem 0.6rem; border-radius:999px; background:#241012; color:#ffb4b4; border:1px solid rgba(255,255,255,0.08);">Red pockets</span>
+        <span style="padding:0.35rem 0.6rem; border-radius:999px; background:#0d1016; color:#dce6f2; border:1px solid rgba(255,255,255,0.08);">Black pockets</span>
+        <span style="padding:0.35rem 0.6rem; border-radius:999px; background:#102418; color:#b9f6ca; border:1px solid rgba(255,255,255,0.08);">0 is green</span>
+      </div>
+    </div>`;
+}
+
+async function animateRouletteSpin(finalPocket, selectedChoice) {
+  rouletteVisualState = {
+    selectedChoice,
+    winningValue: null,
+    activeValue: 0,
+    spinning: true
+  };
+  const pockets = getRoulettePockets();
+  const totalSteps = 26 + (Number(finalPocket && finalPocket.value) || 0);
+  for (let step = 0; step < totalSteps; step += 1) {
+    const activePocket = pockets[step % pockets.length];
+    rouletteVisualState = {
+      selectedChoice,
+      winningValue: null,
+      activeValue: activePocket.value,
+      spinning: true
+    };
+    renderRouletteVisualization();
+    await waitForMs(Math.min(180, 45 + (step * 5)));
+  }
+  rouletteVisualState = {
+    selectedChoice,
+    winningValue: finalPocket.value,
+    activeValue: finalPocket.value,
+    spinning: false
+  };
+  renderRouletteVisualization();
+}
+
+function renderSlotFace(symbol, options = {}) {
+  const label = String(options.label || (symbol === '?' ? 'ANY' : symbol || '?')).trim();
+  const emoji = String(options.emoji || getSlotSymbolEmoji(symbol));
+  const compact = !!options.compact;
+  const spinning = !!options.spinning;
+  return `
+    <div style="min-width:${compact ? '2.9rem' : '4.6rem'}; min-height:${compact ? '3.3rem' : '5rem'}; padding:${compact ? '0.3rem 0.35rem' : '0.45rem 0.5rem'}; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:${compact ? '0.18rem' : '0.28rem'}; border-radius:0.8rem; background:linear-gradient(180deg, #fff8e1 0%, #f6d365 100%); color:#24140d; border:2px solid rgba(255,255,255,0.4); box-shadow:${spinning ? '0 16px 30px rgba(246, 211, 101, 0.3)' : '0 10px 24px rgba(0,0,0,0.18)'}; transform:${spinning ? 'translateY(-2px) scale(1.03)' : 'none'}; transition:transform 120ms ease, box-shadow 120ms ease;">
+      <span style="font-size:${compact ? '1.55rem' : '2.25rem'}; line-height:1;">${escapeHtml(emoji)}</span>
+      <span style="font-size:${compact ? '0.56rem' : '0.68rem'}; font-weight:800; letter-spacing:0.08em; color:#5f3a18;">${escapeHtml(label)}</span>
+    </div>`;
+}
+
+function setSlotsSpinButtonState(isSpinning) {
+  const button = document.getElementById('slots-spin-button');
+  if (!button) return;
+  button.disabled = !!isSpinning;
+  button.textContent = isSpinning ? 'Spinning...' : 'Spin';
+  button.style.opacity = isSpinning ? '0.7' : '1';
+  button.style.cursor = isSpinning ? 'wait' : 'pointer';
+}
+
+function waitForMs(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function animateSlotsSpin(finalReels, settings = getCachedCasinoGameSettings()) {
+  const totalFrames = 16;
+  for (let frameIndex = 0; frameIndex < totalFrames; frameIndex += 1) {
+    const frame = finalReels.map((finalSymbol, reelIndex) => {
+      const lockFrame = totalFrames - ((reelIndex + 1) * 4);
+      return frameIndex >= lockFrame ? finalSymbol : pickWeightedSlotSymbol(settings);
+    });
+    slotsVisualState = frame.slice();
+    renderSlotsVisualization(frame, settings, { spinning: true });
+    await waitForMs(75 + (frameIndex * 7));
+  }
+  slotsVisualState = finalReels.slice();
+  renderSlotsVisualization(finalReels, settings, { spinning: false });
+}
+
+function renderSlotsVisualization(reels = slotsVisualState, settings = getCachedCasinoGameSettings(), options = {}) {
+  const reelNode = document.getElementById('slots-reel-visual');
+  const oddsNode = document.getElementById('slots-odds-visual');
+  const spinning = !!options.spinning;
+  if (reelNode) {
+    reelNode.innerHTML = (Array.isArray(reels) ? reels : slotsVisualState).map((symbol) => renderSlotFace(symbol, { spinning })).join('');
+  }
+  if (oddsNode) {
+    oddsNode.innerHTML = `
+      <div style="padding:0.8rem; border-radius:0.8rem; background:#10151d; border:1px solid #263140; display:grid; gap:0.55rem;">
+        <div style="font-size:0.82rem; font-weight:700; color:#fff;">Slots payout combinations</div>
+        <div style="display:grid; gap:0.45rem;">
+          <div style="display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:0.6rem; align-items:center;"><div style="display:flex; gap:0.35rem; flex-wrap:wrap;">${['7', '7', '7'].map((symbol) => renderSlotFace(symbol, { compact: true })).join('')}<span style="font-size:0.76rem; color:#9fb0c2; align-self:center;">if all 3 are 7s</span></div><div style="font-weight:700; color:#9fe3a5;">8x bet</div></div>
+          <div style="display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:0.6rem; align-items:center;"><div style="display:flex; gap:0.35rem; flex-wrap:wrap;">${['BAR', 'BAR', 'BAR'].map((symbol) => renderSlotFace(symbol, { compact: true })).join('')}<span style="font-size:0.76rem; color:#9fb0c2; align-self:center;">if all 3 match</span></div><div style="font-weight:700; color:#9fe3a5;">3x bet</div></div>
+          <div style="display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:0.6rem; align-items:center;"><div style="display:flex; gap:0.35rem; flex-wrap:wrap;">${renderSlotFace('CHERRY', { compact: true })}${renderSlotFace('CHERRY', { compact: true })}${renderSlotFace('?', { compact: true, label: 'ANY', emoji: '✨' })}<span style="font-size:0.76rem; color:#9fb0c2; align-self:center;">if any 2 match</span></div><div style="font-weight:700; color:#90caf9;">1x bet</div></div>
+          <div style="display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:0.6rem; align-items:center;"><div style="display:flex; gap:0.35rem; flex-wrap:wrap;">${['7', 'BAR', 'BELL'].map((symbol) => renderSlotFace(symbol, { compact: true })).join('')}<span style="font-size:0.76rem; color:#9fb0c2; align-self:center;">if none match</span></div><div style="font-weight:700; color:#ffb4a8;">lose bet</div></div>
+        </div>
+      </div>`;
+  }
+}
+
+function sanitizeCasinoAchievementIds(ids) {
+  const knownIds = new Set(CASINO_ACHIEVEMENTS.map((item) => item.id));
+  return Array.from(new Set((Array.isArray(ids) ? ids : [])
+    .map((id) => sanitizeNullableText(id, ''))
+    .filter((id) => knownIds.has(id)))).sort();
+}
+
+function getCasinoUnlockedAchievements(stats) {
+  return CASINO_ACHIEVEMENTS.filter((item) => Math.max(0, Number(stats && stats[item.stat] || 0)) >= item.goal);
+}
+
+function getCasinoUnlockedAchievementIds(stats) {
+  return getCasinoUnlockedAchievements(stats).map((item) => item.id);
+}
+
+function getCasinoGameLabel(gameKey) {
+  if (gameKey === 'blackjack') return 'Blackjack';
+  if (gameKey === 'roulette') return 'Roulette';
+  if (gameKey === 'slots') return 'Slots';
+  if (gameKey === 'poker') return 'Poker';
+  return 'Casino';
+}
+
+function normalizeCasinoProfileStatsData(username, data = {}) {
+  const key = normalizeUsername(username);
+  const balance = Math.max(0, Number(data.balance ?? 1000));
+  const biggestBalance = Math.max(balance, Math.max(0, Number(data.biggestBalance ?? 1000)));
+  const normalizedStats = {
+    username: key,
+    balance,
+    bankruptcies: Math.max(0, Number(data.bankruptcies ?? 0)),
+    wins: Math.max(0, Number(data.wins ?? 0)),
+    losses: Math.max(0, Number(data.losses ?? 0)),
+    pushes: Math.max(0, Number(data.pushes ?? 0)),
+    gamesPlayed: Math.max(0, Number(data.gamesPlayed ?? 0)),
+    totalWagered: Math.max(0, Number(data.totalWagered ?? 0)),
+    biggestWin: Math.max(0, Number(data.biggestWin ?? 0)),
+    biggestBalance,
+    currentWinStreak: Math.max(0, Number(data.currentWinStreak ?? 0)),
+    currentLossStreak: Math.max(0, Number(data.currentLossStreak ?? 0)),
+    bestWinStreak: Math.max(0, Number(data.bestWinStreak ?? 0)),
+    worstLossStreak: Math.max(0, Number(data.worstLossStreak ?? 0)),
+    hotHandUntilMs: Math.max(0, Number(data.hotHandUntilMs ?? 0)),
+    coldTableUntilMs: Math.max(0, Number(data.coldTableUntilMs ?? 0)),
+    reliefClaims: Math.max(0, Number(data.reliefClaims ?? 0)),
+    lastReliefClaimAtMs: Math.max(0, Number(data.lastReliefClaimAtMs ?? 0)),
+    lastGameAtMs: Math.max(0, Number(data.lastGameAtMs ?? 0))
+  };
+  normalizedStats.achievementIds = Array.from(new Set([
+    ...sanitizeCasinoAchievementIds(data.achievementIds),
+    ...getCasinoUnlockedAchievementIds(normalizedStats)
+  ])).sort();
+  return normalizedStats;
+}
+
+function getDefaultCasinoProfileStats(username = '') {
+  return normalizeCasinoProfileStatsData(username, {});
+}
+
+function getCachedCasinoProfileStats(username) {
+  const key = normalizeUsername(username);
+  if (!key) return getDefaultCasinoProfileStats('');
+  return {
+    ...getDefaultCasinoProfileStats(key),
+    ...(casinoProfileStatsCache[key] || {}),
+    username: key
+  };
+}
+
+async function loadCasinoProfileStats(username) {
+  const key = normalizeUsername(username);
+  if (!key) return getDefaultCasinoProfileStats('');
+  try {
+    const doc = await getCasinoBalanceCollection().doc(key).get();
+    if (doc.exists) {
+      casinoProfileStatsCache[key] = normalizeCasinoProfileStatsData(key, doc.data() || {});
+    } else {
+      casinoProfileStatsCache[key] = getDefaultCasinoProfileStats(key);
+    }
+  } catch (_) {}
+  return getCachedCasinoProfileStats(key);
+}
+
+async function ensureCasinoBalanceRecord() {
+  const user = getCasinoPlayerKey();
+  const displayName = getCasinoPlayerDisplayName();
+  if (!user) {
+    const emptyStats = normalizeCasinoProfileStatsData('', { balance: 0 });
+    return { user: '', displayName, ref: null, ...emptyStats };
+  }
+  const ref = getCasinoBalanceCollection().doc(user);
+  const snap = await ref.get();
+  const stats = normalizeCasinoProfileStatsData(user, snap.exists ? (snap.data() || {}) : {});
+  if (snap.exists) {
+    const data = snap.data() || {};
+    if (data.displayName !== displayName
+      || data.username !== user
+      || typeof data.bankruptcies !== 'number'
+      || typeof data.wins !== 'number'
+      || typeof data.losses !== 'number'
+      || typeof data.pushes !== 'number'
+      || typeof data.gamesPlayed !== 'number'
+      || typeof data.totalWagered !== 'number'
+      || typeof data.biggestWin !== 'number'
+      || typeof data.biggestBalance !== 'number'
+      || typeof data.currentWinStreak !== 'number'
+      || typeof data.currentLossStreak !== 'number'
+      || typeof data.bestWinStreak !== 'number'
+      || typeof data.worstLossStreak !== 'number'
+      || typeof data.hotHandUntilMs !== 'number'
+      || typeof data.coldTableUntilMs !== 'number'
+      || typeof data.reliefClaims !== 'number'
+      || typeof data.lastReliefClaimAtMs !== 'number'
+      || typeof data.lastGameAtMs !== 'number'
+      || !Array.isArray(data.achievementIds)) {
+      await ref.set({
+        username: user,
+        displayName,
+        ...stats,
+        updatedAtMs: Date.now()
+      }, { merge: true });
+    }
+  } else {
+    await ref.set({
+      username: user,
+      displayName,
+      ...stats,
+      updatedAtMs: Date.now()
+    }, { merge: true });
+  }
+  casinoProfileStatsCache[user] = stats;
+  return { user, displayName, ref, ...stats };
+}
+
+function renderCasinoActivityFeed() {
+  const container = document.getElementById('casino-activity-feed');
+  if (!container) return;
+  if (!casinoActivityCache.length) {
+    container.innerHTML = '<div class="activity-feed-empty">No casino action yet. Big wins, bankruptcies, and unlocks show here.</div>';
+    return;
+  }
+  container.innerHTML = casinoActivityCache.map((item) => `
+    <div class="activity-feed-item">
+      <div class="activity-feed-head">
+        <div class="activity-feed-title">${escapeHtml(item.title || 'Casino Activity')}</div>
+        <div class="activity-feed-meta">${escapeHtml(formatRelativeTime(item.atMs || 0))}</div>
+      </div>
+      <div class="activity-feed-body">${escapeHtml(item.body || '')}</div>
+    </div>`).join('');
+}
+
+function stopListeningForCasinoActivity() {
+  if (casinoActivityUnsub) {
+    casinoActivityUnsub();
+    casinoActivityUnsub = null;
+  }
+}
+
+function listenForCasinoActivity() {
+  renderCasinoActivityFeed();
+  try {
+    stopListeningForCasinoActivity();
+    casinoActivityUnsub = getCasinoActivityCollection()
+      .orderBy('createdAt', 'desc')
+      .limit(MAX_CASINO_ACTIVITY_ITEMS)
+      .onSnapshot((snapshot) => {
+        casinoActivityCache = snapshot.docs.map((doc) => {
+          const data = doc.data() || {};
+          return {
+            type: sanitizeNullableText(data.type, 'activity'),
+            title: sanitizeNullableText(data.title, 'Casino Activity'),
+            body: sanitizeNullableText(data.body, ''),
+            atMs: data.createdAt && typeof data.createdAt.toDate === 'function' ? data.createdAt.toDate().getTime() : Math.max(0, Number(data.atMs || 0))
+          };
+        });
+        renderCasinoActivityFeed();
+      }, () => {
+        renderCasinoActivityFeed();
+      });
+  } catch (_) {
+    renderCasinoActivityFeed();
+  }
+}
+
+async function publishCasinoActivity(items) {
+  const entries = (Array.isArray(items) ? items : [items]).filter(Boolean);
+  if (!entries.length) return;
+  try {
+    await Promise.all(entries.map((item) => getCasinoActivityCollection().add({
+      type: sanitizeNullableText(item.type, 'activity'),
+      title: sanitizeNullableText(item.title, 'Casino Activity').slice(0, 120),
+      body: sanitizeNullableText(item.body, '').slice(0, 220),
+      by: sanitizeNullableText(item.by, getCasinoPlayerKey() || 'guest'),
+      atMs: Date.now(),
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    })));
+  } catch (_) {}
+}
+
+function renderCasinoSidebar(stats = getCachedCasinoProfileStats(getCasinoPlayerKey())) {
+  const statsNode = document.getElementById('casino-sidebar-stats');
+  const achievementNode = document.getElementById('casino-achievement-list');
+  if (!statsNode || !achievementNode) return;
+  const resolvedStats = normalizeCasinoProfileStatsData((stats && stats.username) || getCasinoPlayerKey(), stats || {});
+  const winRate = resolvedStats.gamesPlayed ? `${Math.round((resolvedStats.wins / resolvedStats.gamesPlayed) * 100)}%` : '0%';
+  const hotHandActive = resolvedStats.hotHandUntilMs > Date.now();
+  const summaryItems = [
+    ['Record', `${resolvedStats.wins}W / ${resolvedStats.losses}L / ${resolvedStats.pushes}P`],
+    ['Win Rate', winRate],
+    ['Hot Streak', String(resolvedStats.currentWinStreak)],
+    ['Loss Streak', String(resolvedStats.currentLossStreak)],
+    ['Best Heater', String(resolvedStats.bestWinStreak)],
+    ['Worst Slide', String(resolvedStats.worstLossStreak)],
+    ['Achievements', `${resolvedStats.achievementIds.length}/${CASINO_ACHIEVEMENTS.length}`],
+    ['Hot Hand', hotHandActive ? `Live for ${formatRemainingDuration(resolvedStats.hotHandUntilMs - Date.now())}` : 'Inactive'],
+    ['Cold Table', resolvedStats.coldTableUntilMs > Date.now() ? `Live for ${formatRemainingDuration(resolvedStats.coldTableUntilMs - Date.now())}` : 'Inactive']
+  ];
+  statsNode.innerHTML = `<div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:0.45rem;">${summaryItems.map(([label, value]) => `<div style="padding:0.55rem; background:#121720; border:1px solid #263140; border-radius:0.6rem;"><div style="font-size:0.72rem; color:#90a4ae;">${escapeHtml(label)}</div><div style="margin-top:0.2rem; color:#fff; font-weight:700;">${escapeHtml(value)}</div></div>`).join('')}</div>`;
+  achievementNode.innerHTML = CASINO_ACHIEVEMENTS.map((item) => {
+    const progress = Math.max(0, Number(resolvedStats[item.stat] || 0));
+    const unlocked = resolvedStats.achievementIds.includes(item.id);
+    const displayProgress = Math.min(item.goal, progress);
+    const nearComplete = !unlocked && item.goal > 1 && (displayProgress / item.goal) >= 0.8;
+    return `<div class="achievement-item ${unlocked ? 'unlocked' : ''}"><div><div style="font-weight:bold;">${escapeHtml(item.label)}</div><div style="font-size:0.78rem; color:#bbb; margin-top:0.15rem;">${escapeHtml(item.description)}</div>${nearComplete ? '<div class="achievement-near">Almost there</div>' : ''}</div><div style="white-space:nowrap; color:${unlocked ? '#66bb6a' : '#ffca28'}; font-weight:bold;">${displayProgress}/${item.goal}</div></div>`;
+  }).join('');
+}
+
+function openCasinoModal() {
+  if (!getCasinoPlayerKey()) {
+    alert('You must be logged in to play the casino.');
+    return;
+  }
+  let modal = document.getElementById('casino-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'casino-modal';
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100vw';
+    modal.style.height = '100vh';
+    modal.style.background = 'rgba(0,0,0,0.85)';
+    modal.style.zIndex = '9999';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.innerHTML = `
+      <div style="background:#181c24;padding:2rem;border-radius:1.2rem;box-shadow:0 8px 32px #000;width:min(74rem, calc(100vw - 2rem));max-width:95vw;max-height:88vh;overflow:auto;text-align:left;color:#fff;position:relative;">
+        <h2 style="margin-top:0;margin-bottom:0.6rem;font-size:2rem;">Casino 🎰</h2>
+        <div id="casino-balance" style="font-size:1.1rem;margin-bottom:1rem;">Loading...</div>
+        <div id="casino-game-area"></div>
+        <button onclick="closeCasinoModal()" style="position:absolute;top:1rem;right:1rem;background:#222;border:none;border-radius:50%;width:36px;height:36px;color:#fff;font-size:1.2rem;">×</button>
+      </div>
+    `;
+    modal.addEventListener('click', function(event) {
+      if (event.target === modal) closeCasinoModal();
+    });
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+  syncCasinoModalOverflow();
+  renderCasinoGame();
+  listenForCasinoActivity();
+  loadCasinoGameSettings().then(() => {
+    if (document.getElementById('casino-modal')?.style.display === 'flex') {
+      renderActiveCasinoGamePanel();
+    }
+  }).catch(() => {});
+  loadCasinoBalance().catch(() => {
+    const balanceNode = document.getElementById('casino-balance');
+    if (balanceNode) balanceNode.textContent = 'Could not load balance.';
+  });
+}
+
+function closeCasinoModal() {
+  const modal = document.getElementById('casino-modal');
+  if (modal) modal.style.display = 'none';
+  stopListeningForCasinoActivity();
+  if (typeof stopListeningForPokerRooms === 'function') stopListeningForPokerRooms();
+  syncCasinoModalOverflow();
+}
+
+function openCasinoLeaderboardModal() {
+  let modal = document.getElementById('casino-leaderboard-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'casino-leaderboard-modal';
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100vw';
+    modal.style.height = '100vh';
+    modal.style.background = 'rgba(0,0,0,0.85)';
+    modal.style.zIndex = '9999';
+    modal.style.display = 'none';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.innerHTML = `
+      <div style="background:#181c24;padding:2rem;border-radius:1.2rem;box-shadow:0 8px 32px #000;width:min(48rem, calc(100vw - 2rem));max-width:95vw;max-height:85vh;text-align:left;color:#fff;position:relative;overflow:hidden;">
+        <h2 style="margin:0 0 1rem 0;font-size:1.8rem;">Casino Leaderboard</h2>
+        <div style="color:#8ea0bc;font-size:0.9rem;margin-bottom:1rem;">Top balance across everyone.</div>
+        <div id="casino-leaderboard-list" style="overflow:auto;max-height:55vh;padding-right:0.15rem;"></div>
+        <button onclick="closeCasinoLeaderboardModal()" style="position:absolute;top:1rem;right:1rem;background:#222;border:none;border-radius:50%;width:36px;height:36px;color:#fff;font-size:1.2rem;">×</button>
+      </div>
+    `;
+    modal.addEventListener('click', function(event) {
+      if (event.target === modal) closeCasinoLeaderboardModal();
+    });
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+  syncCasinoModalOverflow();
+  loadCasinoLeaderboard();
+}
+
+function closeCasinoLeaderboardModal() {
+  const modal = document.getElementById('casino-leaderboard-modal');
+  if (modal) modal.style.display = 'none';
+  syncCasinoModalOverflow();
+}
+
+async function loadCasinoLeaderboard() {
+  const list = document.getElementById('casino-leaderboard-list');
+  if (!list) return;
+  list.innerHTML = '<div style="color:#8ea0bc;">Loading leaderboard...</div>';
+  try {
+    const adminDb = getAdminDb();
+    const [balancesSnapshot, approvedAccountsSnapshot, profilesSnapshot] = await Promise.all([
+      getCasinoBalanceCollection().get(),
+      adminDb.collection(LOGIN_REQUESTS_COLLECTION).where('status', '==', 'approved').get(),
+      adminDb.collection(USER_PROFILES_COLLECTION).get()
+    ]);
+    const balanceMap = {};
+    balancesSnapshot.forEach((doc) => {
+      const data = doc.data() || {};
+      const key = normalizeUsername(data.username || doc.id);
+      if (!key) return;
+      balanceMap[key] = {
+        balance: Math.max(0, Number(data.balance || 0)),
+        displayName: sanitizeNullableText(data.displayName || key, key)
+      };
+    });
+    const knownUsers = new Set();
+    Object.keys(balanceMap).forEach((username) => knownUsers.add(normalizeUsername(username)));
+    approvedAccountsSnapshot.forEach((doc) => {
+      const key = normalizeUsername(doc.id || ((doc.data() || {}).username));
+      if (key) knownUsers.add(key);
+    });
+    profilesSnapshot.forEach((doc) => {
+      const key = normalizeUsername(doc.id);
+      if (!key) return;
+      userProfileCache[key] = buildProfileCacheEntry(key, doc.data() || {});
+      knownUsers.add(key);
+    });
+    Object.keys(roleCache || {}).forEach((username) => knownUsers.add(normalizeUsername(username)));
+    const currentUserKey = normalizeUsername(currentChatUser || (typeof getUserName === 'function' ? getUserName() : '') || '');
+    if (currentUserKey) knownUsers.add(currentUserKey);
+    const leaderboardData = Array.from(knownUsers)
+      .filter(Boolean)
+      .map((username) => {
+        const balanceEntry = balanceMap[username] || null;
+        return {
+          username,
+          displayName: balanceEntry ? balanceEntry.displayName : username,
+          balance: balanceEntry ? balanceEntry.balance : 1000
+        };
+      })
+      .sort((a, b) => {
+        if (b.balance !== a.balance) return b.balance - a.balance;
+        return a.username.localeCompare(b.username);
+      });
+    applyDynamicLeaderboardTagState({
+      mostMoney: leaderboardData[0] ? leaderboardData[0].username : '',
+      mostActive: dynamicLeaderboardTagState.mostActive,
+      leastMoney: leaderboardData.length ? leaderboardData[leaderboardData.length - 1].username : '',
+      leastActive: dynamicLeaderboardTagState.leastActive,
+      hotHandUsers: dynamicLeaderboardTagState.hotHandUsers,
+      coldTableUsers: dynamicLeaderboardTagState.coldTableUsers
+    }, false);
+    if (!leaderboardData.length) {
+      list.innerHTML = '<div style="color:#8ea0bc;">No casino players yet.</div>';
+      return;
+    }
+    list.innerHTML = leaderboardData.map((entry, index) => {
+      const rank = index + 1;
+      const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
+      const ownerTag = getOwnerTagHtml(entry.username);
+      const customTag = getUserTagHtml(entry.username);
+      const profileTarget = encodeURIComponent(entry.username);
+      const profile = getCachedProfile(entry.username);
+      const bannerStyle = `background:${getProfileBannerBackground(profile.bannerData)};${isProfileBannerMedia(profile.bannerData) ? 'background-size:100% 100%;background-position:center;background-repeat:no-repeat;' : ''}`;
+      return `<div class="leaderboard-entry">
+  <div class="leaderboard-entry-banner" style="${escapeHtml(bannerStyle)}"></div>
+  <div class="leaderboard-rank">${medal}</div>
+  <div class="leaderboard-username" onclick="openUserProfileFromChat('${profileTarget}', event)"><span class="leaderboard-identity">${getStatusDotHtml(entry.username)}${renderInlineProfileAvatarHtml(entry.username, 'leaderboard-avatar')}<span class="leaderboard-name-copy">${escapeHtml(entry.displayName)}${ownerTag}${customTag}</span></span></div>
+  <div class="leaderboard-level">Top Balance</div>
+  <div class="leaderboard-points">$${entry.balance.toLocaleString()}</div>
+</div>`;
+    }).join('');
+  } catch (err) {
+    list.innerHTML = '<div style="color:#ff8a80;">Could not load the casino leaderboard.</div>';
+  }
+}
+
+// --- Firestore Casino Balance ---
+async function loadCasinoBalance() {
+  const balanceNode = document.getElementById('casino-balance');
+  if (!getCasinoPlayerKey()) {
+    if (balanceNode) balanceNode.textContent = 'Sign in to use the casino.';
+    renderCasinoRecoveryAction(getDefaultCasinoProfileStats(''));
+    renderCasinoSidebar(getDefaultCasinoProfileStats(''));
+    return 0;
+  }
+  const record = await ensureCasinoBalanceRecord();
+  const balance = record.balance;
+  if (balanceNode) balanceNode.textContent = `Balance: $${balance.toLocaleString()}`;
+  renderCasinoRecoveryAction(record);
+  renderCasinoSidebar(record);
+  return balance;
+}
+
+function getCasinoBailoutRemainingMs(stats) {
+  const lastClaimAtMs = Math.max(0, Number(stats && stats.lastReliefClaimAtMs || 0));
+  if (!lastClaimAtMs) return 0;
+  return Math.max(0, CASINO_BAILOUT_COOLDOWN_MS - (Date.now() - lastClaimAtMs));
+}
+
+function setCasinoStatus(message = '', tone = 'neutral') {
+  const statusNode = document.getElementById('casino-game-status');
+  if (!statusNode) return;
+  statusNode.textContent = message || '';
+  statusNode.style.color = tone === 'error'
+    ? '#ffb4a8'
+    : tone === 'success'
+      ? '#9fe3a5'
+      : '#9fb0c2';
+}
+
+async function refreshCasinoProfileUiForUser(username) {
+  const key = normalizeUsername(username);
+  if (!key) return;
+  if (currentProfileViewUser && normalizeUsername(currentProfileViewUser) === key) {
+    await loadProfileDetails(key);
+    renderProfileModal(key);
+  }
+}
+
+function renderCasinoRecoveryAction(stats) {
+  const actionNode = document.getElementById('casino-recovery-action');
+  if (!actionNode) return;
+  const resolvedStats = typeof stats === 'object' && stats ? stats : getDefaultCasinoProfileStats(getCasinoPlayerKey());
+  if (resolvedStats.balance !== 0) {
+    actionNode.innerHTML = '';
+    return;
+  }
+  const remainingMs = getCasinoBailoutRemainingMs(resolvedStats);
+  if (remainingMs > 0) {
+    actionNode.innerHTML = `
+      <div style="margin-top:0.85rem; display:grid; gap:0.45rem; justify-items:center;">
+        <div style="font-size:0.82rem; color:#ffcc80;">You are bankrupt. Bailout unlocks in ${escapeHtml(formatRemainingDuration(remainingMs))}.</div>
+        <button disabled style="padding:0.55rem 1rem; border-radius:0.6rem; background:#37474f; color:#b0bec5; border:none; font-weight:700; cursor:not-allowed;">Claim $1,000</button>
+      </div>
+    `;
+    return;
+  }
+  actionNode.innerHTML = `
+    <div style="margin-top:0.85rem; display:grid; gap:0.45rem; justify-items:center;">
+      <div style="font-size:0.82rem; color:#ffcc80;">You are bankrupt. Claim a fresh $1,000 to keep playing.</div>
+      <button onclick="claimCasinoRelief()" style="padding:0.55rem 1rem; border-radius:0.6rem; background:#2e7d32; color:#fff; border:none; font-weight:700;">Claim $1,000</button>
+    </div>
+  `;
+}
+
+async function claimCasinoRelief() {
+  const user = getCasinoPlayerKey();
+  if (!user) {
+    setCasinoStatus('You must be logged in to claim relief.', 'error');
+    return;
+  }
+  try {
+    const db = getCasinoDb();
+    const ref = getCasinoBalanceCollection().doc(user);
+    const displayName = getCasinoPlayerDisplayName();
+    let nextStats = getDefaultCasinoProfileStats(user);
+    let previousStats = getDefaultCasinoProfileStats(user);
+    let unlockedAchievements = [];
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const currentStats = normalizeCasinoProfileStatsData(user, snap.exists ? (snap.data() || {}) : {});
+      previousStats = currentStats;
+      const currentBalance = currentStats.balance;
+      const remainingMs = getCasinoBailoutRemainingMs(currentStats);
+      if (currentBalance !== 0) {
+        throw new Error('Relief is only available when your balance is 0.');
+      }
+      if (remainingMs > 0) {
+        throw new Error(`Bailout is on cooldown for ${formatRemainingDuration(remainingMs)}.`);
+      }
+      nextStats = {
+        ...currentStats,
+        balance: 1000,
+        reliefClaims: currentStats.reliefClaims + 1,
+        lastReliefClaimAtMs: Date.now(),
+        biggestBalance: Math.max(currentStats.biggestBalance, 1000)
+      };
+      nextStats.achievementIds = getCasinoUnlockedAchievementIds(nextStats);
+      unlockedAchievements = getCasinoUnlockedAchievements(nextStats).filter((item) => !currentStats.achievementIds.includes(item.id));
+      tx.set(ref, {
+        username: user,
+        displayName,
+        ...nextStats,
+        updatedAtMs: Date.now()
+      }, { merge: true });
+    });
+    casinoProfileStatsCache[user] = nextStats;
+    await publishCasinoActivity([
+      {
+        type: 'bailout',
+        title: `${displayName} claimed a bailout`,
+        body: `Fresh $1,000 after ${previousStats.bankruptcies.toLocaleString()} bankruptcies.`,
+        by: user
+      },
+      ...unlockedAchievements.map((item) => ({
+        type: 'achievement',
+        title: `${displayName} unlocked ${item.label}`,
+        body: item.description,
+        by: user
+      }))
+    ]);
+    await loadCasinoBalance();
+    await refreshCasinoProfileUiForUser(user);
+    scheduleDynamicLeaderboardTagRefresh();
+    setCasinoStatus('You claimed $1,000 relief.', 'success');
+  } catch (err) {
+    setCasinoStatus(err && err.message ? err.message : 'Could not claim relief.', 'error');
+  }
+}
+
+async function updateCasinoBalance(delta, options = {}) {
+  const user = getCasinoPlayerKey();
+  if (!user) throw new Error('You must be logged in to play the casino.');
+  const db = getCasinoDb();
+  const ref = getCasinoBalanceCollection().doc(user);
+  const displayName = getCasinoPlayerDisplayName();
+  const wager = Math.max(0, Number(options.wager || 0));
+  const outcome = String(options.outcome || 'push');
+  const game = String(options.game || 'casino');
+  const nowMs = Date.now();
+  let nextStats = getDefaultCasinoProfileStats(user);
+  let previousStats = getDefaultCasinoProfileStats(user);
+  let unlockedAchievements = [];
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const currentStats = normalizeCasinoProfileStatsData(user, snap.exists ? (snap.data() || {}) : {});
+    previousStats = currentStats;
+    const nextBalance = Math.max(0, currentStats.balance + delta);
+    const nextBankruptcies = nextBalance === 0 && currentStats.balance > 0 ? currentStats.bankruptcies + 1 : currentStats.bankruptcies;
+    const nextWinStreak = outcome === 'win' ? currentStats.currentWinStreak + 1 : 0;
+    const nextLossStreak = outcome === 'loss' ? currentStats.currentLossStreak + 1 : 0;
+    nextStats = {
+      ...currentStats,
+      balance: nextBalance,
+      bankruptcies: nextBankruptcies,
+      gamesPlayed: currentStats.gamesPlayed + 1,
+      wins: currentStats.wins + (outcome === 'win' ? 1 : 0),
+      losses: currentStats.losses + (outcome === 'loss' ? 1 : 0),
+      pushes: currentStats.pushes + (outcome === 'push' ? 1 : 0),
+      totalWagered: currentStats.totalWagered + wager,
+      biggestWin: Math.max(currentStats.biggestWin, Math.max(0, delta)),
+      biggestBalance: Math.max(currentStats.biggestBalance, nextBalance),
+      currentWinStreak: nextWinStreak,
+      currentLossStreak: nextLossStreak,
+      bestWinStreak: Math.max(currentStats.bestWinStreak, nextWinStreak),
+      worstLossStreak: Math.max(currentStats.worstLossStreak, nextLossStreak),
+      hotHandUntilMs: outcome === 'win' && nextWinStreak >= CASINO_HOT_HAND_STREAK
+        ? nowMs + CASINO_HOT_HAND_DURATION_MS
+        : (outcome === 'loss' ? 0 : currentStats.hotHandUntilMs),
+      coldTableUntilMs: outcome === 'loss' && nextLossStreak >= CASINO_COLD_TABLE_STREAK
+        ? nowMs + CASINO_COLD_TABLE_DURATION_MS
+        : (outcome === 'win' ? 0 : currentStats.coldTableUntilMs),
+      lastGameAtMs: nowMs
+    };
+    nextStats.achievementIds = getCasinoUnlockedAchievementIds(nextStats);
+    unlockedAchievements = getCasinoUnlockedAchievements(nextStats).filter((item) => !currentStats.achievementIds.includes(item.id));
+    tx.set(ref, {
+      username: user,
+      displayName,
+      ...nextStats,
+      updatedAtMs: Date.now()
+    }, { merge: true });
+  });
+  casinoProfileStatsCache[user] = nextStats;
+  await publishCasinoActivity([
+    ...(outcome === 'win' && delta > 0 ? [{
+      type: 'win',
+      title: `${displayName} won $${delta.toLocaleString()} in ${getCasinoGameLabel(game)}`,
+      body: `Bet $${wager.toLocaleString()} and climbed to $${nextStats.balance.toLocaleString()}.`,
+      by: user
+    }] : []),
+    ...(nextStats.bankruptcies > previousStats.bankruptcies ? [{
+      type: 'bankruptcy',
+      title: `${displayName} hit bankruptcy`,
+      body: `${getCasinoGameLabel(game)} dropped them to $0.`,
+      by: user
+    }] : []),
+    ...(nextStats.currentWinStreak >= CASINO_HOT_HAND_STREAK && nextStats.currentWinStreak > previousStats.currentWinStreak ? [{
+      type: 'hot_hand',
+      title: `${displayName} is on a hot hand`,
+      body: `${nextStats.currentWinStreak} straight wins and counting.`,
+      by: user
+    }] : []),
+    ...(nextStats.currentLossStreak >= CASINO_COLD_TABLE_STREAK && nextStats.currentLossStreak > previousStats.currentLossStreak ? [{
+      type: 'cold_table',
+      title: `${displayName} is stuck at a cold table`,
+      body: `${nextStats.currentLossStreak} straight losses in ${getCasinoGameLabel(game)}.`,
+      by: user
+    }] : []),
+    ...unlockedAchievements.map((item) => ({
+      type: 'achievement',
+      title: `${displayName} unlocked ${item.label}`,
+      body: item.description,
+      by: user
+    }))
+  ]);
+  await loadCasinoBalance();
+  await refreshCasinoProfileUiForUser(user);
+  scheduleDynamicLeaderboardTagRefresh();
+  return { stats: nextStats, unlockedAchievements };
+}
+
+function getPokerRoomsCollection() {
+  return getCasinoDb().collection(POKER_ROOMS_COLLECTION);
+}
+
+function normalizePokerRoomData(id, data = {}) {
+  const roomId = sanitizeNullableText(id || data.id, '');
+  const owner = normalizeUsername(data.owner);
+  const roomType = sanitizeNullableText(data.roomType, 'ai') === 'human' ? 'human' : 'ai';
+  const members = Array.from(new Set((Array.isArray(data.members) ? data.members : [owner])
+    .map((value) => normalizeUsername(value))
+    .filter(Boolean)));
+  if (owner && !members.includes(owner)) members.unshift(owner);
+  return {
+    id: roomId,
+    name: sanitizeNullableText(data.name, 'AI Table').slice(0, 32) || 'AI Table',
+    description: sanitizeNullableText(data.description, '').slice(0, 120),
+    owner,
+    ownerDisplayName: sanitizeNullableText(data.ownerDisplayName, owner || 'host').slice(0, 32),
+    roomType,
+    members,
+    aiName: roomType === 'human' ? '' : (sanitizeNullableText(data.aiName, 'Dealer Bot').slice(0, 32) || 'Dealer Bot'),
+    stake: Math.max(25, Math.min(10000, Math.floor(Number(data.stake || 100)))),
+    status: sanitizeNullableText(data.status, 'open') || 'open',
+    createdAtMs: Math.max(0, Number(data.createdAtMs || 0)),
+    updatedAtMs: Math.max(0, Number(data.updatedAtMs || data.createdAtMs || 0)),
+    lastPlayedBy: normalizeUsername(data.lastPlayedBy),
+    lastPlayedByDisplayName: sanitizeNullableText(data.lastPlayedByDisplayName, '').slice(0, 32)
+  };
+}
+
+function getSelectedPokerRoom() {
+  return pokerRoomCache.find((room) => room.id === currentPokerRoomId) || null;
+}
+
+function getPokerRoomTypeLabel(roomType) {
+  return roomType === 'human' ? 'Humans Only' : 'AI Table';
+}
+
+function renderPokerGuideCards(cards) {
+  return (Array.isArray(cards) ? cards : []).map((label) => {
+    const isRed = String(label || '').includes('♥') || String(label || '').includes('♦');
+    return `<span style="display:inline-flex; align-items:center; justify-content:center; min-width:3.05rem; padding:0.55rem 0.45rem; border-radius:0.6rem; background:#fff; color:${isRed ? '#b71c1c' : '#111'}; font-weight:700; border:2px solid #d7dee8;">${escapeHtml(label)}</span>`;
+  }).join('');
+}
+
+function getPokerPhaseSummary() {
+  if (!pokerState) return 'No hand in progress.';
+  if (pokerState.phase === 'showdown') return pokerState.resultText || 'Showdown complete.';
+  if (pokerState.phase === 'preflop') return `Pre-flop. Hole cards: ${getPokerHoleCardSummary(pokerState.playerHand)}.`;
+  if (pokerState.phase === 'flop') return 'Flop dealt. Three community cards are on the board.';
+  if (pokerState.phase === 'turn') return 'Turn dealt. Four community cards are showing.';
+  if (pokerState.phase === 'river') return 'River dealt. The next step is showdown.';
+  return 'Texas Hold\'em hand in progress.';
+}
+
+function getPokerPhaseLabel(phase) {
+  if (phase === 'preflop') return 'Pre-Flop';
+  if (phase === 'flop') return 'Flop';
+  if (phase === 'turn') return 'Turn';
+  if (phase === 'river') return 'River';
+  if (phase === 'showdown') return 'Showdown';
+  return 'Waiting';
+}
+
+function getVisiblePokerCommunityCards(state = pokerState) {
+  const communityCards = Array.isArray(state && state.communityCards) ? state.communityCards : [];
+  const revealedCount = Math.max(0, Math.min(communityCards.length, Math.floor(Number(state && state.revealedCommunityCount) || 0)));
+  return communityCards.slice(0, revealedCount);
+}
+
+function renderPokerCommunityCards(cards, revealedCount) {
+  const communityCards = Array.isArray(cards) ? cards : [];
+  const visibleCount = Math.max(0, Math.min(communityCards.length, Math.floor(Number(revealedCount) || 0)));
+  return communityCards.map((card, index) => renderCasinoPlayingCard(card, { hidden: index >= visibleCount })).join('');
+}
+
+function getPokerHoleCardSummary(cards) {
+  const hand = Array.isArray(cards) ? cards.slice(0, 2) : [];
+  if (hand.length < 2) return 'waiting for cards';
+  const values = hand.map((card) => getPokerCardRankValue(card)).sort((left, right) => right - left);
+  const labels = values.map((value) => getPokerRankLabel(value));
+  if (values[0] === values[1]) return `Pocket ${labels[0]}s`;
+  return `${labels[0]}-${labels[1]}${hand[0].suit === hand[1].suit ? ' suited' : ' offsuit'}`;
+}
+
+function formatPokerCardsInline(cards) {
+  return (Array.isArray(cards) ? cards : []).map((card) => getCasinoCardLabel(card)).join(' ');
+}
+
+function getPokerCurrentPlayerEvaluation(state = pokerState) {
+  if (!state || !Array.isArray(state.playerHand)) return null;
+  const combined = [...state.playerHand, ...getVisiblePokerCommunityCards(state)];
+  if (combined.length < 5) return null;
+  return getBestPokerEvaluation(combined);
+}
+
+function getPokerCurrentPlayerHandText(state = pokerState) {
+  const evaluation = getPokerCurrentPlayerEvaluation(state);
+  if (evaluation) {
+    return `Current hand: ${evaluation.label}${evaluation.cards && evaluation.cards.length ? ` • Best five: ${formatPokerCardsInline(evaluation.cards)}` : ''}`;
+  }
+  return `Hole cards: ${getPokerHoleCardSummary(state && state.playerHand)}`;
+}
+
+function getPokerNextActionLabel(state = pokerState) {
+  if (!state) return 'Deal Hand';
+  if (state.phase === 'preflop') return 'Deal Flop';
+  if (state.phase === 'flop') return 'Deal Turn';
+  if (state.phase === 'turn') return 'Deal River';
+  if (state.phase === 'river') return 'Showdown';
+  return 'Deal New Hand';
+}
+
+function updatePokerRoomFormForType() {
+  const roomTypeSelect = document.getElementById('poker-room-type');
+  const aiWrap = document.getElementById('poker-room-ai-wrap');
+  const createButton = document.getElementById('poker-room-create-btn');
+  const helper = document.getElementById('poker-room-create-note');
+  const roomType = roomTypeSelect && roomTypeSelect.value === 'human' ? 'human' : 'ai';
+  if (aiWrap) aiWrap.style.display = roomType === 'human' ? 'none' : 'grid';
+  if (createButton) createButton.textContent = roomType === 'human' ? 'Create Human Room' : 'Create AI Room';
+  if (helper) {
+    helper.textContent = roomType === 'human'
+      ? 'Human rooms are shared Texas Hold\'em lobbies with no AI dealer so people can gather at one table.'
+      : 'AI rooms are shared in Firestore so anyone on the site can join your table and play heads-up Texas Hold\'em against the room bot.';
+  }
+}
+
+async function syncPokerRoomMembership(roomId, join = true) {
+  const roomKey = sanitizeNullableText(roomId, '');
+  const user = getCasinoPlayerKey();
+  if (!roomKey || !user) return;
+  try {
+    await getPokerRoomsCollection().doc(roomKey).set({
+      members: join
+        ? firebase.firestore.FieldValue.arrayUnion(user)
+        : firebase.firestore.FieldValue.arrayRemove(user),
+      updatedAtMs: Date.now(),
+      lastPlayedBy: user,
+      lastPlayedByDisplayName: getCasinoPlayerDisplayName()
+    }, { merge: true });
+  } catch (_) {}
+}
+
+function stopListeningForPokerRooms() {
+  if (pokerRoomUnsub) {
+    pokerRoomUnsub();
+    pokerRoomUnsub = null;
+  }
+}
+
+function listenForPokerRooms() {
+  if (pokerRoomUnsub) return;
+  try {
+    pokerRoomUnsub = getPokerRoomsCollection()
+      .orderBy('updatedAtMs', 'desc')
+      .limit(30)
+      .onSnapshot((snapshot) => {
+        pokerRoomCache = snapshot.docs
+          .map((doc) => normalizePokerRoomData(doc.id, doc.data() || {}))
+          .filter((room) => room.status !== 'closed');
+        if (currentPokerRoomId && !getSelectedPokerRoom()) {
+          currentPokerRoomId = '';
+          pokerState = null;
+        }
+        if (activeCasinoGame === 'poker') {
+          renderActiveCasinoGamePanel();
+        }
+      }, () => {
+        if (activeCasinoGame === 'poker') {
+          renderActiveCasinoGamePanel();
+        }
+      });
+  } catch (_) {}
+}
+
+async function touchPokerRoom(room) {
+  if (!room || !room.id) return;
+  try {
+    await getPokerRoomsCollection().doc(room.id).set({
+      updatedAtMs: Date.now(),
+      lastPlayedBy: getCasinoPlayerKey() || '',
+      lastPlayedByDisplayName: getCasinoPlayerDisplayName()
+    }, { merge: true });
+  } catch (_) {}
+}
+
+function togglePokerTutorial() {
+  pokerTutorialExpanded = !pokerTutorialExpanded;
+  renderActiveCasinoGamePanel();
+}
+
+function getPokerTutorialVideoSrcdoc() {
+  return `<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Segoe UI, Arial, sans-serif;
+    background: #09110b;
+    color: #f4f8fb;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+  .frame {
+    height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 12px;
+    padding: 14px;
+    background: radial-gradient(circle at top, rgba(38,90,58,0.44) 0%, rgba(9,17,11,0.98) 70%);
+  }
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: #c7d4e2;
+  }
+  .badge {
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    font-weight: 700;
+  }
+  .table {
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+    border: 1px solid rgba(92, 132, 101, 0.42);
+    background: radial-gradient(circle at center, rgba(26,95,58,0.9) 0%, rgba(11,32,18,0.96) 78%);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+  }
+  .scene {
+    position: absolute;
+    inset: 0;
+    padding: 18px;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 14px;
+    opacity: 0;
+    animation: sceneCycle 20s infinite;
+    will-change: opacity;
+  }
+  .scene-2 { animation-delay: 4s; }
+  .scene-3 { animation-delay: 8s; }
+  .scene-4 { animation-delay: 12s; }
+  .scene-5 { animation-delay: 16s; }
+  .caption {
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+  }
+  .subcaption {
+    font-size: 12px;
+    color: #d9e5ef;
+    text-align: center;
+    max-width: 420px;
+    line-height: 1.45;
+  }
+  .row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+  }
+  .label {
+    font-size: 11px;
+    color: #b9c8d6;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .card {
+    min-width: 52px;
+    min-height: 70px;
+    padding: 8px 7px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #ffffff 0%, #edf3fb 100%);
+    color: #101820;
+    border: 2px solid #d7dee8;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    box-shadow: 0 12px 22px rgba(0,0,0,0.18);
+  }
+  .card.red { color: #b71c1c; }
+  .card.back {
+    background: linear-gradient(180deg, #1b2a3b 0%, #0c141d 100%);
+    border-color: #2a425a;
+    color: #dbe7f3;
+  }
+  .board {
+    padding: 12px;
+    border-radius: 16px;
+    background: rgba(7, 14, 22, 0.34);
+    border: 1px solid rgba(255,255,255,0.08);
+    display: grid;
+    gap: 10px;
+    justify-items: center;
+  }
+  .footer {
+    display: grid;
+    gap: 8px;
+  }
+  .progress {
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.08);
+    overflow: hidden;
+  }
+  .progress::after {
+    content: "";
+    display: block;
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #90caf9 0%, #f6d365 100%);
+    transform-origin: left center;
+    animation: progressFill 20s linear infinite;
+  }
+  .hint {
+    font-size: 12px;
+    color: #c7d4e2;
+    text-align: center;
+  }
+  @keyframes sceneCycle {
+    0% { opacity: 0; }
+    5% { opacity: 1; }
+    20% { opacity: 1; }
+    25% { opacity: 0; }
+    100% { opacity: 0; }
+  }
+  @keyframes progressFill {
+    0% { transform: scaleX(0); }
+    100% { transform: scaleX(1); }
+  }
+</style>
+<div class="frame">
+    <div class="topbar">
+      <div class="badge">Texas Hold'em Tutorial Video</div>
+      <div>Looping demo</div>
+    </div>
+    <div class="table">
+      <div class="scene scene-1">
+        <div class="caption">1. Pre-Flop</div>
+        <div class="subcaption">Each player gets two private hole cards. You start by reading your starting hand.</div>
+        <div class="board">
+          <div class="label">Your hole cards</div>
+          <div class="row">
+            <div class="card red">A♥</div>
+            <div class="card">K♠</div>
+          </div>
+        </div>
+      </div>
+      <div class="scene scene-2">
+        <div class="caption">2. Flop</div>
+        <div class="subcaption">Three community cards land on the board. Combine them with your hole cards to see your best hand.</div>
+        <div class="board">
+          <div class="label">Board</div>
+          <div class="row">
+            <div class="card red">Q♦</div>
+            <div class="card">J♣</div>
+            <div class="card">10♠</div>
+          </div>
+        </div>
+      </div>
+      <div class="scene scene-3">
+        <div class="caption">3. Turn</div>
+        <div class="subcaption">A fourth community card is added. Your hand strength can jump fast here.</div>
+        <div class="board">
+          <div class="label">Board</div>
+          <div class="row">
+            <div class="card red">Q♦</div>
+            <div class="card">J♣</div>
+            <div class="card">10♠</div>
+            <div class="card red">2♥</div>
+          </div>
+        </div>
+      </div>
+      <div class="scene scene-4">
+        <div class="caption">4. River</div>
+        <div class="subcaption">The fifth and final board card appears. Now both players know the full board.</div>
+        <div class="board">
+          <div class="label">Board</div>
+          <div class="row">
+            <div class="card red">Q♦</div>
+            <div class="card">J♣</div>
+            <div class="card">10♠</div>
+            <div class="card red">2♥</div>
+            <div class="card">3♣</div>
+          </div>
+        </div>
+      </div>
+      <div class="scene scene-5">
+        <div class="caption">5. Showdown</div>
+        <div class="subcaption">Use any 5 of the 7 available cards. Here the best hand is Broadway: A-K-Q-J-10 straight.</div>
+        <div class="board">
+          <div class="label">Best five-card hand</div>
+          <div class="row">
+            <div class="card red">A♥</div>
+            <div class="card">K♠</div>
+            <div class="card red">Q♦</div>
+            <div class="card">J♣</div>
+            <div class="card">10♠</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="progress"></div>
+      <div class="hint">This loops through pre-flop, flop, turn, river, and showdown.</div>
+    </div>
+  </div>`;
+}
+
+function getPokerTutorialHtml() {
+  return `
+    <div style="padding:0.85rem; background:#10151d; border:1px solid #263140; border-radius:0.85rem; display:grid; gap:0.6rem;">
+      <div style="font-weight:700; color:#fff;">Poker Tutorial</div>
+      <div style="display:grid; gap:0.45rem;">
+        <div style="font-size:0.84rem; font-weight:700; color:#fff;">Tutorial Video</div>
+        <div style="font-size:0.8rem; color:#9fb0c2;">This loops through the Texas Hold'em hand flow like a built-in video.</div>
+        <iframe title="Texas Hold'em tutorial video" loading="lazy" referrerpolicy="no-referrer" style="display:block; width:100%; min-height:22rem; border:none; border-radius:0.9rem; background:#09110b;" srcdoc="${escapeHtml(getPokerTutorialVideoSrcdoc())}"></iframe>
+      </div>
+      <div style="font-size:0.84rem; color:#c5d2e1;">This table uses heads-up Texas Hold'em against an AI in player-made rooms.</div>
+      <div style="font-size:0.82rem; color:#9fb0c2;">1. Create or join a room with a fixed stake.</div>
+      <div style="font-size:0.82rem; color:#9fb0c2;">2. Each player gets 2 private hole cards.</div>
+      <div style="font-size:0.82rem; color:#9fb0c2;">3. Reveal the flop, turn, and river to build the shared board.</div>
+      <div style="font-size:0.82rem; color:#9fb0c2;">4. Your best 5-card hand is made from any mix of your 2 hole cards and the 5 community cards.</div>
+      <div style="font-size:0.82rem; color:#9fb0c2;">5. Win the showdown to gain the room stake. Lose and the same amount comes off your balance.</div>
+      <div style="font-size:0.82rem; color:#dce6f2;">Hand order: High Card, Pair, Two Pair, Trips, Straight, Flush, Full House, Quads, Straight Flush, Royal Flush.</div>
+      <div style="display:grid; gap:0.55rem; margin-top:0.35rem;">
+        <div style="font-size:0.84rem; font-weight:700; color:#fff;">What each made hand can look like</div>
+        ${POKER_HAND_GUIDE.map((entry) => `<div style="padding:0.7rem; background:#0d141d; border:1px solid #263140; border-radius:0.75rem; display:grid; gap:0.45rem;"><div style="display:flex; justify-content:space-between; gap:0.6rem; flex-wrap:wrap;"><div style="font-weight:700; color:#fff;">${escapeHtml(entry.label)}</div><div style="font-size:0.76rem; color:#9fb0c2;">${escapeHtml(entry.note)}</div></div><div style="display:flex; gap:0.35rem; flex-wrap:wrap;">${renderPokerGuideCards(entry.cards)}</div></div>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function getPokerCardRankValue(card) {
+  if (!card) return 0;
+  if (typeof card.rank === 'number') return card.rank;
+  if (card.rank === 'A') return 14;
+  if (card.rank === 'K') return 13;
+  if (card.rank === 'Q') return 12;
+  if (card.rank === 'J') return 11;
+  return Number(card.rank || 0) || 0;
+}
+
+function getPokerRankLabel(value) {
+  if (value === 14) return 'A';
+  if (value === 13) return 'K';
+  if (value === 12) return 'Q';
+  if (value === 11) return 'J';
+  return String(value || '');
+}
+
+function getPokerStraightHighValue(values) {
+  const unique = Array.from(new Set(values)).sort((a, b) => b - a);
+  if (unique.length !== 5) return 0;
+  if (unique.every((value, index) => index === 0 || unique[index - 1] - value === 1)) {
+    return unique[0];
+  }
+  if (unique.join(',') === '14,5,4,3,2') {
+    return 5;
+  }
+  return 0;
+}
+
+function evaluatePokerHand(cards) {
+  const values = cards.map((card) => getPokerCardRankValue(card)).sort((a, b) => b - a);
+  const suits = cards.map((card) => card.suit);
+  const counts = {};
+  values.forEach((value) => {
+    counts[value] = (counts[value] || 0) + 1;
+  });
+  const groups = Object.entries(counts)
+    .map(([value, count]) => ({ value: Number(value), count }))
+    .sort((a, b) => b.count - a.count || b.value - a.value);
+  const flush = suits.every((suit) => suit === suits[0]);
+  const straightHigh = getPokerStraightHighValue(values);
+  if (flush && straightHigh === 14) {
+    return { category: 9, tiebreak: [14], label: 'Royal Flush' };
+  }
+  if (flush && straightHigh) {
+    return { category: 8, tiebreak: [straightHigh], label: 'Straight Flush' };
+  }
+  if (groups[0].count === 4) {
+    return { category: 7, tiebreak: [groups[0].value, groups[1].value], label: 'Four of a Kind' };
+  }
+  if (groups[0].count === 3 && groups[1] && groups[1].count === 2) {
+    return { category: 6, tiebreak: [groups[0].value, groups[1].value], label: 'Full House' };
+  }
+  if (flush) {
+    return { category: 5, tiebreak: values, label: 'Flush' };
+  }
+  if (straightHigh) {
+    return { category: 4, tiebreak: [straightHigh], label: 'Straight' };
+  }
+  if (groups[0].count === 3) {
+    const kickers = groups.filter((group) => group.count === 1).map((group) => group.value).sort((a, b) => b - a);
+    return { category: 3, tiebreak: [groups[0].value, ...kickers], label: 'Three of a Kind' };
+  }
+  if (groups[0].count === 2 && groups[1] && groups[1].count === 2) {
+    const pairValues = groups.filter((group) => group.count === 2).map((group) => group.value).sort((a, b) => b - a);
+    const kicker = groups.find((group) => group.count === 1)?.value || 0;
+    return { category: 2, tiebreak: [...pairValues, kicker], label: 'Two Pair' };
+  }
+  if (groups[0].count === 2) {
+    const kickers = groups.filter((group) => group.count === 1).map((group) => group.value).sort((a, b) => b - a);
+    return { category: 1, tiebreak: [groups[0].value, ...kickers], label: 'Pair' };
+  }
+  return { category: 0, tiebreak: values, label: 'High Card' };
+}
+
+function comparePokerEvaluations(left, right) {
+  if (left.category !== right.category) return left.category - right.category;
+  const length = Math.max(left.tiebreak.length, right.tiebreak.length);
+  for (let index = 0; index < length; index += 1) {
+    const leftValue = left.tiebreak[index] || 0;
+    const rightValue = right.tiebreak[index] || 0;
+    if (leftValue !== rightValue) return leftValue - rightValue;
+  }
+  return 0;
+}
+
+function getPokerFiveCardCombinations(cards) {
+  const source = Array.isArray(cards) ? cards.filter(Boolean) : [];
+  if (source.length <= 5) return source.length === 5 ? [source.slice()] : [];
+  const combinations = [];
+  const current = [];
+  function build(startIndex) {
+    if (current.length === 5) {
+      combinations.push(current.slice());
+      return;
+    }
+    for (let index = startIndex; index <= source.length - (5 - current.length); index += 1) {
+      current.push(source[index]);
+      build(index + 1);
+      current.pop();
+    }
+  }
+  build(0);
+  return combinations;
+}
+
+function getBestPokerEvaluation(cards) {
+  const combinations = getPokerFiveCardCombinations(cards);
+  if (!combinations.length) return null;
+  let best = null;
+  combinations.forEach((combo) => {
+    const evaluation = evaluatePokerHand(combo);
+    if (!best || comparePokerEvaluations(evaluation, best) > 0) {
+      best = { ...evaluation, cards: combo.slice() };
+    }
+  });
+  return best;
+}
+
+function chooseAiPokerDiscardIndexes(hand) {
+  const evaluation = evaluatePokerHand(hand);
+  if (evaluation.category >= 4) return [];
+  const rankCounts = {};
+  hand.forEach((card) => {
+    const value = getPokerCardRankValue(card);
+    rankCounts[value] = (rankCounts[value] || 0) + 1;
+  });
+  const keepRanks = Object.keys(rankCounts)
+    .filter((value) => rankCounts[value] >= 2)
+    .map((value) => Number(value));
+  if (keepRanks.length) {
+    return hand.map((card, index) => keepRanks.includes(getPokerCardRankValue(card)) ? -1 : index).filter((index) => index >= 0).slice(0, 3);
+  }
+  const suitCounts = {};
+  hand.forEach((card) => {
+    suitCounts[card.suit] = (suitCounts[card.suit] || 0) + 1;
+  });
+  const flushSuit = Object.keys(suitCounts).find((suit) => suitCounts[suit] >= 4);
+  if (flushSuit) {
+    return hand.map((card, index) => card.suit === flushSuit ? -1 : index).filter((index) => index >= 0).slice(0, 3);
+  }
+  return hand
+    .map((card, index) => ({ index, value: getPokerCardRankValue(card) }))
+    .sort((a, b) => a.value - b.value)
+    .slice(0, 3)
+    .map((item) => item.index);
+}
+
+async function validateCasinoBetAmount(rawBet) {
+  const bet = Math.floor(Number(rawBet) || 0);
+  setCasinoStatus('');
+  if (!Number.isFinite(bet) || bet < 1) {
+    throw new Error('Enter a valid bet amount.');
+  }
+  const record = await ensureCasinoBalanceRecord();
+  if (!record.user) {
+    throw new Error('You must be logged in to play.');
+  }
+  if (bet > record.balance) {
+    throw new Error('That bet is bigger than your current balance.');
+  }
+  return { bet, record };
+}
+
+function renderPokerRoomList() {
+  const list = document.getElementById('poker-room-list');
+  if (!list) return;
+  if (!pokerRoomCache.length) {
+    list.innerHTML = '<div class="activity-feed-empty">No poker rooms yet. Create the first table.</div>';
+    return;
+  }
+  list.innerHTML = pokerRoomCache.map((room) => {
+    const isSelected = currentPokerRoomId === room.id;
+    const canDelete = room.owner && (room.owner === getCasinoPlayerKey() || canManageRoles(currentChatUser));
+    const roomMembers = room.members && room.members.length ? room.members.map((member) => `@${member}`).join(', ') : 'No one seated yet';
+    return `<div style="padding:0.7rem; border:1px solid ${isSelected ? '#5b8cff' : '#2b3442'}; background:${isSelected ? '#162338' : '#10151d'}; border-radius:0.75rem; display:grid; gap:0.4rem;">
+      <div style="display:flex; justify-content:space-between; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+        <div style="font-weight:700; color:#fff;">${escapeHtml(room.name)}</div>
+        <div style="font-size:0.75rem; color:#9fb0c2;">${escapeHtml(getPokerRoomTypeLabel(room.roomType))} • $${room.stake.toLocaleString()} table</div>
+      </div>
+      <div style="font-size:0.78rem; color:#9fb0c2;">Host: ${escapeHtml(room.ownerDisplayName)}${room.roomType === 'human' ? '' : ` • AI: ${escapeHtml(room.aiName)}`}</div>
+      <div style="font-size:0.78rem; color:#c5d2e1;">${escapeHtml(room.description || 'Texas Hold\'em against the house AI.')}</div>
+      <div style="font-size:0.76rem; color:#90a4ae;">Seats: ${escapeHtml(roomMembers)}</div>
+      <div style="display:flex; gap:0.45rem; flex-wrap:wrap;">
+        <button onclick="joinPokerRoom('${room.id}')" style="padding:0.45rem 0.75rem; border:none; border-radius:0.5rem; background:#1f4f89; color:#fff; font-weight:700;">${isSelected ? 'At Table' : (room.roomType === 'human' ? 'Join Room' : 'Join Table')}</button>
+        ${canDelete ? `<button onclick="deletePokerRoom('${room.id}')" style="padding:0.45rem 0.75rem; border:none; border-radius:0.5rem; background:#6b202a; color:#fff; font-weight:700;">Delete</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderPokerCards(hand, options = {}) {
+  return hand.map((card, index) => {
+    const hidden = !!options.hidden;
+    const selectable = !!options.selectable;
+    const selected = Array.isArray(options.selectedIndexes) && options.selectedIndexes.includes(index);
+    return renderCasinoPlayingCard(card, {
+      hidden,
+      selectable,
+      selected,
+      index
+    });
+  }).join('');
+}
+
+function renderPokerCurrentTable() {
+  const container = document.getElementById('poker-room-active');
+  if (!container) return;
+  const room = getSelectedPokerRoom();
+  if (!room) {
+    container.innerHTML = '<div class="activity-feed-empty">Pick a poker room to sit down for Texas Hold\'em.</div>';
+    return;
+  }
+  if (pokerState && pokerState.roomId !== room.id) {
+    pokerState = null;
+  }
+  if (room.roomType === 'human') {
+    container.innerHTML = `
+      <div style="display:grid; gap:0.6rem;">
+        <div style="font-size:0.95rem; font-weight:700; color:#fff;">${escapeHtml(room.name)}</div>
+        <div style="font-size:0.82rem; color:#9fb0c2;">Humans Only • Stake: $${room.stake.toLocaleString()}</div>
+        <div style="font-size:0.82rem; color:#c5d2e1;">${escapeHtml(room.description || 'Human-only poker room.')}</div>
+        <div style="font-size:0.78rem; color:#90a4ae;">People in room: ${escapeHtml((room.members || []).map((member) => `@${member}`).join(', ') || 'No one seated yet')}</div>
+        <div style="padding:0.95rem; border-radius:1rem; background:radial-gradient(circle at top, rgba(38,90,58,0.4) 0%, rgba(10,20,13,0.95) 72%); border:1px solid #26452f; color:#dce6f2; font-size:0.82rem; display:grid; gap:0.6rem;">
+          <div style="font-weight:700; color:#fff;">Texas Hold'em Lounge</div>
+          <div style="display:flex; gap:0.45rem; flex-wrap:wrap; justify-content:center;">${renderPokerGuideCards(['A♠', 'K♥'])}</div>
+          <div style="display:flex; gap:0.45rem; flex-wrap:wrap; justify-content:center;">${renderPokerGuideCards(['Q♦', 'J♣', '10♠', '9♠', '8♠'])}</div>
+          <div>AI is disabled at this table. Use it as a human-only room while everyone learns Texas Hold'em hands and board reading from the guide.</div>
+        </div>
+        <div style="display:flex; gap:0.45rem; flex-wrap:wrap;">
+          <button onclick="togglePokerTutorial()" style="padding:0.45rem 0.8rem; border:none; border-radius:0.5rem; background:#263140; color:#fff; font-weight:700;">${pokerTutorialExpanded ? 'Hide Tutorial' : 'Poker Tutorial'}</button>
+          <button onclick="leavePokerRoom()" style="padding:0.45rem 0.8rem; border:none; border-radius:0.5rem; background:#37474f; color:#fff; font-weight:700;">Leave Room</button>
+        </div>
+      </div>`;
+    return;
+  }
+  if (!pokerState) {
+    container.innerHTML = `
+      <div style="display:grid; gap:0.6rem;">
+        <div style="font-size:0.95rem; font-weight:700; color:#fff;">${escapeHtml(room.name)}</div>
+        <div style="font-size:0.82rem; color:#9fb0c2;">AI opponent: ${escapeHtml(room.aiName)} • Stake: $${room.stake.toLocaleString()}</div>
+        <div style="font-size:0.82rem; color:#c5d2e1;">${escapeHtml(room.description || 'Heads-up Texas Hold\'em. Best five-card hand from your hole cards and the board wins.')}</div>
+        <div style="padding:0.95rem; border-radius:1rem; background:radial-gradient(circle at top, rgba(38,90,58,0.4) 0%, rgba(10,20,13,0.95) 72%); border:1px solid #26452f; display:grid; gap:0.7rem; justify-items:center;">
+          <div style="font-size:0.8rem; color:#c7d4e2;">Table preview</div>
+          <div style="display:flex; gap:0.45rem; flex-wrap:wrap; justify-content:center;">${renderPokerGuideCards(['🂠', '🂠'])}</div>
+          <div style="display:flex; gap:0.45rem; flex-wrap:wrap; justify-content:center;">${renderPokerGuideCards(['🂠', '🂠', '🂠', '🂠', '🂠'])}</div>
+          <div style="font-size:0.8rem; color:#9fb0c2; text-align:center;">Deal a hand to see your hole cards, the community board, and your current best hand update after each street.</div>
+        </div>
+        <div style="display:flex; gap:0.45rem; flex-wrap:wrap;">
+          <button onclick="startPokerHand()" style="padding:0.5rem 0.9rem; border:none; border-radius:0.55rem; background:#2e7d32; color:#fff; font-weight:700;">Deal Hand ($${room.stake.toLocaleString()})</button>
+          <button onclick="leavePokerRoom()" style="padding:0.5rem 0.9rem; border:none; border-radius:0.55rem; background:#37474f; color:#fff; font-weight:700;">Leave Room</button>
+        </div>
+      </div>`;
+    return;
+  }
+  const playerEval = pokerState.playerEvaluation;
+  const aiEval = pokerState.aiEvaluation;
+  const visibleCommunityCards = getVisiblePokerCommunityCards(pokerState);
+  container.innerHTML = `
+    <div style="display:grid; gap:0.8rem;">
+      <div style="display:flex; justify-content:space-between; gap:0.6rem; align-items:flex-start; flex-wrap:wrap;">
+        <div>
+          <div style="font-size:0.98rem; font-weight:700; color:#fff;">${escapeHtml(room.name)}</div>
+          <div style="font-size:0.8rem; color:#9fb0c2;">AI: ${escapeHtml(room.aiName)} • Stake: $${room.stake.toLocaleString()}</div>
+        </div>
+        <div style="display:flex; gap:0.45rem; flex-wrap:wrap;">
+          <button onclick="togglePokerTutorial()" style="padding:0.45rem 0.8rem; border:none; border-radius:0.5rem; background:#263140; color:#fff; font-weight:700;">${pokerTutorialExpanded ? 'Hide Tutorial' : 'Poker Tutorial'}</button>
+          <button onclick="leavePokerRoom()" style="padding:0.45rem 0.8rem; border:none; border-radius:0.5rem; background:#37474f; color:#fff; font-weight:700;">Leave Room</button>
+        </div>
+      </div>
+      <div style="padding:0.95rem; border:1px solid #26452f; border-radius:1rem; background:radial-gradient(circle at top, rgba(38,90,58,0.45) 0%, rgba(10,20,13,0.97) 72%); display:grid; gap:0.8rem;">
+        <div style="display:flex; justify-content:space-between; gap:0.6rem; align-items:center; flex-wrap:wrap; font-size:0.78rem; color:#c7d4e2;">
+          <span>Texas Hold'em table</span>
+          <span>${escapeHtml(getPokerPhaseSummary())}</span>
+        </div>
+        <div style="padding:0.85rem; border:1px solid #2b3442; border-radius:0.85rem; background:rgba(8, 15, 23, 0.78); display:grid; gap:0.55rem;">
+          <div style="font-size:0.82rem; color:#9fb0c2;">${escapeHtml(room.aiName)}</div>
+          <div style="display:flex; gap:0.45rem; flex-wrap:wrap; justify-content:center;">${renderPokerCards(pokerState.aiHand, { hidden: pokerState.phase !== 'showdown' })}</div>
+          <div style="font-size:0.8rem; color:#dce6f2; text-align:center;">${pokerState.phase === 'showdown' && aiEval ? `${escapeHtml(aiEval.label)} • Best five: ${escapeHtml(formatPokerCardsInline(aiEval.cards || []))}` : 'Hole cards stay hidden until the showdown.'}</div>
+        </div>
+        <div style="display:grid; grid-template-columns:auto auto auto; justify-content:center; gap:0.45rem; align-items:center; font-size:0.76rem; color:#9fb0c2;">
+          <span style="padding:0.4rem 0.7rem; border-radius:999px; background:#162338; border:1px solid #29415f;">Stake: $${room.stake.toLocaleString()}</span>
+          <span style="padding:0.4rem 0.7rem; border-radius:999px; background:#13231c; border:1px solid #2d5a46;">${getPokerPhaseLabel(pokerState.phase)}</span>
+          <span style="padding:0.4rem 0.7rem; border-radius:999px; background:#2a1d12; border:1px solid #614125;">Board: ${visibleCommunityCards.length}/5</span>
+        </div>
+        <div style="padding:0.85rem; border:1px solid #2b3442; border-radius:0.85rem; background:rgba(8, 15, 23, 0.78); display:grid; gap:0.55rem;">
+          <div style="font-size:0.82rem; color:#9fb0c2;">Board</div>
+          <div style="display:flex; gap:0.45rem; flex-wrap:wrap; justify-content:center;">${renderPokerCommunityCards(pokerState.communityCards, pokerState.revealedCommunityCount)}</div>
+          <div style="font-size:0.8rem; color:#dce6f2; text-align:center;">${visibleCommunityCards.length ? `${visibleCommunityCards.length} community cards revealed.` : 'No community cards revealed yet.'}</div>
+        </div>
+        <div style="padding:0.85rem; border:1px solid #2b3442; border-radius:0.85rem; background:rgba(8, 15, 23, 0.78); display:grid; gap:0.55rem;">
+          <div style="font-size:0.82rem; color:#9fb0c2;">You</div>
+          <div style="display:flex; gap:0.45rem; flex-wrap:wrap; justify-content:center;">${renderPokerCards(pokerState.playerHand)}</div>
+          <div style="font-size:0.8rem; color:#dce6f2; text-align:center;">${pokerState.phase === 'showdown' && playerEval ? `${escapeHtml(playerEval.label)} • Best five: ${escapeHtml(formatPokerCardsInline(playerEval.cards || []))}` : escapeHtml(getPokerCurrentPlayerHandText(pokerState))}</div>
+        </div>
+      </div>
+      ${pokerState.phase === 'showdown' ? `<div style="padding:0.75rem; border-radius:0.75rem; background:${pokerState.outcome === 'win' ? '#173524' : pokerState.outcome === 'loss' ? '#3a1717' : '#263140'}; color:#fff; font-weight:700;">${escapeHtml(pokerState.resultText)}</div>` : ''}
+      <div style="display:flex; gap:0.45rem; flex-wrap:wrap;">
+        ${pokerState.phase !== 'showdown' ? `<button onclick="advancePokerStreet()" style="padding:0.5rem 0.9rem; border:none; border-radius:0.55rem; background:#2e7d32; color:#fff; font-weight:700;">${getPokerNextActionLabel(pokerState)}</button>` : `<button onclick="startPokerHand()" style="padding:0.5rem 0.9rem; border:none; border-radius:0.55rem; background:#2e7d32; color:#fff; font-weight:700;">Deal New Hand</button>`}
+      </div>
+    </div>`;
+}
+
+function renderPokerPanel() {
+  const panel = document.getElementById('casino-game-panel');
+  if (!panel) return;
+  listenForPokerRooms();
+  panel.innerHTML = `
+    <div style="display:grid; gap:0.85rem;">
+      <div style="display:flex; justify-content:space-between; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+        <div style="font-size:0.88rem; color:#dce6f2;">Build an AI poker table, join a room, and play Texas Hold'em.</div>
+        <button onclick="togglePokerTutorial()" style="padding:0.45rem 0.8rem; border:none; border-radius:0.5rem; background:#263140; color:#fff; font-weight:700;">${pokerTutorialExpanded ? 'Hide Tutorial' : 'Poker Tutorial'}</button>
+      </div>
+      ${pokerTutorialExpanded ? getPokerTutorialHtml() : ''}
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(18rem, 1fr)); gap:0.85rem; align-items:start;">
+        <div style="padding:0.85rem; background:#10151d; border:1px solid #263140; border-radius:0.85rem; display:grid; gap:0.7rem;">
+          <div style="font-weight:700; color:#fff;">Current Table</div>
+          <div id="poker-room-active"></div>
+        </div>
+        <div style="padding:0.85rem; background:#10151d; border:1px solid #263140; border-radius:0.85rem; display:grid; gap:0.6rem;">
+          <div style="font-weight:700; color:#fff;">Create Poker Room</div>
+          <label for="poker-room-type" style="font-size:0.76rem; color:#9fb0c2;">Room type</label>
+          <select id="poker-room-type" onchange="updatePokerRoomFormForType()" style="padding:0.5rem 0.7rem; border-radius:0.55rem; border:1px solid #31425f; background:#182231; color:#fff;">
+            <option value="ai">AI table</option>
+            <option value="human">Humans only</option>
+          </select>
+          <label for="poker-room-name" style="font-size:0.76rem; color:#9fb0c2;">Room name</label>
+          <input id="poker-room-name" type="text" maxlength="32" placeholder="Room name" style="padding:0.5rem 0.7rem; border-radius:0.55rem; border:1px solid #31425f; background:#182231; color:#fff;" />
+          <label for="poker-room-stake" style="font-size:0.76rem; color:#9fb0c2;">Table stake</label>
+          <input id="poker-room-stake" type="number" min="25" max="10000" value="150" placeholder="Stake amount" style="padding:0.5rem 0.7rem; border-radius:0.55rem; border:1px solid #31425f; background:#182231; color:#fff;" />
+          <div id="poker-room-ai-wrap" style="display:grid; gap:0.35rem;">
+            <label for="poker-room-ai-name" style="font-size:0.76rem; color:#9fb0c2;">AI dealer name</label>
+            <input id="poker-room-ai-name" type="text" maxlength="32" placeholder="AI dealer name" value="Dealer Bot" style="padding:0.5rem 0.7rem; border-radius:0.55rem; border:1px solid #31425f; background:#182231; color:#fff;" />
+          </div>
+          <label for="poker-room-description" style="font-size:0.76rem; color:#9fb0c2;">Room description</label>
+          <input id="poker-room-description" type="text" maxlength="120" placeholder="Room description" style="padding:0.5rem 0.7rem; border-radius:0.55rem; border:1px solid #31425f; background:#182231; color:#fff;" />
+          <button id="poker-room-create-btn" onclick="createPokerRoom()" style="padding:0.55rem 0.9rem; border:none; border-radius:0.55rem; background:#1f4f89; color:#fff; font-weight:700;">Create AI Room</button>
+          <div id="poker-room-create-note" style="font-size:0.76rem; color:#9fb0c2;">AI rooms are shared in Firestore so anyone on the site can join your table and play heads-up Texas Hold'em against the room bot.</div>
+        </div>
+      </div>
+      <div style="padding:0.85rem; background:#10151d; border:1px solid #263140; border-radius:0.85rem; display:grid; gap:0.7rem;">
+        <div style="font-weight:700; color:#fff;">Open Tables</div>
+        <div id="poker-room-list" style="display:grid; gap:0.65rem;"></div>
+      </div>
+    </div>`;
+  updatePokerRoomFormForType();
+  renderPokerCurrentTable();
+  renderPokerRoomList();
+}
+
+async function createPokerRoom() {
+  const user = getCasinoPlayerKey();
+  if (!user) {
+    setCasinoStatus('You must be logged in to create a poker room.', 'error');
+    return;
+  }
+  const nameInput = document.getElementById('poker-room-name');
+  const stakeInput = document.getElementById('poker-room-stake');
+  const roomTypeSelect = document.getElementById('poker-room-type');
+  const aiNameInput = document.getElementById('poker-room-ai-name');
+  const descriptionInput = document.getElementById('poker-room-description');
+  const roomType = roomTypeSelect && roomTypeSelect.value === 'human' ? 'human' : 'ai';
+  const name = sanitizeNullableText(nameInput ? nameInput.value : '', roomType === 'human' ? 'Human Table' : 'AI Table').slice(0, 32) || (roomType === 'human' ? 'Human Table' : 'AI Table');
+  const description = sanitizeNullableText(descriptionInput ? descriptionInput.value : '', '').slice(0, 120);
+  const aiName = roomType === 'human' ? '' : (sanitizeNullableText(aiNameInput ? aiNameInput.value : '', 'Dealer Bot').slice(0, 32) || 'Dealer Bot');
+  const stake = Math.max(25, Math.min(10000, Math.floor(Number(stakeInput ? stakeInput.value : 0) || 0)));
+  if (!Number.isFinite(stake) || stake < 25) {
+    setCasinoStatus('Poker room stake must be at least $25.', 'error');
+    return;
+  }
+  try {
+    const ref = getPokerRoomsCollection().doc();
+    const payload = {
+      name,
+      description,
+      roomType,
+      aiName,
+      stake,
+      owner: user,
+      ownerDisplayName: getCasinoPlayerDisplayName(),
+      members: [user],
+      status: 'open',
+      createdAtMs: Date.now(),
+      updatedAtMs: Date.now(),
+      lastPlayedBy: '',
+      lastPlayedByDisplayName: ''
+    };
+    await ref.set(payload, { merge: true });
+    currentPokerRoomId = ref.id;
+    pokerState = null;
+    pokerRoomCache = [normalizePokerRoomData(ref.id, payload), ...pokerRoomCache.filter((room) => room.id !== ref.id)].slice(0, 30);
+    if (nameInput) nameInput.value = '';
+    if (descriptionInput) descriptionInput.value = '';
+    if (aiNameInput) aiNameInput.value = 'Dealer Bot';
+    if (stakeInput) stakeInput.value = '150';
+    if (roomTypeSelect) roomTypeSelect.value = 'ai';
+    updatePokerRoomFormForType();
+    await publishCasinoActivity({
+      type: 'poker_room',
+      title: `${getCasinoPlayerDisplayName()} opened a poker room`,
+      body: roomType === 'human'
+        ? `${name} is live as a humans-only poker room at a $${stake.toLocaleString()} table.`
+        : `${name} is live with ${aiName} at a $${stake.toLocaleString()} table.`,
+      by: user
+    });
+    setCasinoStatus(`Poker room ${name} is live.`, 'success');
+    renderActiveCasinoGamePanel();
+  } catch (err) {
+    setCasinoStatus('Could not create the poker room.', 'error');
+  }
+}
+
+async function joinPokerRoom(roomId) {
+  const previousRoomId = currentPokerRoomId;
+  currentPokerRoomId = sanitizeNullableText(roomId, '');
+  pokerState = null;
+  if (previousRoomId && previousRoomId !== currentPokerRoomId) {
+    await syncPokerRoomMembership(previousRoomId, false);
+  }
+  if (currentPokerRoomId) {
+    await syncPokerRoomMembership(currentPokerRoomId, true);
+  }
+  renderActiveCasinoGamePanel();
+  const room = getSelectedPokerRoom();
+  if (room) {
+    setCasinoStatus(`Joined ${room.name}.`, 'success');
+  }
+}
+
+async function leavePokerRoom() {
+  const previousRoomId = currentPokerRoomId;
+  currentPokerRoomId = '';
+  pokerState = null;
+  if (previousRoomId) {
+    await syncPokerRoomMembership(previousRoomId, false);
+  }
+  renderActiveCasinoGamePanel();
+  setCasinoStatus('Left the poker room.', 'neutral');
+}
+
+async function deletePokerRoom(roomId) {
+  const room = pokerRoomCache.find((entry) => entry.id === roomId);
+  if (!room) return;
+  if (room.owner !== getCasinoPlayerKey() && !canManageRoles(currentChatUser)) {
+    setCasinoStatus('Only the room owner can delete that poker room.', 'error');
+    return;
+  }
+  try {
+    await getPokerRoomsCollection().doc(roomId).delete();
+    if (currentPokerRoomId === roomId) {
+      currentPokerRoomId = '';
+      pokerState = null;
+    }
+    pokerRoomCache = pokerRoomCache.filter((entry) => entry.id !== roomId);
+    await publishCasinoActivity({
+      type: 'poker_room_closed',
+      title: `${getCasinoPlayerDisplayName()} closed a poker room`,
+      body: `${room.name} was removed from the poker list.`,
+      by: getCasinoPlayerKey()
+    });
+    setCasinoStatus(`Deleted ${room.name}.`, 'success');
+    renderActiveCasinoGamePanel();
+  } catch (err) {
+    setCasinoStatus('Could not delete the poker room.', 'error');
+  }
+}
+
+async function startPokerHand() {
+  const room = getSelectedPokerRoom();
+  if (!room) {
+    setCasinoStatus('Join a poker room first.', 'error');
+    return;
+  }
+  if (room.roomType === 'human') {
+    setCasinoStatus('Human-only rooms do not seat an AI opponent.', 'error');
+    return;
+  }
+  try {
+    await validateCasinoBetAmount(room.stake);
+    const deck = shuffleDeck();
+    const playerHand = [deck.pop(), deck.pop()];
+    const aiHand = [deck.pop(), deck.pop()];
+    const communityCards = [deck.pop(), deck.pop(), deck.pop(), deck.pop(), deck.pop()];
+    pokerState = {
+      roomId: room.id,
+      stake: room.stake,
+      phase: 'preflop',
+      deck,
+      aiName: room.aiName,
+      playerHand,
+      aiHand,
+      communityCards,
+      revealedCommunityCount: 0,
+      selectedDiscards: [],
+      playerEvaluation: null,
+      aiEvaluation: null,
+      outcome: '',
+      resultText: ''
+    };
+    touchPokerRoom(room).catch(() => {});
+    renderPokerCurrentTable();
+    setCasinoStatus(`Texas Hold'em hand dealt at ${room.name}. Pre-flop is live.`, 'neutral');
+  } catch (err) {
+    setCasinoStatus(err && err.message ? err.message : 'Could not start poker.', 'error');
+  }
+}
+
+function togglePokerDiscard() {
+  return;
+}
+
+async function advancePokerStreet() {
+  const room = getSelectedPokerRoom();
+  if (!room || !pokerState || pokerState.phase === 'showdown') return;
+  try {
+    if (pokerState.phase === 'preflop') {
+      pokerState = {
+        ...pokerState,
+        phase: 'flop',
+        revealedCommunityCount: 3
+      };
+      touchPokerRoom(room).catch(() => {});
+      renderPokerCurrentTable();
+      setCasinoStatus(`Flop dealt at ${room.name}. ${getPokerCurrentPlayerHandText(pokerState)}`, 'neutral');
+      return;
+    }
+    if (pokerState.phase === 'flop') {
+      pokerState = {
+        ...pokerState,
+        phase: 'turn',
+        revealedCommunityCount: 4
+      };
+      touchPokerRoom(room).catch(() => {});
+      renderPokerCurrentTable();
+      setCasinoStatus(`Turn dealt at ${room.name}. ${getPokerCurrentPlayerHandText(pokerState)}`, 'neutral');
+      return;
+    }
+    if (pokerState.phase === 'turn') {
+      pokerState = {
+        ...pokerState,
+        phase: 'river',
+        revealedCommunityCount: 5
+      };
+      touchPokerRoom(room).catch(() => {});
+      renderPokerCurrentTable();
+      setCasinoStatus(`River dealt at ${room.name}. ${getPokerCurrentPlayerHandText(pokerState)}`, 'neutral');
+      return;
+    }
+    const playerEvaluation = getBestPokerEvaluation([...(pokerState.playerHand || []), ...(pokerState.communityCards || [])]);
+    const aiEvaluation = getBestPokerEvaluation([...(pokerState.aiHand || []), ...(pokerState.communityCards || [])]);
+    if (!playerEvaluation || !aiEvaluation) {
+      throw new Error('Could not evaluate the Texas Hold\'em showdown.');
+    }
+    const comparison = comparePokerEvaluations(playerEvaluation, aiEvaluation);
+    const outcome = comparison > 0 ? 'win' : comparison < 0 ? 'loss' : 'push';
+    const delta = outcome === 'win' ? room.stake : outcome === 'loss' ? -room.stake : 0;
+    await updateCasinoBalance(delta, { wager: room.stake, outcome, game: 'poker' });
+    pokerState = {
+      ...pokerState,
+      phase: 'showdown',
+      revealedCommunityCount: 5,
+      selectedDiscards: [],
+      playerEvaluation,
+      aiEvaluation,
+      outcome,
+      resultText: outcome === 'win'
+        ? `You win with ${playerEvaluation.label} over ${room.aiName}'s ${aiEvaluation.label}. +$${room.stake.toLocaleString()}`
+        : outcome === 'loss'
+          ? `${room.aiName} wins with ${aiEvaluation.label} over your ${playerEvaluation.label}. -$${room.stake.toLocaleString()}`
+          : `Push. Both you and ${room.aiName} showed ${playerEvaluation.label}.`
+    };
+    touchPokerRoom(room).catch(() => {});
+    renderPokerCurrentTable();
+    setCasinoStatus(pokerState.resultText, outcome === 'win' ? 'success' : outcome === 'loss' ? 'error' : 'neutral');
+  } catch (err) {
+    setCasinoStatus(err && err.message ? err.message : 'Could not finish the poker hand.', 'error');
+  }
+}
+
+async function drawPokerCardsForShowdown() {
+  await advancePokerStreet();
+}
+
+let activeCasinoGame = 'blackjack';
+let blackjackState = null;
+
+function setActiveCasinoGame(gameKey) {
+  activeCasinoGame = ['blackjack', 'roulette', 'slots', 'poker'].includes(gameKey) ? gameKey : 'blackjack';
+  blackjackState = null;
+  rouletteVisualState = { selectedChoice: '', winningValue: null, activeValue: null, spinning: false };
+  if (activeCasinoGame !== 'poker' && typeof stopListeningForPokerRooms === 'function') stopListeningForPokerRooms();
+  renderCasinoGame();
+  loadCasinoBalance().catch(() => {});
+}
+
+function renderCasinoTabButton(gameKey, label) {
+  const isActive = activeCasinoGame === gameKey;
+  return `<button onclick="setActiveCasinoGame('${gameKey}')" style="padding:0.55rem 0.85rem;border-radius:0.7rem;border:none;font-weight:700;background:${isActive ? 'linear-gradient(180deg, #4f83ff 0%, #3268f0 100%)' : '#242b38'};color:#fff;">${escapeHtml(label)}</button>`;
+}
+
+function renderCasinoGame() {
+  const area = document.getElementById('casino-game-area');
+  if (!area) return;
+  area.innerHTML = `
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap:1rem; align-items:start;">
+      <div style="display:grid; gap:0.9rem; min-width:0;">
+        <div style="display:grid; gap:0.7rem;">
+          <div style="font-size:0.95rem; color:#dce6f2;">Choose a casino game.</div>
+          <div style="display:flex; gap:0.45rem; flex-wrap:wrap; justify-content:flex-start;">${renderCasinoTabButton('blackjack', 'Blackjack')}${renderCasinoTabButton('roulette', 'Roulette')}${renderCasinoTabButton('slots', 'Slots')}${renderCasinoTabButton('poker', 'Poker')}</div>
+        </div>
+        <div id="casino-game-status" style="margin-top:0.2rem;color:#9fb0c2;min-height:1.2rem;"></div>
+        <div id="casino-recovery-action"></div>
+        <div id="casino-game-panel" style="margin-top:0.2rem;"></div>
+      </div>
+      <div style="display:grid; gap:0.85rem; min-width:0;">
+        <div style="padding:0.85rem; background:#10151d; border:1px solid #263140; border-radius:0.9rem;">
+          <div style="font-size:0.88rem; font-weight:700; color:#fff; margin-bottom:0.65rem;">Casino Stats</div>
+          <div id="casino-sidebar-stats"></div>
+        </div>
+        <div style="padding:0.85rem; background:#10151d; border:1px solid #263140; border-radius:0.9rem;">
+          <div style="font-size:0.88rem; font-weight:700; color:#fff; margin-bottom:0.65rem;">Casino Achievements</div>
+          <div id="casino-achievement-list" class="achievement-list" style="max-height:15rem; overflow:auto;"></div>
+        </div>
+        <div style="padding:0.85rem; background:#10151d; border:1px solid #263140; border-radius:0.9rem;">
+          <div style="font-size:0.88rem; font-weight:700; color:#fff; margin-bottom:0.65rem;">Casino Feed</div>
+          <div id="casino-activity-feed" class="activity-feed-list" style="max-height:15rem; overflow:auto;"></div>
+        </div>
+      </div>
+    </div>
+  `;
+  renderActiveCasinoGamePanel();
+  renderCasinoSidebar(getCachedCasinoProfileStats(getCasinoPlayerKey()));
+  renderCasinoActivityFeed();
+}
+
+function renderActiveCasinoGamePanel() {
+  const panel = document.getElementById('casino-game-panel');
+  if (!panel) return;
+  const gameSettings = getCachedCasinoGameSettings();
+  if (activeCasinoGame === 'poker') {
+    renderPokerPanel();
+    return;
+  }
+  if (activeCasinoGame === 'roulette') {
+    panel.innerHTML = `
+      <div style="display:grid; gap:0.75rem; justify-items:center;">
+        <div style="font-size:0.88rem; color:#dce6f2;">Bet on red, black, or green. Red/black pays +$bet. Green pays +$13 x bet. Owner boost on your selected pocket: ${gameSettings.rouletteSelectedBoostPct >= 0 ? '+' : ''}${gameSettings.rouletteSelectedBoostPct}%.</div>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center; align-items:center;">
+          <input id="roulette-bet" type="number" min="1" max="10000" value="100" style="padding:0.4rem 0.7rem;border-radius:0.5rem;border:1px solid #333;background:#222;color:#fff;width:90px;">
+          <button onclick="spinRoulette('red')" style="padding:0.5rem 1rem;border-radius:0.6rem;background:#b71c1c;color:#fff;border:none;font-weight:700;">Red</button>
+          <button onclick="spinRoulette('black')" style="padding:0.5rem 1rem;border-radius:0.6rem;background:#111;color:#fff;border:1px solid #444;font-weight:700;">Black</button>
+          <button onclick="spinRoulette('green')" style="padding:0.5rem 1rem;border-radius:0.6rem;background:#2e7d32;color:#fff;border:none;font-weight:700;">Green</button>
+        </div>
+        <div id="roulette-visual" style="width:min(34rem, 100%);"></div>
+        <div id="roulette-area" style="margin-top:0.6rem;color:#fff;"></div>
+      </div>
+    `;
+    renderRouletteVisualization();
+    return;
+  }
+  if (activeCasinoGame === 'slots') {
+    panel.innerHTML = `
+      <div style="display:grid; gap:0.75rem; justify-items:center;">
+        <div style="font-size:0.88rem; color:#dce6f2;">Spin the reels. The board below shows the winning combinations, the emoji symbols, and how many times your bet they pay.</div>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center; align-items:center;">
+          <input id="slots-bet" type="number" min="1" max="10000" value="100" style="padding:0.4rem 0.7rem;border-radius:0.5rem;border:1px solid #333;background:#222;color:#fff;width:90px;">
+          <button id="slots-spin-button" onclick="spinSlots()" style="padding:0.5rem 1rem;border-radius:0.6rem;background:#8e24aa;color:#fff;border:none;font-weight:700;">Spin</button>
+        </div>
+        <div id="slots-reel-visual" style="display:flex; gap:0.55rem; flex-wrap:wrap; justify-content:center; margin-top:0.2rem;"></div>
+        <div id="slots-odds-visual" style="width:min(24rem, 100%); display:grid; gap:0.4rem;"></div>
+        <div id="slots-area" style="margin-top:0.6rem;color:#fff;"></div>
+      </div>
+    `;
+    renderSlotsVisualization();
+    return;
+  }
+  panel.innerHTML = `
+    <div style="display:grid; gap:0.75rem; justify-items:center;">
+      <div style="font-size:0.88rem; color:#dce6f2;">Play Blackjack. Beat the dealer without going over 21. Dealer stands on ${gameSettings.blackjackDealerStandValue}.</div>
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center; align-items:center;">
+        <input id="casino-bet" type="number" min="1" max="10000" value="100" style="padding:0.4rem 0.7rem;border-radius:0.5rem;border:1px solid #333;background:#222;color:#fff;width:90px;">
+        <button onclick="startBlackjack()" style="padding:0.5rem 1.2rem;border-radius:0.6rem;background:#4f83ff;color:#fff;border:none;font-weight:700;">Bet & Deal</button>
+      </div>
+      <div id="blackjack-area" style="margin-top:0.6rem;color:#fff;"></div>
+    </div>
+  `;
+}
+
+async function validateCasinoBet(inputId) {
+  const input = document.getElementById(inputId);
+  return validateCasinoBetAmount(input ? input.value : 0);
+}
+
+function shuffleDeck() {
+  const suits = ['♠', '♥', '♦', '♣'];
+  const ranks = [2,3,4,5,6,7,8,9,10,'J','Q','K','A'];
+  let deck = [];
+  for (const suit of suits) for (const rank of ranks) deck.push({ suit, rank });
+  for (let i = deck.length - 1; i > 0; i--) {
+    const swapIndex = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[swapIndex]] = [deck[swapIndex], deck[i]];
+  }
+  return deck;
+}
+
+function drawCard(hand) {
+  hand.push(blackjackState.deck.pop());
+}
+
+function handValue(hand) {
+  let value = 0;
+  let aces = 0;
+  for (const card of hand) {
+    if (typeof card.rank === 'number') value += card.rank;
+    else if (card.rank === 'A') {
+      value += 11;
+      aces += 1;
+    } else {
+      value += 10;
+    }
+  }
+  while (value > 21 && aces) {
+    value -= 10;
+    aces -= 1;
+  }
+  return value;
+}
+
+async function startBlackjack() {
+  try {
+    await loadCasinoGameSettings();
+    const { bet } = await validateCasinoBet('casino-bet');
+    blackjackState = { bet, player: [], dealer: [], deck: shuffleDeck(), done: false };
+    drawCard(blackjackState.player);
+    drawCard(blackjackState.dealer);
+    drawCard(blackjackState.player);
+    drawCard(blackjackState.dealer);
+    renderBlackjack();
+  } catch (err) {
+    setCasinoStatus(err && err.message ? err.message : 'Could not start blackjack.', 'error');
+  }
+}
+
+function cardHtml(hand, hideSecond) {
+  return hand.map((card, index) => hideSecond && index === 1 ? '🂠' : `${card.rank}${card.suit}`).join(' ');
+}
+
+function renderBlackjack() {
+  const area = document.getElementById('blackjack-area');
+  if (!area || !blackjackState) return;
+  const { player, dealer, done } = blackjackState;
+  const playerVal = handValue(player);
+  const dealerVal = handValue(dealer);
+  let html = `
+    <div style="display:grid; gap:0.85rem; width:min(34rem, 100%); padding:1rem; border-radius:1rem; background:radial-gradient(circle at top, rgba(38,90,58,0.42) 0%, rgba(9,18,12,0.96) 74%); border:1px solid #26452f; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.04);">
+      <div style="display:flex; justify-content:space-between; gap:0.6rem; flex-wrap:wrap; font-size:0.8rem; color:#c7d4e2;">
+        <span>Blackjack table</span>
+        <span>Bet: $${blackjackState.bet.toLocaleString()}</span>
+      </div>
+      <div style="padding:0.85rem; border-radius:0.85rem; background:rgba(8, 15, 23, 0.8); border:1px solid #2b3442; display:grid; gap:0.5rem;">
+        <div style="display:flex; justify-content:space-between; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+          <div style="font-size:0.84rem; color:#9fb0c2;">Dealer</div>
+          <div style="font-size:0.82rem; color:#dce6f2;">${done ? `${dealerVal} points` : 'One card hidden'}</div>
+        </div>
+        <div style="display:flex; gap:0.45rem; flex-wrap:wrap; justify-content:center;">${renderCasinoCardRow(dealer, { hiddenSecond: !done })}</div>
+      </div>
+      <div style="padding:0.85rem; border-radius:0.85rem; background:rgba(8, 15, 23, 0.8); border:1px solid #2b3442; display:grid; gap:0.5rem;">
+        <div style="display:flex; justify-content:space-between; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+          <div style="font-size:0.84rem; color:#9fb0c2;">You</div>
+          <div style="font-size:0.82rem; color:#dce6f2;">${playerVal} points</div>
+        </div>
+        <div style="display:flex; gap:0.45rem; flex-wrap:wrap; justify-content:center;">${renderCasinoCardRow(player)}</div>
+      </div>`;
+  if (!done) {
+    html += `<div style="display:flex; justify-content:center; gap:0.55rem; flex-wrap:wrap;"><button onclick="blackjackHit()" style="padding:0.55rem 1.15rem;border-radius:0.6rem;background:#3c68ea;color:#fff;border:none;font-weight:700;">Hit</button><button onclick="blackjackStand()" style="padding:0.55rem 1.15rem;border-radius:0.6rem;background:#222;color:#fff;border:none;font-weight:700;">Stand</button></div>`;
+  } else {
+    html += `<div style="padding:0.8rem; border-radius:0.8rem; background:${playerVal > 21 || (dealerVal <= 21 && playerVal < dealerVal) ? '#3a1717' : playerVal === dealerVal ? '#263140' : '#173524'}; color:#fff; font-weight:700; text-align:center;">${blackjackResult()}</div>`;
+    html += `<div style="display:flex; justify-content:center;"><button onclick="renderActiveCasinoGamePanel()" style="padding:0.55rem 1.15rem;border-radius:0.6rem;background:#4f83ff;color:#fff;border:none;font-weight:700;">Play Again</button></div>`;
+  }
+  html += `</div>`;
+  area.innerHTML = html;
+}
+
+function blackjackResult() {
+  const playerVal = handValue(blackjackState.player);
+  const dealerVal = handValue(blackjackState.dealer);
+  if (playerVal > 21) return `You busted! -$${blackjackState.bet}`;
+  if (dealerVal > 21) return `Dealer busted! +$${blackjackState.bet}`;
+  if (playerVal > dealerVal) return `You win! +$${blackjackState.bet}`;
+  if (playerVal === dealerVal) return 'Push! Bet returned.';
+  return `You lose! -$${blackjackState.bet}`;
+}
+
+async function finishBlackjack() {
+  const playerVal = handValue(blackjackState.player);
+  const dealerVal = handValue(blackjackState.dealer);
+  let delta = 0;
+  let outcome = 'push';
+  if (playerVal > 21) {
+    delta = -blackjackState.bet;
+    outcome = 'loss';
+  } else if (dealerVal > 21 || playerVal > dealerVal) {
+    delta = blackjackState.bet;
+    outcome = 'win';
+  } else if (playerVal < dealerVal) {
+    delta = -blackjackState.bet;
+    outcome = 'loss';
+  }
+  await updateCasinoBalance(delta, { wager: blackjackState.bet, outcome, game: 'blackjack' });
+  setCasinoStatus(blackjackResult(), outcome === 'loss' ? 'error' : (outcome === 'win' ? 'success' : 'neutral'));
+}
+
+async function blackjackHit() {
+  drawCard(blackjackState.player);
+  if (handValue(blackjackState.player) > 21) {
+    blackjackState.done = true;
+    await finishBlackjack();
+  }
+  renderBlackjack();
+}
+
+async function blackjackStand() {
+  const settings = await loadCasinoGameSettings();
+  while (handValue(blackjackState.dealer) < settings.blackjackDealerStandValue) drawCard(blackjackState.dealer);
+  blackjackState.done = true;
+  await finishBlackjack();
+  renderBlackjack();
+}
+
+async function spinRoulette(choice) {
+  try {
+    const settings = await loadCasinoGameSettings();
+    const { bet } = await validateCasinoBet('roulette-bet');
+    const multiplier = Math.max(0.2, 1 + (settings.rouletteSelectedBoostPct / 100));
+    const pockets = Array.from({ length: 15 }, (_, value) => ({
+      value,
+      color: value === 0 ? 'green' : (value % 2 === 0 ? 'black' : 'red'),
+      weight: (value === 0 ? 'green' : (value % 2 === 0 ? 'black' : 'red')) === choice ? multiplier : 1
+    }));
+    const totalWeight = pockets.reduce((sum, pocket) => sum + pocket.weight, 0);
+    let remaining = Math.random() * totalWeight;
+    let winningPocket = pockets[0];
+    for (const pocket of pockets) {
+      remaining -= pocket.weight;
+      if (remaining <= 0) {
+        winningPocket = pocket;
+        break;
+      }
+    }
+    const roll = winningPocket.value;
+    const resultColor = winningPocket.color;
+    const delta = choice === resultColor ? (choice === 'green' ? bet * 13 : bet) : -bet;
+    const outcome = delta > 0 ? 'win' : 'loss';
+    await animateRouletteSpin(winningPocket, choice);
+    await updateCasinoBalance(delta, { wager: bet, outcome, game: 'roulette' });
+    const area = document.getElementById('roulette-area');
+    if (area) {
+      area.innerHTML = `
+        <div style="display:grid; gap:0.45rem; justify-items:center; text-align:center;">
+          <div style="font-size:0.92rem; color:#dce6f2;">Ball landed on <strong>${roll}</strong> (${escapeHtml(resultColor)}).</div>
+          <div style="font-size:0.96rem; color:${delta > 0 ? '#9fe3a5' : '#ffb4a8'}; font-weight:700;">${delta > 0 ? `You won $${delta}.` : `You lost $${bet}.`}</div>
+        </div>`;
+    }
+    setCasinoStatus(`Roulette result: ${resultColor.toUpperCase()}.`, outcome === 'win' ? 'success' : 'error');
+  } catch (err) {
+    setCasinoStatus(err && err.message ? err.message : 'Could not spin roulette.', 'error');
+  }
+}
+
+async function spinSlots() {
+  if (slotsSpinInProgress) return;
+  try {
+    slotsSpinInProgress = true;
+    setSlotsSpinButtonState(true);
+    const settings = await loadCasinoGameSettings();
+    const { bet } = await validateCasinoBet('slots-bet');
+    const reels = [pickWeightedSlotSymbol(settings), pickWeightedSlotSymbol(settings), pickWeightedSlotSymbol(settings)];
+    const area = document.getElementById('slots-area');
+    if (area) {
+      area.innerHTML = `<div style="font-size:0.92rem; color:#dce6f2;">Reels spinning...</div>`;
+    }
+    await animateSlotsSpin(reels, settings);
+    let delta = -bet;
+    if (reels[0] === reels[1] && reels[1] === reels[2]) {
+      delta = reels[0] === '7' ? bet * 8 : bet * 3;
+    } else if (reels[0] === reels[1] || reels[1] === reels[2] || reels[0] === reels[2]) {
+      delta = bet;
+    }
+    const outcome = delta > 0 ? 'win' : 'loss';
+    await updateCasinoBalance(delta, { wager: bet, outcome, game: 'slots' });
+    if (area) {
+      area.innerHTML = `
+        <div style="display:flex; justify-content:center; gap:0.55rem; flex-wrap:wrap;">${reels.map((symbol) => renderSlotFace(symbol)).join('')}</div>
+        <div style="margin-top:0.6rem; text-align:center; font-size:0.95rem; color:${delta > 0 ? '#9fe3a5' : '#ffb4a8'};">${delta > 0 ? `You won $${delta}.` : `You lost $${bet}.`}</div>`;
+    }
+    setCasinoStatus(delta > 0 ? 'Slots paid out.' : 'Slots missed this round.', outcome === 'win' ? 'success' : 'error');
+  } catch (err) {
+    setCasinoStatus(err && err.message ? err.message : 'Could not spin slots.', 'error');
+  } finally {
+    slotsSpinInProgress = false;
+    setSlotsSpinButtonState(false);
+  }
+}
+
 // --- In-Game Chat Overlay ---
 
 async function adminUnbanUser() {
@@ -5300,13 +7657,43 @@ const PROFILE_TAG_ALIASES = {
 'tag-contributor': 'contributor'
 };
 const DEFAULT_UPDATE_NOTES = [
-'The library and storefront were updated with more visible browsing controls, including UI density settings, a site accent picker, a favorites-only filter, personal game ratings, and a direct broken-game report flow for games that fail to load or behave correctly.',
-'Chat was expanded with stronger day-to-day usability features: the panel can now dock left or right, resize more naturally, show clearer unread state, insert formatting shortcuts, and keep recent-room reading state so it is easier to return to active conversations.',
-'Room management now exposes more structure for private spaces, including room icons, invite codes, room favorites, searchable member picks during setup, richer room summaries, and better moderation visibility for room-level roles and audit activity.',
-'Profiles and achievements were upgraded with banner support, richer detail cards, self-visible moderation status, side-by-side compare tools, and near-complete achievement hints so users can see what they are close to unlocking.',
-'Admin review tools were modernized with queue summary cards, per-item selection, bulk actions, rejection reasons for login requests, and modal-based confirmations instead of the older direct prompt or confirm flow.',
-'Thumbnail poll screens now provide more context by showing richer candidate previews and visible voter lists, making it easier to understand which image is winning and who has already voted.'
+'The casino now includes blackjack, roulette, slots, and poker with balances saved in the separate casino database for each player.',
+'Slots were upgraded with emoji reel symbols, a visible spin animation, a clearer payout board, and labeled win or lose conditions so the results are easier to read.',
+'Casino controls were expanded for owners with labeled chance tuning for blackjack, roulette, and slot symbols instead of unlabeled number boxes.',
+'Poker now has room creation, AI or humans-only room types, a tutorial, and full hand examples so people can learn the game inside the site.',
+'Casino profiles, feed, achievements, bailout tracking, streaks, and leaderboard tags were expanded so player progress and activity are easier to see.'
 ];
+const LEGACY_UPDATE_NOTES = [
+  [
+    'A persistent what\'s new panel and detailed notes view now make recent site changes easier to review.',
+    'Store browsing now includes density and accent preferences, a visible favorites-only toggle, personal ratings, and broken-game reporting.',
+    'Chat now supports docking, manual resize, formatting shortcuts, unread separators, and clearer jump-to-latest behavior.',
+    'Private rooms now support favorites, invite codes, room icons, searchable member selection, and richer moderation controls.',
+    'Profiles, review queues, and thumbnail polls were expanded with banners, compare tools, rejection reasons, bulk actions, and visible voter lists.'
+  ],
+  [
+    'The casino was expanded with a poker lounge, shared AI or humans-only rooms, a poker tutorial with full hand examples, owner-tunable chances for blackjack, roulette, and slots, and a clearer slots odds visualization.',
+    'The library and storefront were updated with more visible browsing controls, including UI density settings, a site accent picker, a favorites-only filter, personal game ratings, and a direct broken-game report flow for games that fail to load or behave correctly.',
+    'Chat was expanded with stronger day-to-day usability features: the panel can now dock left or right, resize more naturally, show clearer unread state, insert formatting shortcuts, and keep recent-room reading state so it is easier to return to active conversations.',
+    'Room management now exposes more structure for private spaces, including room icons, invite codes, room favorites, searchable member picks during setup, richer room summaries, and better moderation visibility for room-level roles and audit activity.',
+    'Profiles and achievements were upgraded with banner support, richer detail cards, self-visible moderation status, side-by-side compare tools, and near-complete achievement hints so users can see what they are close to unlocking.',
+    'Admin review tools were modernized with queue summary cards, per-item selection, bulk actions, rejection reasons for login requests, and modal-based confirmations instead of the older direct prompt or confirm flow.',
+    'Thumbnail poll screens now provide more context by showing richer candidate previews and visible voter lists, making it easier to understand which image is winning and who has already voted.'
+  ]
+];
+
+function normalizeUpdateNotesList(notes) {
+  return (Array.isArray(notes) ? notes : []).map((note) => String(note || '').trim()).filter(Boolean);
+}
+
+function shouldReplaceLegacyUpdateNotes(notes) {
+  const normalized = normalizeUpdateNotesList(notes);
+  if (!normalized.length) return true;
+  return LEGACY_UPDATE_NOTES.some((legacyNotes) => {
+    const normalizedLegacy = normalizeUpdateNotesList(legacyNotes);
+    return normalized.length === normalizedLegacy.length && normalized.every((note, index) => note === normalizedLegacy[index]);
+  });
+}
 let updateNotesCache = DEFAULT_UPDATE_NOTES.slice();
 const ACHIEVEMENTS = [
 { id: 'first_message', label: 'First Word', description: 'Send your first chat message.', stat: 'messagesSent', goal: 1 },
@@ -5358,11 +7745,48 @@ if (key !== OWNER_TAG_USERNAME) return '';
 return '<span class="owner-tag">OWNER</span>';
 }
 
+let dynamicLeaderboardTagState = {
+mostMoney: '',
+mostActive: '',
+leastMoney: '',
+leastActive: '',
+hotHandUsers: [],
+coldTableUsers: []
+};
+let dynamicLeaderboardTagRefreshTimer = null;
+let dynamicLeaderboardTagRefreshPromise = null;
+
+function getDynamicUserTagHtml(username) {
+const key = normalizeUsername(username);
+if (!key) return '';
+const tags = [];
+if (dynamicLeaderboardTagState.mostMoney === key) {
+tags.push({ className: 'tag-most-money', label: 'Most Money' });
+}
+if (dynamicLeaderboardTagState.mostActive === key) {
+tags.push({ className: 'tag-most-active', label: 'Most Active' });
+}
+if (dynamicLeaderboardTagState.leastActive === key) {
+tags.push({ className: 'tag-least-active', label: 'Least Active Chud' });
+}
+if (dynamicLeaderboardTagState.leastMoney === key) {
+tags.push({ className: 'tag-broke-chud', label: 'Broke Chud' });
+}
+if (Array.isArray(dynamicLeaderboardTagState.hotHandUsers) && dynamicLeaderboardTagState.hotHandUsers.includes(key)) {
+tags.push({ className: 'tag-hot-hand', label: 'Hot Hand' });
+}
+if (Array.isArray(dynamicLeaderboardTagState.coldTableUsers) && dynamicLeaderboardTagState.coldTableUsers.includes(key)) {
+tags.push({ className: 'tag-cold-table', label: 'Cold Table' });
+}
+return tags.map((tag) => `<span class="custom-tag ${tag.className}">${escapeHtml(tag.label)}</span>`).join('');
+}
+
 function getUserTagHtml(username) {
+const dynamicTagsHtml = getDynamicUserTagHtml(username);
 const tagKey = getUserProfileTagKey(username);
-if (!tagKey || !PROFILE_TAGS[tagKey]) return '';
+if (!tagKey || !PROFILE_TAGS[tagKey]) return dynamicTagsHtml;
 const tagData = PROFILE_TAGS[tagKey];
-return `<span class="custom-tag ${tagData.className}">${escapeHtml(tagData.label)}</span>`;
+return `${dynamicTagsHtml}<span class="custom-tag ${tagData.className}">${escapeHtml(tagData.label)}</span>`;
 }
 
 function getProfileTagOptionsHtml(selectedTag = '') {
@@ -5388,6 +7812,146 @@ loadLeaderboard();
 if (document.getElementById('chat-container')) {
 loadChatMessages();
 }
+}
+
+function applyDynamicLeaderboardTagState(nextState, refreshUi = true) {
+const normalizedState = {
+mostMoney: normalizeUsername(nextState && nextState.mostMoney),
+mostActive: normalizeUsername(nextState && nextState.mostActive),
+leastMoney: normalizeUsername(nextState && nextState.leastMoney),
+leastActive: normalizeUsername(nextState && nextState.leastActive),
+hotHandUsers: Array.from(new Set(((nextState && nextState.hotHandUsers) || []).map((username) => normalizeUsername(username)).filter(Boolean))).sort(),
+coldTableUsers: Array.from(new Set(((nextState && nextState.coldTableUsers) || []).map((username) => normalizeUsername(username)).filter(Boolean))).sort()
+};
+const changed = dynamicLeaderboardTagState.mostMoney !== normalizedState.mostMoney
+|| dynamicLeaderboardTagState.mostActive !== normalizedState.mostActive
+|| dynamicLeaderboardTagState.leastMoney !== normalizedState.leastMoney
+|| dynamicLeaderboardTagState.leastActive !== normalizedState.leastActive
+|| (dynamicLeaderboardTagState.hotHandUsers || []).join('|') !== normalizedState.hotHandUsers.join('|')
+|| (dynamicLeaderboardTagState.coldTableUsers || []).join('|') !== normalizedState.coldTableUsers.join('|');
+dynamicLeaderboardTagState = normalizedState;
+if (!changed || !refreshUi) return;
+refreshTagDependentUi();
+if (document.getElementById('casino-leaderboard-modal')?.style.display === 'flex') {
+loadCasinoLeaderboard();
+}
+}
+
+async function refreshDynamicLeaderboardTags(refreshUi = true) {
+if (dynamicLeaderboardTagRefreshPromise) return dynamicLeaderboardTagRefreshPromise;
+dynamicLeaderboardTagRefreshPromise = (async () => {
+  const db = getPrimaryDb();
+  const adminDb = getAdminDb();
+  const nowMs = Date.now();
+  const bannedUsers = await getBannedUsernames().catch(() => []);
+  const bannedSet = new Set((bannedUsers || []).map((username) => normalizeUsername(username)).filter(Boolean));
+  const [statsSnapshot, approvedAccountsSnapshot, profilesSnapshot, balancesSnapshot] = await Promise.all([
+    db.collection(USER_STATS_COLLECTION).get(),
+    adminDb.collection(LOGIN_REQUESTS_COLLECTION).where('status', '==', 'approved').get(),
+    adminDb.collection(USER_PROFILES_COLLECTION).get(),
+    getCasinoBalanceCollection().get()
+  ]);
+  const allStats = {};
+  statsSnapshot.forEach((doc) => {
+    allStats[normalizeUsername(doc.id)] = doc.data() || {};
+  });
+  const localStats = getStatsStore();
+  const knownUsers = new Set();
+  Object.keys(allStats).forEach((username) => knownUsers.add(normalizeUsername(username)));
+  Object.keys(localStats || {}).forEach((username) => knownUsers.add(normalizeUsername(username)));
+  approvedAccountsSnapshot.forEach((doc) => knownUsers.add(normalizeUsername(doc.id || ((doc.data() || {}).username))));
+  Object.keys(roleCache || {}).forEach((username) => knownUsers.add(normalizeUsername(username)));
+  Object.keys(userTagCache || {}).forEach((username) => knownUsers.add(normalizeUsername(username)));
+  const currentUserKey = normalizeUsername(currentChatUser || (typeof getUserName === 'function' ? getUserName() : '') || '');
+  if (currentUserKey) knownUsers.add(currentUserKey);
+  profilesSnapshot.forEach((doc) => {
+    const key = normalizeUsername(doc.id);
+    if (!key) return;
+    userProfileCache[key] = buildProfileCacheEntry(key, doc.data() || {});
+    knownUsers.add(key);
+  });
+  const balanceMap = {};
+  const hotHandUsers = [];
+  const coldTableUsers = [];
+  let nextHotHandExpiryMs = 0;
+  let nextColdTableExpiryMs = 0;
+  balancesSnapshot.forEach((doc) => {
+    const data = doc.data() || {};
+    const key = normalizeUsername(data.username || doc.id);
+    if (!key) return;
+    const casinoStats = normalizeCasinoProfileStatsData(key, data);
+    balanceMap[key] = casinoStats.balance;
+    if (casinoStats.hotHandUntilMs > nowMs && !bannedSet.has(key)) {
+      hotHandUsers.push(key);
+      nextHotHandExpiryMs = nextHotHandExpiryMs ? Math.min(nextHotHandExpiryMs, casinoStats.hotHandUntilMs) : casinoStats.hotHandUntilMs;
+    }
+    if (casinoStats.coldTableUntilMs > nowMs && !bannedSet.has(key)) {
+      coldTableUsers.push(key);
+      nextColdTableExpiryMs = nextColdTableExpiryMs ? Math.min(nextColdTableExpiryMs, casinoStats.coldTableUntilMs) : casinoStats.coldTableUntilMs;
+    }
+    knownUsers.add(key);
+  });
+  const filteredUsers = Array.from(knownUsers).filter(Boolean).filter((username) => !bannedSet.has(username));
+  const mostActiveData = filteredUsers
+    .map((username) => {
+      const stats = allStats[username] || localStats[username] || {
+        gamesOpened: 0,
+        messagesSent: 0,
+        mediaShared: 0,
+        reactionsUsed: 0
+      };
+      return {
+        username,
+        points: calculateUserLevel(stats, username).points
+      };
+    })
+    .sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      return a.username.localeCompare(b.username);
+    });
+  const mostMoneyData = filteredUsers
+    .map((username) => ({
+      username,
+      balance: Object.prototype.hasOwnProperty.call(balanceMap, username) ? balanceMap[username] : 1000
+    }))
+    .sort((a, b) => {
+      if (b.balance !== a.balance) return b.balance - a.balance;
+      return a.username.localeCompare(b.username);
+    });
+  const leastActiveData = mostActiveData.slice().sort((a, b) => {
+    if (a.points !== b.points) return a.points - b.points;
+    return a.username.localeCompare(b.username);
+  });
+  const leastMoneyData = mostMoneyData.slice().sort((a, b) => {
+    if (a.balance !== b.balance) return a.balance - b.balance;
+    return a.username.localeCompare(b.username);
+  });
+  applyDynamicLeaderboardTagState({
+    mostMoney: mostMoneyData[0] ? mostMoneyData[0].username : '',
+    mostActive: mostActiveData[0] ? mostActiveData[0].username : '',
+    leastMoney: leastMoneyData[0] ? leastMoneyData[0].username : '',
+    leastActive: leastActiveData[0] ? leastActiveData[0].username : '',
+    hotHandUsers,
+    coldTableUsers
+  }, refreshUi);
+  const nextTagExpiryMs = [nextHotHandExpiryMs, nextColdTableExpiryMs].filter((value) => value > nowMs).sort((a, b) => a - b)[0] || 0;
+  if (nextTagExpiryMs > nowMs) {
+    scheduleDynamicLeaderboardTagRefresh(Math.max(1000, nextTagExpiryMs - nowMs + 250));
+  }
+})().finally(() => {
+  dynamicLeaderboardTagRefreshPromise = null;
+});
+return dynamicLeaderboardTagRefreshPromise;
+}
+
+function scheduleDynamicLeaderboardTagRefresh(delayMs = 450) {
+if (dynamicLeaderboardTagRefreshTimer) {
+clearTimeout(dynamicLeaderboardTagRefreshTimer);
+}
+dynamicLeaderboardTagRefreshTimer = setTimeout(() => {
+  dynamicLeaderboardTagRefreshTimer = null;
+  refreshDynamicLeaderboardTags().catch(() => {});
+}, delayMs);
 }
 
 function getRoleRank(role) {
@@ -5442,7 +8006,8 @@ const targetIds = [
 'admin-warn-username',
 'admin-tempban-username',
 'admin-role-username',
-'admin-history-username'
+'admin-history-username',
+'admin-casino-username'
 ];
 targetIds.forEach((id) => {
 const el = document.getElementById(id);
@@ -5518,6 +8083,58 @@ function getAdminSectionPreferenceKey(sectionId) {
 return `adminSectionCollapsed:${sectionId}`;
 }
 
+function getAdminSectionAutoId(label, index) {
+const slug = String(label || '')
+.toLowerCase()
+.replace(/[^a-z0-9]+/g, '-')
+.replace(/^-+|-+$/g, '');
+return slug || `admin-section-${index + 1}`;
+}
+
+function initializeAdminSectionCards() {
+const cards = Array.from(document.querySelectorAll('#admin-menu .admin-section-card'));
+cards.forEach((card, index) => {
+let heading = Array.from(card.children).find((child) => child.classList.contains('admin-section-heading')) || null;
+let body = Array.from(card.children).find((child) => child.classList.contains('admin-section-body')) || null;
+let title = heading
+? heading.querySelector('.admin-section-title')
+: Array.from(card.children).find((child) => child.classList.contains('admin-section-title'));
+if (!title) return;
+if (!card.dataset.adminSectionId) {
+card.dataset.adminSectionId = getAdminSectionAutoId(title.textContent, index);
+}
+const sectionId = card.dataset.adminSectionId;
+if (!heading) {
+heading = document.createElement('div');
+heading.className = 'admin-section-heading';
+card.insertBefore(heading, card.firstChild);
+}
+if (!heading.contains(title)) {
+heading.insertBefore(title, heading.firstChild);
+}
+let toggle = heading.querySelector('.admin-section-toggle');
+if (!toggle) {
+toggle = document.createElement('button');
+toggle.className = 'admin-section-toggle';
+toggle.type = 'button';
+heading.appendChild(toggle);
+}
+toggle.onclick = function() {
+toggleAdminSectionCard(sectionId);
+};
+if (!body) {
+body = document.createElement('div');
+body.className = 'admin-section-body';
+const looseNodes = Array.from(card.childNodes).filter((node) => node !== heading);
+looseNodes.forEach((node) => body.appendChild(node));
+card.appendChild(body);
+} else {
+const looseNodes = Array.from(card.childNodes).filter((node) => node !== heading && node !== body);
+looseNodes.forEach((node) => body.appendChild(node));
+}
+});
+}
+
 function applyAdminSectionCardState(sectionId) {
 const card = document.querySelector(`#admin-menu .admin-section-card[data-admin-section-id="${sectionId}"]`);
 if (!card) return;
@@ -5535,7 +8152,10 @@ applyAdminSectionCardState(sectionId);
 }
 
 function syncAdminSectionCardStates() {
-['accounts', 'analytics', 'login-requests'].forEach(applyAdminSectionCardState);
+initializeAdminSectionCards();
+document.querySelectorAll('#admin-menu .admin-section-card[data-admin-section-id]').forEach((card) => {
+applyAdminSectionCardState(card.dataset.adminSectionId);
+});
 }
 
 function updateAdminOwnerToolState() {
@@ -5587,6 +8207,8 @@ loadGameSubmissionsOnce();
 loadLoginRequestsOnce();
 renderSubmissionQueue();
 renderLoginRequestQueue();
+loadAdminCasinoManager();
+loadAdminCasinoGameSettings();
 document.getElementById('admin-menu').style.display = 'flex';
 }
 function closeAdminMenu() {
@@ -6303,8 +8925,54 @@ const GAME_SUBMISSIONS_COLLECTION = 'game_submissions';
 const GAME_METADATA_COLLECTION = 'game_metadata';
 const LOGIN_REQUESTS_COLLECTION = 'login_requests';
 const SITE_ACTIVITY_COLLECTION = 'site_activity';
+const CASINO_ACTIVITY_COLLECTION = 'casino_activity';
+const CASINO_CONFIG_COLLECTION = 'casino_config';
+const POKER_ROOMS_COLLECTION = 'poker_rooms';
 const MAX_LOCAL_NOTIFICATIONS = 80;
 const MAX_ACTIVITY_ITEMS = 30;
+const MAX_CASINO_ACTIVITY_ITEMS = 18;
+const CASINO_GAME_SETTINGS_DOC_ID = 'game_chances';
+const CASINO_HOT_HAND_STREAK = 3;
+const CASINO_HOT_HAND_DURATION_MS = 20 * 60 * 1000;
+const CASINO_COLD_TABLE_STREAK = 3;
+const CASINO_COLD_TABLE_DURATION_MS = 20 * 60 * 1000;
+const CASINO_ACHIEVEMENTS = [
+{ id: 'first_win', label: 'First Blood', description: 'Win your first casino round.', stat: 'wins', goal: 1 },
+{ id: 'pit_regular', label: 'Pit Regular', description: 'Play 25 casino rounds.', stat: 'gamesPlayed', goal: 25 },
+{ id: 'high_roller', label: 'High Roller', description: 'Wager $5,000 total.', stat: 'totalWagered', goal: 5000 },
+{ id: 'heater', label: 'Heater', description: 'Reach a 3-win streak.', stat: 'bestWinStreak', goal: 3 },
+{ id: 'lucky_seven', label: 'Lucky Seven', description: 'Win $700 or more in one round.', stat: 'biggestWin', goal: 700 },
+{ id: 'stacked', label: 'Stacked', description: 'Reach a $5,000 balance.', stat: 'biggestBalance', goal: 5000 },
+{ id: 'lifeline', label: 'Lifeline', description: 'Claim a bailout once.', stat: 'reliefClaims', goal: 1 },
+{ id: 'rock_bottom', label: 'Rock Bottom', description: 'Go bankrupt 3 times.', stat: 'bankruptcies', goal: 3 }
+];
+const POKER_HAND_GUIDE = [
+{ label: 'Royal Flush', cards: ['A♠', 'K♠', 'Q♠', 'J♠', '10♠'], note: 'Best possible hand.' },
+{ label: 'Straight Flush', cards: ['9♥', '8♥', '7♥', '6♥', '5♥'], note: 'Five in order, same suit.' },
+{ label: 'Four of a Kind', cards: ['K♠', 'K♥', 'K♦', 'K♣', '4♠'], note: 'Four cards of one rank.' },
+{ label: 'Full House', cards: ['Q♠', 'Q♥', 'Q♦', '8♣', '8♦'], note: 'Trips plus a pair.' },
+{ label: 'Flush', cards: ['A♦', 'J♦', '8♦', '5♦', '2♦'], note: 'Same suit, any order.' },
+{ label: 'Straight', cards: ['9♠', '8♦', '7♣', '6♥', '5♠'], note: 'Five in order.' },
+{ label: 'Three of a Kind', cards: ['7♠', '7♥', '7♦', 'K♣', '3♠'], note: 'Three cards of one rank.' },
+{ label: 'Two Pair', cards: ['J♠', 'J♦', '4♣', '4♥', 'A♠'], note: 'Two different pairs.' },
+{ label: 'Pair', cards: ['10♠', '10♣', 'A♦', '7♣', '3♥'], note: 'One pair.' },
+{ label: 'High Card', cards: ['A♣', 'J♦', '8♠', '5♥', '2♣'], note: 'No made hand.' }
+];
+const SLOT_SYMBOL_DEFAULT_WEIGHTS = {
+'7': 1,
+BAR: 2,
+CHERRY: 4,
+STAR: 3,
+BELL: 3
+};
+const SLOT_SYMBOL_EMOJIS = {
+'?': '❔',
+'7': '7️⃣',
+BAR: '💎',
+CHERRY: '🍒',
+STAR: '⭐',
+BELL: '🔔'
+};
 const GAME_FEATURED_SCORES = {
 Slope: 10,
 'Tung Tung Sahur': 7,
@@ -6361,9 +9029,22 @@ let adminAccountManagerWarnings = [];
 let activeRoomModerationId = '';
 let siteActivityUnsub = null;
 let siteActivityCache = [];
+let casinoActivityUnsub = null;
+let casinoActivityCache = [];
+let casinoGameSettingsLoadPromise = null;
+let casinoGameSettingsCache = null;
+let pokerRoomUnsub = null;
+let pokerRoomCache = [];
+let currentPokerRoomId = '';
+let pokerState = null;
+let pokerTutorialExpanded = false;
+let rouletteVisualState = { selectedChoice: '', winningValue: null, activeValue: null, spinning: false };
+let slotsVisualState = ['?', '?', '?'];
+let slotsSpinInProgress = false;
 let localNotificationCache = [];
 let localProfileCache = {};
 let userProfileCache = {};
+let casinoProfileStatsCache = {};
 let currentProfileEditorVisible = false;
 let pendingProfileAvatarData = null;
 let pendingProfileBannerData = null;
@@ -8324,6 +11005,218 @@ try {
 }
 }
 
+function renderAdminCasinoSummaryHtml(username, stats) {
+const winRate = stats.gamesPlayed ? `${Math.round((stats.wins / stats.gamesPlayed) * 100)}%` : '0%';
+const rows = [
+  ['Balance', `$${Math.max(0, Number(stats.balance || 0)).toLocaleString()}`],
+  ['Record', `${Math.max(0, Number(stats.wins || 0))}W / ${Math.max(0, Number(stats.losses || 0))}L / ${Math.max(0, Number(stats.pushes || 0))}P`],
+  ['Games Played', String(Math.max(0, Number(stats.gamesPlayed || 0)))],
+  ['Win Rate', winRate],
+  ['Hot Streak', String(Math.max(0, Number(stats.currentWinStreak || 0)))],
+  ['Loss Streak', String(Math.max(0, Number(stats.currentLossStreak || 0)))],
+  ['Best Heater', String(Math.max(0, Number(stats.bestWinStreak || 0)))],
+  ['Worst Slide', String(Math.max(0, Number(stats.worstLossStreak || 0)))],
+  ['Total Wagered', `$${Math.max(0, Number(stats.totalWagered || 0)).toLocaleString()}`],
+  ['Biggest Win', `$${Math.max(0, Number(stats.biggestWin || 0)).toLocaleString()}`],
+  ['Biggest Balance', `$${Math.max(0, Number(stats.biggestBalance || 0)).toLocaleString()}`],
+  ['Achievements', `${Array.isArray(stats.achievementIds) ? stats.achievementIds.length : 0}/${CASINO_ACHIEVEMENTS.length}`],
+  ['Relief Claims', String(Math.max(0, Number(stats.reliefClaims || 0)))],
+  ['Bankruptcies', String(Math.max(0, Number(stats.bankruptcies || 0)))]
+];
+return `
+  <div style="display:grid; gap:0.65rem;">
+    <div style="font-weight:700; color:#fff;">${escapeHtml(username)}</div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:0.45rem;">
+      ${rows.map(([label, value]) => `<div style="padding:0.5rem; background:#151515; border:1px solid #2f2f2f; border-radius:0.45rem;"><div style="font-size:0.72rem; color:#90a4ae;">${escapeHtml(label)}</div><div style="margin-top:0.2rem; color:#fff; font-weight:700;">${escapeHtml(value)}</div></div>`).join('')}
+    </div>
+  </div>`;
+}
+
+async function loadAdminCasinoManager(targetUsername = '') {
+const container = document.getElementById('admin-casino-manager');
+const statusDiv = document.getElementById('admin-casino-status');
+if (!container) return;
+if (!canManageRoles(currentChatUser)) {
+  container.textContent = 'Insufficient permissions.';
+  return;
+}
+const username = normalizeUsername(targetUsername || resolveAdminTargetUsername('admin-casino-username'));
+const input = document.getElementById('admin-casino-username');
+if (input && username) input.value = username;
+if (statusDiv) statusDiv.textContent = '';
+if (!username) {
+  container.innerHTML = '<div class="submission-empty">Enter a username to load casino stats.</div>';
+  return;
+}
+container.innerHTML = '<div class="submission-empty">Loading casino stats...</div>';
+try {
+  const doc = await getCasinoBalanceCollection().doc(username).get();
+  const stats = normalizeCasinoProfileStatsData(username, doc.exists ? (doc.data() || {}) : {});
+  casinoProfileStatsCache[username] = stats;
+  container.innerHTML = renderAdminCasinoSummaryHtml(username, stats);
+} catch (err) {
+  container.innerHTML = '<div class="submission-empty">Failed to load casino stats.</div>';
+}
+}
+
+async function loadAdminCasinoGameSettings() {
+if (!canManageRoles(currentChatUser)) return;
+const settings = await loadCasinoGameSettings().catch(() => getCachedCasinoGameSettings());
+const blackjackInput = document.getElementById('admin-casino-blackjack-stand');
+const rouletteInput = document.getElementById('admin-casino-roulette-boost');
+const slots7Input = document.getElementById('admin-casino-slot-weight-7');
+const slotsBarInput = document.getElementById('admin-casino-slot-weight-bar');
+const slotsCherryInput = document.getElementById('admin-casino-slot-weight-cherry');
+const slotsStarInput = document.getElementById('admin-casino-slot-weight-star');
+const slotsBellInput = document.getElementById('admin-casino-slot-weight-bell');
+if (blackjackInput) blackjackInput.value = String(settings.blackjackDealerStandValue);
+if (rouletteInput) rouletteInput.value = String(settings.rouletteSelectedBoostPct);
+if (slots7Input) slots7Input.value = String(settings.slotsSymbolWeights['7']);
+if (slotsBarInput) slotsBarInput.value = String(settings.slotsSymbolWeights.BAR);
+if (slotsCherryInput) slotsCherryInput.value = String(settings.slotsSymbolWeights.CHERRY);
+if (slotsStarInput) slotsStarInput.value = String(settings.slotsSymbolWeights.STAR);
+if (slotsBellInput) slotsBellInput.value = String(settings.slotsSymbolWeights.BELL);
+}
+
+async function adminSaveCasinoGameSettings() {
+if (!canManageRoles(currentChatUser)) return;
+const statusDiv = document.getElementById('admin-casino-status');
+try {
+  const nextSettings = normalizeCasinoGameSettingsData({
+    blackjackDealerStandValue: Number(document.getElementById('admin-casino-blackjack-stand')?.value),
+    rouletteSelectedBoostPct: Number(document.getElementById('admin-casino-roulette-boost')?.value),
+    slotsSymbolWeights: {
+      '7': Number(document.getElementById('admin-casino-slot-weight-7')?.value),
+      BAR: Number(document.getElementById('admin-casino-slot-weight-bar')?.value),
+      CHERRY: Number(document.getElementById('admin-casino-slot-weight-cherry')?.value),
+      STAR: Number(document.getElementById('admin-casino-slot-weight-star')?.value),
+      BELL: Number(document.getElementById('admin-casino-slot-weight-bell')?.value)
+    }
+  });
+  await saveCasinoGameSettings(nextSettings);
+  await writeAuditLog('casino_update_chances', 'casino_settings', `Blackjack stand ${nextSettings.blackjackDealerStandValue}, roulette boost ${nextSettings.rouletteSelectedBoostPct}%`);
+  if (statusDiv) statusDiv.textContent = 'Casino game chances updated.';
+  await loadAdminCasinoGameSettings();
+  if (document.getElementById('casino-modal')?.style.display === 'flex') {
+    renderActiveCasinoGamePanel();
+    renderSlotsVisualization(slotsVisualState, nextSettings);
+  }
+} catch (err) {
+  if (statusDiv) statusDiv.textContent = 'Failed to save casino game chances.';
+}
+}
+
+function adminCasinoUseSelectedUser() {
+if (!canManageRoles(currentChatUser)) return;
+const username = getSelectedAdminUser();
+const input = document.getElementById('admin-casino-username');
+if (input) input.value = username;
+if (username) loadAdminCasinoManager(username);
+}
+
+async function refreshCasinoViewsAfterAdminChange(username) {
+const key = normalizeUsername(username);
+if (!key) return;
+if (normalizeUsername(getCasinoPlayerKey()) === key) {
+  await loadCasinoBalance();
+}
+await refreshCasinoProfileUiForUser(key);
+scheduleDynamicLeaderboardTagRefresh();
+}
+
+async function adminUpdateCasinoBalance(mode) {
+if (!canManageRoles(currentChatUser)) return;
+const statusDiv = document.getElementById('admin-casino-status');
+const username = normalizeUsername(resolveAdminTargetUsername('admin-casino-username'));
+const inputId = mode === 'set' ? 'admin-casino-balance-set' : 'admin-casino-balance-adjust';
+const input = document.getElementById(inputId);
+const rawAmount = Number(input ? input.value : NaN);
+if (!username) {
+  if (statusDiv) statusDiv.textContent = 'Enter a casino username first.';
+  return;
+}
+if (!Number.isFinite(rawAmount)) {
+  if (statusDiv) statusDiv.textContent = 'Enter a valid amount.';
+  return;
+}
+const amount = Math.trunc(rawAmount);
+try {
+  const ref = getCasinoBalanceCollection().doc(username);
+  let nextStats = getDefaultCasinoProfileStats(username);
+  await getCasinoDb().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const currentStats = normalizeCasinoProfileStatsData(username, snap.exists ? (snap.data() || {}) : {});
+    const nextBalance = mode === 'set'
+      ? Math.max(0, amount)
+      : Math.max(0, currentStats.balance + amount);
+    nextStats = {
+      ...currentStats,
+      balance: nextBalance,
+      biggestBalance: Math.max(currentStats.biggestBalance, nextBalance)
+    };
+    nextStats.achievementIds = getCasinoUnlockedAchievementIds(nextStats);
+    tx.set(ref, {
+      username,
+      displayName: sanitizeNullableText(currentStats.displayName, '') || username,
+      ...nextStats,
+      updatedAtMs: Date.now()
+    }, { merge: true });
+  });
+  casinoProfileStatsCache[username] = nextStats;
+  await writeAuditLog(mode === 'set' ? 'casino_set_balance' : 'casino_adjust_balance', username, mode === 'set' ? `Set casino balance to ${nextStats.balance}` : `Adjusted casino balance by ${amount} to ${nextStats.balance}`);
+  if (statusDiv) statusDiv.textContent = `${username} casino balance is now $${nextStats.balance.toLocaleString()}.`;
+  if (input) input.value = '';
+  await loadAdminCasinoManager(username);
+  await refreshCasinoViewsAfterAdminChange(username);
+} catch (err) {
+  if (statusDiv) statusDiv.textContent = 'Failed to update casino balance.';
+}
+}
+
+async function adminSetCasinoBankruptcies() {
+if (!canManageRoles(currentChatUser)) return;
+const statusDiv = document.getElementById('admin-casino-status');
+const username = normalizeUsername(resolveAdminTargetUsername('admin-casino-username'));
+const input = document.getElementById('admin-casino-bankruptcies-input');
+const rawValue = Number(input ? input.value : NaN);
+if (!username) {
+  if (statusDiv) statusDiv.textContent = 'Enter a casino username first.';
+  return;
+}
+if (!Number.isFinite(rawValue)) {
+  if (statusDiv) statusDiv.textContent = 'Enter a valid bankruptcy count.';
+  return;
+}
+const nextBankruptcies = Math.max(0, Math.trunc(rawValue));
+try {
+  const ref = getCasinoBalanceCollection().doc(username);
+  let nextStats = getDefaultCasinoProfileStats(username);
+  await getCasinoDb().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const currentStats = normalizeCasinoProfileStatsData(username, snap.exists ? (snap.data() || {}) : {});
+    nextStats = {
+      ...currentStats,
+      bankruptcies: nextBankruptcies
+    };
+    nextStats.achievementIds = getCasinoUnlockedAchievementIds(nextStats);
+    tx.set(ref, {
+      username,
+      displayName: sanitizeNullableText(currentStats.displayName, '') || username,
+      ...nextStats,
+      updatedAtMs: Date.now()
+    }, { merge: true });
+  });
+  casinoProfileStatsCache[username] = nextStats;
+  await writeAuditLog('casino_set_bankruptcies', username, `Set casino bankruptcies to ${nextBankruptcies}`);
+  if (statusDiv) statusDiv.textContent = `${username} bankruptcies updated to ${nextBankruptcies}.`;
+  if (input) input.value = '';
+  await loadAdminCasinoManager(username);
+  await refreshCasinoViewsAfterAdminChange(username);
+} catch (err) {
+  if (statusDiv) statusDiv.textContent = 'Failed to update casino bankruptcies.';
+}
+}
+
 async function adminCreateApprovedAccount() {
 if (!canAdminSettings(currentChatUser)) return;
 const username = normalizeUsername(prompt('Username for the new approved account:', '') || '');
@@ -8432,7 +11325,10 @@ if (!key) return getProfileDefaults('');
 try {
   if (chatInitialized) {
     const db = getAdminDb();
-    const doc = await db.collection(USER_PROFILES_COLLECTION).doc(key).get();
+    const [doc] = await Promise.all([
+      db.collection(USER_PROFILES_COLLECTION).doc(key).get(),
+      loadCasinoProfileStats(key)
+    ]);
     if (doc.exists) {
       userProfileCache[key] = buildProfileCacheEntry(key, doc.data() || {});
     }
@@ -8452,12 +11348,33 @@ const badges = getProfileBadges(profileUserKey, stats, profile);
 const favoriteGameName = sanitizeNullableText(profile.favoriteGameName, '') || 'None set';
 const joinedLabel = sanitizeNullableText(profile.joinLabel, '') || 'Unknown';
 const mutualFriends = profileUserKey && myFriends.has(profileUserKey) ? 1 : 0;
+const casinoStats = getCachedCasinoProfileStats(profileUserKey);
+const casinoGamesPlayed = Math.max(0, Number(casinoStats.gamesPlayed || 0));
+const casinoWins = Math.max(0, Number(casinoStats.wins || 0));
+const casinoLosses = Math.max(0, Number(casinoStats.losses || 0));
+const casinoPushes = Math.max(0, Number(casinoStats.pushes || 0));
+const casinoWinRate = casinoGamesPlayed ? `${Math.round((casinoWins / casinoGamesPlayed) * 100)}%` : '0%';
+const casinoAchievementsUnlocked = Array.isArray(casinoStats.achievementIds) ? casinoStats.achievementIds.length : 0;
 badgesEl.innerHTML = badges.length ? badges.map((badge) => `<span class="profile-badge">${escapeHtml(badge.icon)} ${escapeHtml(badge.label)}</span>`).join('') : '<span style="color:#888; font-size:0.84rem;">No badges yet.</span>';
 detailListEl.innerHTML = [
   ['Bio', profile.bio || 'No bio yet'],
   ['Favorite Game', favoriteGameName],
   ['Joined', joinedLabel],
-  ['Mutual Friends', String(mutualFriends)]
+  ['Mutual Friends', String(mutualFriends)],
+  ['Casino Balance', `$${Math.max(0, Number(casinoStats.balance || 0)).toLocaleString()}`],
+  ['Casino Record', `${casinoWins}W / ${casinoLosses}L / ${casinoPushes}P`],
+  ['Casino Win Rate', casinoWinRate],
+  ['Casino Games', String(casinoGamesPlayed)],
+  ['Current Hot Streak', String(Math.max(0, Number(casinoStats.currentWinStreak || 0)))],
+  ['Current Loss Streak', String(Math.max(0, Number(casinoStats.currentLossStreak || 0)))],
+  ['Best Heater', String(Math.max(0, Number(casinoStats.bestWinStreak || 0)))],
+  ['Worst Slide', String(Math.max(0, Number(casinoStats.worstLossStreak || 0)))],
+  ['Biggest Win', `$${Math.max(0, Number(casinoStats.biggestWin || 0)).toLocaleString()}`],
+  ['Biggest Balance', `$${Math.max(0, Number(casinoStats.biggestBalance || 0)).toLocaleString()}`],
+  ['Total Wagered', `$${Math.max(0, Number(casinoStats.totalWagered || 0)).toLocaleString()}`],
+  ['Casino Achievements', `${casinoAchievementsUnlocked}/${CASINO_ACHIEVEMENTS.length}`],
+  ['Relief Claims', String(Math.max(0, Number(casinoStats.reliefClaims || 0)))],
+  ['Bankruptcies', String(casinoStats.bankruptcies || 0)]
 ].map(([label, value]) => `<div class="profile-detail-card"><div class="profile-detail-label">${escapeHtml(label)}</div><div class="profile-detail-value">${escapeHtml(value)}</div></div>`).join('');
 const isOwnProfile = profileUserKey && profileUserKey === getMyProfileKey();
 editBtn.style.display = isOwnProfile ? 'inline-block' : 'none';
@@ -8872,10 +11789,20 @@ const svg = `
 return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
+function hasBrokenTemplatePlaceholder(value) {
+const text = typeof value === 'string' ? value.trim() : '';
+if (!text) return false;
+const lower = text.toLowerCase();
+return text.includes('${')
+|| lower.includes('%7b')
+|| lower.includes('%7d')
+|| /escapehtml\s*\(/i.test(text);
+}
+
 function sanitizeRenderableMediaUrl(url) {
 const value = typeof url === 'string' ? url.trim() : '';
 if (!value) return '';
-if (value.includes('${') || value.includes('%7B') || value.includes('%7D')) return '';
+if (hasBrokenTemplatePlaceholder(value)) return '';
 if (/^data:image\//i.test(value)) return value;
 return isValidReactionImageUrl(value) && isDirectImageUrl(value) ? value : '';
 }
@@ -9743,8 +12670,18 @@ messagingSenderId: "696203941105",
 appId: "1:696203941105:web:5b8d370ad383537c19c550"
 };
 
+const casinoFirebaseConfig = {
+apiKey: "AIzaSyABMyvYjhr7gvLOrxdDMKUoCuVtfLEBOTg",
+authDomain: "balright-casino.firebaseapp.com",
+projectId: "balright-casino",
+storageBucket: "balright-casino.firebasestorage.app",
+messagingSenderId: "534969019133",
+appId: "1:534969019133:web:e2a4169fd920077816ac94"
+};
+
 const ADMIN_APP_NAME = 'balright-admin';
 const ARCHIVE_APP_NAME = 'balright-archive';
+const CASINO_APP_NAME = 'balright-casino';
 const configuredFirestoreDbs = new WeakSet();
 
 function isFirebaseConfigReady(config) {
@@ -9780,6 +12717,12 @@ return configureFirestoreTransport(db);
 function getArchiveDb() {
 const archiveApp = ensureFirebaseApp(archiveFirebaseConfig, ARCHIVE_APP_NAME);
 return archiveApp ? archiveApp.firestore() : null;
+}
+
+function getCasinoDb() {
+const casinoApp = ensureFirebaseApp(casinoFirebaseConfig, CASINO_APP_NAME);
+const db = casinoApp ? casinoApp.firestore() : getPrimaryDb();
+return configureFirestoreTransport(db);
 }
 
 function isRealtimeDbConfigReady(config) {
@@ -9979,6 +12922,7 @@ return (normalized || 'room').slice(0, 36);
 function normalizeRoomIcon(value) {
 const raw = String(value || '').trim();
 if (!raw) return '';
+if (hasBrokenTemplatePlaceholder(raw)) return '';
 if (/^data:image\/(gif|png|jpe?g|webp);base64,/i.test(raw)) return raw;
 if (isValidReactionImageUrl(raw) && isDirectImageUrl(raw)) return raw;
 return raw.slice(0, 8);
@@ -10867,6 +13811,7 @@ store[key] = current;
 saveStatsStore(store);
 pushUserStatsToFirestore(key, current);
 renderProfileModal();
+scheduleDynamicLeaderboardTagRefresh();
 }
 
 async function decrementUserStatsForDeletedMessage(messageData) {
@@ -10895,6 +13840,7 @@ await db.collection(USER_STATS_COLLECTION).doc(authorKey).set(nextStats, { merge
 const store = getStatsStore();
 store[authorKey] = applyDecrement(store[authorKey] || nextStats);
 saveStatsStore(store);
+scheduleDynamicLeaderboardTagRefresh();
 if (authorKey === getStatsUserKey()) {
 renderProfileModal();
 }
@@ -11450,12 +14396,10 @@ return;
 }
 
 const data = doc.data() || {};
-const loadedNotes = Array.isArray(data.notes)
-? data.notes.map(n => String(n || '').trim()).filter(Boolean)
-: [];
-if (loadedNotes.length) {
-updateNotesCache = loadedNotes;
-}
+const loadedNotes = normalizeUpdateNotesList(data.notes);
+updateNotesCache = shouldReplaceLegacyUpdateNotes(loadedNotes)
+? DEFAULT_UPDATE_NOTES.slice()
+: loadedNotes;
 
 const updatedBy = data.updatedBy ? String(data.updatedBy) : '';
 const updatedAt = data.updatedAt && typeof data.updatedAt.toDate === 'function'
@@ -13639,6 +16583,12 @@ return { username, level, points };
 if (b.points !== a.points) return b.points - a.points;
 return a.username.localeCompare(b.username);
 });
+applyDynamicLeaderboardTagState({
+mostMoney: dynamicLeaderboardTagState.mostMoney,
+mostActive: leaderboardData[0] ? leaderboardData[0].username : '',
+leastMoney: dynamicLeaderboardTagState.leastMoney,
+leastActive: leaderboardData.length ? leaderboardData[leaderboardData.length - 1].username : ''
+}, false);
 if (!leaderboardData.length) {
 entriesDiv.innerHTML = '<div style="color:#999; padding:1rem; text-align:center;">No scores yet. Start playing to climb the leaderboard!</div>';
 return;
