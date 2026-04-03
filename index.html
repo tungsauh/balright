@@ -3898,6 +3898,43 @@ outline: 2px solid #5865f2;
 <script>
 let siteLoginPassed = false;
 
+window.getActiveTimedBan = window.getActiveTimedBan || async function() {
+return null;
+};
+
+async function getActiveTimedBanSafe(username) {
+if (typeof window.getActiveTimedBan === 'function') {
+  try {
+    return await window.getActiveTimedBan(username);
+  } catch (_) {
+    return null;
+  }
+}
+return null;
+}
+
+function areSiteLoginDependenciesReady() {
+return typeof normalizeUsername === 'function'
+&& typeof normalizeReviewStatus === 'function'
+&& typeof getAdminDb === 'function'
+&& typeof sanitizeNullableText === 'function'
+&& typeof window.getActiveTimedBan === 'function'
+&& typeof getUserName === 'function'
+&& typeof waitForFirebase === 'function'
+&& typeof initializeChat === 'function'
+&& typeof updateAdminMenuButtonVisibility === 'function'
+&& typeof LOGIN_REQUESTS_COLLECTION !== 'undefined';
+}
+
+async function waitForSiteLoginDependencies(maxWaitMs = 7000) {
+const startMs = Date.now();
+while (!areSiteLoginDependenciesReady()) {
+  if (Date.now() - startMs >= maxWaitMs) return false;
+  await new Promise((resolve) => window.setTimeout(resolve, 50));
+}
+return true;
+}
+
 function showSiteLoginModal() {
 const modal = document.getElementById('site-login-modal');
 if (!modal) return;
@@ -3943,6 +3980,11 @@ errorDiv.textContent = 'Please enter both username and password.';
 return;
 }
 (async () => {
+const dependenciesReady = await waitForSiteLoginDependencies();
+if (!dependenciesReady) {
+errorDiv.textContent = 'The page is still loading. Try again in a moment.';
+return;
+}
 const bannedList = (typeof getBannedUsernames === 'function' ? await getBannedUsernames() : []).map(u => u.trim().toLowerCase());
 const isProtectedUser = typeof isProtectedUsername === 'function' ? isProtectedUsername(username) : false;
 if (!isProtectedUser && bannedList.includes(username)) {
@@ -3951,7 +3993,7 @@ document.body.style.overflow = 'auto';
 showUserBanNotification();
 return;
 }
-const timedBan = await getActiveTimedBan(username);
+const timedBan = await getActiveTimedBanSafe(username);
 if (timedBan) {
 errorDiv.textContent = `Temporarily banned until ${timedBan.expiresAt.toLocaleString()}. Reason: ${timedBan.reason}`;
 return;
@@ -4119,6 +4161,7 @@ if (userList) userList.innerHTML = '<option value="">-- Select a user --</option
 <input type="text" id="admin-history-username" placeholder="Username to inspect" style="padding:0.5rem; border:none; border-radius:0.25rem;" />
 <div class="admin-button-row">
 <button onclick="loadAdminUserHistory()" style="padding:0.45rem 0.8rem; background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Load History</button>
+<button onclick="adminRebuildSelectedUserStats()" style="padding:0.45rem 0.8rem; background:#00695c; color:#fff; border:none; border-radius:0.25rem;">Rebuild Stats</button>
 <button onclick="copySelectedUserToHistory()" style="padding:0.45rem 0.8rem; background:#37474f; color:#fff; border:none; border-radius:0.25rem;">Use Selected User</button>
 </div>
 <div id="admin-user-history" class="admin-scroll-panel" style="max-height:280px;"></div>
@@ -4187,7 +4230,12 @@ if (userList) userList.innerHTML = '<option value="">-- Select a user --</option
 <button onclick="adminSetCasinoBankruptcies()" style="background:#ef6c00; color:#fff; border:none; border-radius:0.25rem;">Set Bankruptcies</button>
 </div>
 <div class="admin-note-text" style="margin-top:0.7rem;">Game chance tuning</div>
-<div style="font-size:0.76rem; color:#9fb0c2; margin-bottom:0.35rem;">Blackjack uses the dealer stand value. Roulette boosts or lowers the selected outcome. Slots use per-symbol chances behind the scenes.</div>
+<div style="font-size:0.76rem; color:#9fb0c2; margin-bottom:0.35rem;">Blackjack uses the dealer stand value. Slots use per-symbol chances behind the scenes.</div>
+<div class="admin-inline-input-row" style="margin-bottom:0.2rem;">
+<button onclick="adminApplyCasinoGameSettingsPreset('player-favored')" style="background:#2e7d32; color:#fff; border:none; border-radius:0.25rem;">Player Favored</button>
+<button onclick="adminApplyCasinoGameSettingsPreset('fair')" style="background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Fair</button>
+<button onclick="adminApplyCasinoGameSettingsPreset('casino-favored')" style="background:#8e0000; color:#fff; border:none; border-radius:0.25rem;">Casino Favored</button>
+</div>
 <div class="admin-inline-input-row">
 <div style="display:grid; gap:0.2rem; flex:1 1 150px; min-width:0;">
 <label for="admin-casino-blackjack-stand" style="font-size:0.72rem; color:#9fb0c2; font-weight:600;">Blackjack dealer stands on</label>
@@ -5342,6 +5390,36 @@ function normalizeCasinoGameSettingsData(data = {}) {
   };
 }
 
+function getCasinoGameSettingsPreset(presetKey = 'fair') {
+  const defaults = getDefaultCasinoGameSettings();
+  const presets = {
+    'player-favored': {
+      blackjackDealerStandValue: 19,
+      rouletteSelectedBoostPct: 40,
+      slotsSymbolWeights: {
+        '7': 8,
+        BAR: 3,
+        CHERRY: 1,
+        STAR: 1,
+        BELL: 1
+      }
+    },
+    fair: defaults,
+    'casino-favored': {
+      blackjackDealerStandValue: 15,
+      rouletteSelectedBoostPct: -35,
+      slotsSymbolWeights: {
+        '7': 1,
+        BAR: 1,
+        CHERRY: 1,
+        STAR: 1,
+        BELL: 1
+      }
+    }
+  };
+  return normalizeCasinoGameSettingsData(presets[presetKey] || defaults);
+}
+
 function getCachedCasinoGameSettings() {
   if (!casinoGameSettingsCache) {
     casinoGameSettingsCache = getDefaultCasinoGameSettings();
@@ -5442,66 +5520,118 @@ function renderCasinoCardRow(cards, options = {}) {
   })).join('');
 }
 
+const ROULETTE_WHEEL_ORDER = [...Array.from({ length: 24 }, (_, index) => index + 1), 0];
+
+function getRoulettePocketColor(value) {
+  if (value === 0) return 'green';
+  return value % 2 === 0 ? 'black' : 'red';
+}
+
 function getRoulettePockets() {
-  return Array.from({ length: 15 }, (_, value) => ({
+  const angleStep = 360 / ROULETTE_WHEEL_ORDER.length;
+  return ROULETTE_WHEEL_ORDER.map((value, index) => ({
     value,
-    color: value === 0 ? 'green' : (value % 2 === 0 ? 'black' : 'red')
+    index,
+    angleDeg: (index * angleStep) - 90,
+    color: getRoulettePocketColor(value)
   }));
+}
+
+function getRoulettePocketByValue(value) {
+  const normalizedValue = Number(value);
+  return getRoulettePockets().find((pocket) => pocket.value === normalizedValue) || getRoulettePockets()[0];
+}
+
+function getRouletteBetLabel(choice, selectedNumber = null) {
+  if (choice === 'number' && Number.isInteger(Number(selectedNumber))) {
+    return `#${Number(selectedNumber)}`;
+  }
+  if (choice === 'green') return 'GREEN';
+  if (choice === 'black') return 'BLACK';
+  if (choice === 'red') return 'RED';
+  return 'WAITING';
+}
+
+function renderRouletteNumberBetButtons() {
+  return [...Array.from({ length: 24 }, (_, index) => index + 1), 0].map((value) => {
+    const color = getRoulettePocketColor(value);
+    const background = color === 'red' ? '#b71c1c' : color === 'black' ? '#12161d' : '#2e7d32';
+    const textColor = color === 'black' ? '#f4f7fb' : '#ffffff';
+    return `<button onclick="spinRouletteNumber(${value})" style="padding:0.45rem 0.2rem; min-height:2.35rem; border-radius:0.65rem; border:1px solid rgba(255,255,255,0.12); background:${background}; color:${textColor}; font-weight:800;">${value}</button>`;
+  }).join('');
 }
 
 function renderRouletteVisualization(state = rouletteVisualState) {
   const node = document.getElementById('roulette-visual');
   if (!node) return;
+  const pockets = getRoulettePockets();
   const activeValue = Number.isInteger(state.activeValue) ? state.activeValue : null;
   const winningValue = Number.isInteger(state.winningValue) ? state.winningValue : null;
+  const activePocket = activeValue != null ? getRoulettePocketByValue(activeValue) : pockets[0];
+  const ballAngleDeg = Number.isFinite(Number(state.ballAngleDeg)) ? Number(state.ballAngleDeg) : activePocket.angleDeg;
+  const betLabel = state.selectedChoice ? escapeHtml(String(state.selectedChoice)) : 'Pick a color or number';
   node.innerHTML = `
     <div style="display:grid; gap:0.7rem; width:min(34rem, 100%);">
       <div style="padding:0.9rem; border-radius:1rem; background:radial-gradient(circle at top, rgba(56,142,60,0.36) 0%, rgba(8,20,12,0.95) 72%); border:1px solid #244028; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.04); display:grid; gap:0.7rem;">
         <div style="display:flex; justify-content:space-between; gap:0.6rem; align-items:center; flex-wrap:wrap; font-size:0.78rem; color:#c7d4e2;">
-          <span>Ball ${state.spinning ? 'spinning...' : (winningValue != null ? `stopped on ${winningValue}` : 'waiting for spin')}</span>
-          <span>${state.selectedChoice ? `Bet: ${escapeHtml(String(state.selectedChoice).toUpperCase())}` : 'Pick a color to spin'}</span>
+          <span>Ball ${state.spinning ? `tracking pocket ${activeValue != null ? activeValue : pockets[0].value}...` : (winningValue != null ? `stopped on ${winningValue}` : 'waiting for spin')}</span>
+          <span>Bet: ${betLabel}</span>
         </div>
-        <div style="display:grid; grid-template-columns:repeat(15, minmax(0, 1fr)); gap:0.3rem; align-items:center;">
-          ${getRoulettePockets().map((pocket) => {
+        <div style="position:relative; width:min(25rem, 92vw); aspect-ratio:1 / 1; margin:0 auto;">
+          <div style="position:absolute; left:50%; top:0.2rem; transform:translateX(-50%); width:0; height:0; border-left:0.75rem solid transparent; border-right:0.75rem solid transparent; border-top:1.15rem solid #f6d365; filter:drop-shadow(0 8px 10px rgba(0,0,0,0.28)); z-index:6;"></div>
+          <div style="position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle at 50% 45%, rgba(34,49,67,0.95) 0%, rgba(12,18,26,0.98) 55%, rgba(6,10,14,1) 100%); border:1px solid rgba(255,255,255,0.08); box-shadow:inset 0 0 40px rgba(0,0,0,0.35), 0 26px 38px rgba(0,0,0,0.28);"></div>
+          <div style="position:absolute; inset:1.4rem; border-radius:50%; background:radial-gradient(circle at center, rgba(19,26,35,0.98) 0%, rgba(8,13,18,1) 72%); border:1px solid rgba(255,255,255,0.08);"></div>
+          ${pockets.map((pocket) => {
             const isActive = activeValue === pocket.value;
             const isWinner = winningValue === pocket.value;
             const background = pocket.color === 'red' ? '#b71c1c' : (pocket.color === 'black' ? '#12161d' : '#2e7d32');
-            return `<div style="min-height:3.25rem; border-radius:0.72rem; display:flex; align-items:center; justify-content:center; font-weight:800; color:#fff; background:${background}; border:2px solid ${isWinner ? '#f6d365' : isActive ? '#90caf9' : 'rgba(255,255,255,0.12)'}; box-shadow:${isWinner ? '0 0 0 2px rgba(246,211,101,0.28), 0 14px 28px rgba(0,0,0,0.22)' : isActive ? '0 0 0 2px rgba(144,202,249,0.2)' : 'none'}; transform:${isActive ? 'translateY(-2px)' : 'none'}; transition:transform 120ms ease, box-shadow 120ms ease;">${pocket.value}</div>`;
+            return `<div style="position:absolute; left:50%; top:50%; width:2.55rem; height:2.55rem; display:flex; align-items:center; justify-content:center; transform:translate(-50%, -50%) rotate(${pocket.angleDeg}deg) translateY(-9.55rem) rotate(${-pocket.angleDeg}deg); border-radius:0.8rem; font-weight:800; color:#fff; background:${background}; border:2px solid ${isWinner ? '#f6d365' : isActive ? '#90caf9' : 'rgba(255,255,255,0.14)'}; box-shadow:${isWinner ? '0 0 0 2px rgba(246,211,101,0.28), 0 14px 28px rgba(0,0,0,0.22)' : isActive ? '0 0 0 2px rgba(144,202,249,0.2)' : 'none'}; transition:transform 120ms ease, box-shadow 120ms ease; z-index:${isWinner ? 4 : isActive ? 3 : 2};">${pocket.value}</div>`;
           }).join('')}
+          <div style="position:absolute; left:50%; top:50%; width:1.05rem; height:1.05rem; border-radius:50%; background:radial-gradient(circle at 35% 35%, #ffffff 0%, #eef5ff 45%, #d8e2f1 100%); border:2px solid rgba(24,31,42,0.6); box-shadow:0 0 18px rgba(255,255,255,0.5), 0 8px 18px rgba(0,0,0,0.3); transform:translate(-50%, -50%) rotate(${ballAngleDeg}deg) translateY(-11.2rem); z-index:7;"></div>
+          <div style="position:absolute; left:50%; top:50%; width:5.4rem; height:5.4rem; border-radius:50%; background:radial-gradient(circle at 50% 35%, rgba(47,66,86,0.92) 0%, rgba(16,23,31,0.98) 75%); border:1px solid rgba(255,255,255,0.08); transform:translate(-50%, -50%); z-index:5; display:flex; align-items:center; justify-content:center; text-align:center; padding:0.6rem; font-size:0.78rem; color:#dce6f2; font-weight:700;">${state.spinning ? 'Ball in motion' : winningValue != null ? `Pocket ${winningValue}` : 'Ready'}</div>
         </div>
       </div>
       <div style="display:flex; justify-content:center; gap:0.6rem; flex-wrap:wrap; font-size:0.8rem; color:#9fb0c2;">
         <span style="padding:0.35rem 0.6rem; border-radius:999px; background:#241012; color:#ffb4b4; border:1px solid rgba(255,255,255,0.08);">Red pockets</span>
         <span style="padding:0.35rem 0.6rem; border-radius:999px; background:#0d1016; color:#dce6f2; border:1px solid rgba(255,255,255,0.08);">Black pockets</span>
         <span style="padding:0.35rem 0.6rem; border-radius:999px; background:#102418; color:#b9f6ca; border:1px solid rgba(255,255,255,0.08);">0 is green</span>
+        <span style="padding:0.35rem 0.6rem; border-radius:999px; background:#14253d; color:#90caf9; border:1px solid rgba(255,255,255,0.08);">Straight number pays +24x</span>
       </div>
     </div>`;
 }
 
 async function animateRouletteSpin(finalPocket, selectedChoice) {
+  const pockets = getRoulettePockets();
+  const finalIndex = Math.max(0, pockets.findIndex((pocket) => pocket.value === Number(finalPocket && finalPocket.value)));
+  const currentIndex = Number.isInteger(rouletteVisualState.activeValue)
+    ? Math.max(0, pockets.findIndex((pocket) => pocket.value === rouletteVisualState.activeValue))
+    : 0;
   rouletteVisualState = {
     selectedChoice,
     winningValue: null,
-    activeValue: 0,
+    activeValue: pockets[currentIndex].value,
+    ballAngleDeg: pockets[currentIndex].angleDeg,
     spinning: true
   };
-  const pockets = getRoulettePockets();
-  const totalSteps = 26 + (Number(finalPocket && finalPocket.value) || 0);
-  for (let step = 0; step < totalSteps; step += 1) {
-    const activePocket = pockets[step % pockets.length];
+  renderRouletteVisualization();
+  const totalSteps = (pockets.length * 4) + ((finalIndex - currentIndex + pockets.length) % pockets.length);
+  for (let step = 1; step <= totalSteps; step += 1) {
+    const activePocket = pockets[(currentIndex + step) % pockets.length];
     rouletteVisualState = {
       selectedChoice,
       winningValue: null,
       activeValue: activePocket.value,
+      ballAngleDeg: activePocket.angleDeg,
       spinning: true
     };
     renderRouletteVisualization();
-    await waitForMs(Math.min(180, 45 + (step * 5)));
+    await waitForMs(Math.min(220, 38 + Math.floor((step / totalSteps) * 170)));
   }
   rouletteVisualState = {
     selectedChoice,
     winningValue: finalPocket.value,
     activeValue: finalPocket.value,
+    ballAngleDeg: Number.isFinite(Number(finalPocket && finalPocket.angleDeg)) ? Number(finalPocket.angleDeg) : getRoulettePocketByValue(finalPocket.value).angleDeg,
     spinning: false
   };
   renderRouletteVisualization();
@@ -7231,7 +7361,7 @@ let blackjackState = null;
 function setActiveCasinoGame(gameKey) {
   activeCasinoGame = ['blackjack', 'roulette', 'slots', 'poker'].includes(gameKey) ? gameKey : 'blackjack';
   blackjackState = null;
-  rouletteVisualState = { selectedChoice: '', winningValue: null, activeValue: null, spinning: false };
+  rouletteVisualState = { selectedChoice: '', winningValue: null, activeValue: null, ballAngleDeg: -90, spinning: false };
   if (activeCasinoGame !== 'poker' && typeof stopListeningForPokerRooms === 'function') stopListeningForPokerRooms();
   renderCasinoGame();
   loadCasinoBalance().catch(() => {});
@@ -7288,13 +7418,18 @@ function renderActiveCasinoGamePanel() {
   if (activeCasinoGame === 'roulette') {
     panel.innerHTML = `
       <div style="display:grid; gap:0.75rem; justify-items:center;">
-        <div style="font-size:0.88rem; color:#dce6f2;">Bet on red, black, or green. Red/black pays +$bet. Green pays +$13 x bet. Owner boost on your selected pocket: ${gameSettings.rouletteSelectedBoostPct >= 0 ? '+' : ''}${gameSettings.rouletteSelectedBoostPct}%.</div>
+        <div style="font-size:0.88rem; color:#dce6f2; text-align:center; max-width:34rem;">Bet on red, black, green, or a straight number. Red/black pays +$bet. Green pays +$24 x bet. Straight number pays +$24 x bet.</div>
         <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center; align-items:center;">
           <input id="roulette-bet" type="number" min="1" max="10000" value="100" style="padding:0.4rem 0.7rem;border-radius:0.5rem;border:1px solid #333;background:#222;color:#fff;width:90px;">
           <button onclick="spinRoulette('red')" style="padding:0.5rem 1rem;border-radius:0.6rem;background:#b71c1c;color:#fff;border:none;font-weight:700;">Red</button>
           <button onclick="spinRoulette('black')" style="padding:0.5rem 1rem;border-radius:0.6rem;background:#111;color:#fff;border:1px solid #444;font-weight:700;">Black</button>
           <button onclick="spinRoulette('green')" style="padding:0.5rem 1rem;border-radius:0.6rem;background:#2e7d32;color:#fff;border:none;font-weight:700;">Green</button>
         </div>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center; align-items:center; width:min(28rem, 100%);">
+          <input id="roulette-number-choice" type="number" min="0" max="24" value="12" style="padding:0.4rem 0.7rem; border-radius:0.5rem; border:1px solid #333; background:#222; color:#fff; width:96px;" />
+          <button onclick="spinRouletteNumber()" style="padding:0.5rem 1rem; border-radius:0.6rem; background:#1565c0; color:#fff; border:none; font-weight:700;">Bet Number</button>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:0.35rem; width:min(28rem, 100%);">${renderRouletteNumberBetButtons()}</div>
         <div id="roulette-visual" style="width:min(34rem, 100%);"></div>
         <div id="roulette-area" style="margin-top:0.6rem;color:#fff;"></div>
       </div>
@@ -7471,15 +7606,33 @@ async function blackjackStand() {
   renderBlackjack();
 }
 
-async function spinRoulette(choice) {
+function spinRouletteNumber(selectedNumber = null) {
+  const resolvedValue = selectedNumber == null ? Number(document.getElementById('roulette-number-choice')?.value) : Number(selectedNumber);
+  if (!Number.isInteger(resolvedValue) || resolvedValue < 0 || resolvedValue > 24) {
+    setCasinoStatus('Pick a roulette number from 0 to 24.', 'error');
+    return;
+  }
+  const input = document.getElementById('roulette-number-choice');
+  if (input) input.value = String(resolvedValue);
+  spinRoulette('number', resolvedValue);
+}
+
+async function spinRoulette(choice, selectedNumber = null) {
   try {
+    if (rouletteVisualState.spinning) return;
     const settings = await loadCasinoGameSettings();
     const { bet } = await validateCasinoBet('roulette-bet');
+    const isNumberBet = choice === 'number';
+    const resolvedNumber = isNumberBet ? Number(selectedNumber) : null;
+    if (isNumberBet && (!Number.isInteger(resolvedNumber) || resolvedNumber < 0 || resolvedNumber > 24)) {
+      throw new Error('Pick a roulette number from 0 to 24.');
+    }
     const multiplier = Math.max(0.2, 1 + (settings.rouletteSelectedBoostPct / 100));
-    const pockets = Array.from({ length: 15 }, (_, value) => ({
-      value,
-      color: value === 0 ? 'green' : (value % 2 === 0 ? 'black' : 'red'),
-      weight: (value === 0 ? 'green' : (value % 2 === 0 ? 'black' : 'red')) === choice ? multiplier : 1
+    const pockets = getRoulettePockets().map((pocket) => ({
+      ...pocket,
+      weight: isNumberBet
+        ? (pocket.value === resolvedNumber ? multiplier : 1)
+        : (pocket.color === choice ? multiplier : 1)
     }));
     const totalWeight = pockets.reduce((sum, pocket) => sum + pocket.weight, 0);
     let remaining = Math.random() * totalWeight;
@@ -7493,19 +7646,23 @@ async function spinRoulette(choice) {
     }
     const roll = winningPocket.value;
     const resultColor = winningPocket.color;
-    const delta = choice === resultColor ? (choice === 'green' ? bet * 13 : bet) : -bet;
+    const delta = isNumberBet
+      ? (roll === resolvedNumber ? bet * 24 : -bet)
+      : (choice === resultColor ? (choice === 'green' ? bet * 24 : bet) : -bet);
     const outcome = delta > 0 ? 'win' : 'loss';
-    await animateRouletteSpin(winningPocket, choice);
+    const betLabel = getRouletteBetLabel(choice, resolvedNumber);
+    await animateRouletteSpin(winningPocket, betLabel);
     await updateCasinoBalance(delta, { wager: bet, outcome, game: 'roulette' });
     const area = document.getElementById('roulette-area');
     if (area) {
       area.innerHTML = `
         <div style="display:grid; gap:0.45rem; justify-items:center; text-align:center;">
           <div style="font-size:0.92rem; color:#dce6f2;">Ball landed on <strong>${roll}</strong> (${escapeHtml(resultColor)}).</div>
+          <div style="font-size:0.82rem; color:#9fb0c2;">Your bet: ${escapeHtml(betLabel)}</div>
           <div style="font-size:0.96rem; color:${delta > 0 ? '#9fe3a5' : '#ffb4a8'}; font-weight:700;">${delta > 0 ? `You won $${delta}.` : `You lost $${bet}.`}</div>
         </div>`;
     }
-    setCasinoStatus(`Roulette result: ${resultColor.toUpperCase()}.`, outcome === 'win' ? 'success' : 'error');
+    setCasinoStatus(`Roulette result: ${roll} ${resultColor.toUpperCase()}.`, outcome === 'win' ? 'success' : 'error');
   } catch (err) {
     setCasinoStatus(err && err.message ? err.message : 'Could not spin roulette.', 'error');
   }
@@ -7570,6 +7727,7 @@ const ADMIN_USERS = ['kaiden', 'kaide', ''];
 const OWNER_USERS = ['kaiden', 'kaide'];
 const PROTECTED_USERNAMES = ['kaiden', 'kaide'];
 const USER_STATS_STORAGE_KEY = 'site_user_stats_v1';
+const USER_ARCHIVE_STATS_RECOVERY_KEY = 'site_user_archive_stats_recovery_v2';
 const USER_STATS_COLLECTION = 'user_stats';
 const UPDATE_NOTES_DOC_ID = 'update_notes';
 const MOD_SETTINGS_DOC_ID = 'mod_settings';
@@ -8153,7 +8311,8 @@ function applyAdminSectionCardState(sectionId) {
 const card = document.querySelector(`#admin-menu .admin-section-card[data-admin-section-id="${sectionId}"]`);
 if (!card) return;
 const button = card.querySelector('.admin-section-toggle');
-const collapsed = localStorage.getItem(getAdminSectionPreferenceKey(sectionId)) === '1';
+const storedPreference = localStorage.getItem(getAdminSectionPreferenceKey(sectionId));
+const collapsed = storedPreference === null ? true : storedPreference === '1';
 card.classList.toggle('is-collapsed', collapsed);
 if (button) button.textContent = collapsed ? 'Expand' : 'Minimize';
 }
@@ -9174,7 +9333,7 @@ let pokerRoomCache = [];
 let currentPokerRoomId = '';
 let pokerState = null;
 let pokerTutorialExpanded = false;
-let rouletteVisualState = { selectedChoice: '', winningValue: null, activeValue: null, spinning: false };
+let rouletteVisualState = { selectedChoice: '', winningValue: null, activeValue: null, ballAngleDeg: -90, spinning: false };
 let slotsVisualState = ['?', '?', '?'];
 let slotsSpinInProgress = false;
 let localNotificationCache = [];
@@ -11201,6 +11360,10 @@ try {
 async function loadAdminCasinoGameSettings() {
 if (!canManageRoles(currentChatUser)) return;
 const settings = await loadCasinoGameSettings().catch(() => getCachedCasinoGameSettings());
+populateAdminCasinoGameSettingsForm(settings);
+}
+
+function populateAdminCasinoGameSettingsForm(settings = getCachedCasinoGameSettings()) {
 const blackjackInput = document.getElementById('admin-casino-blackjack-stand');
 const rouletteInput = document.getElementById('admin-casino-roulette-boost');
 const slots7Input = document.getElementById('admin-casino-slot-weight-7');
@@ -11215,6 +11378,29 @@ if (slotsBarInput) slotsBarInput.value = String(settings.slotsSymbolWeights.BAR)
 if (slotsCherryInput) slotsCherryInput.value = String(settings.slotsSymbolWeights.CHERRY);
 if (slotsStarInput) slotsStarInput.value = String(settings.slotsSymbolWeights.STAR);
 if (slotsBellInput) slotsBellInput.value = String(settings.slotsSymbolWeights.BELL);
+}
+
+async function adminApplyCasinoGameSettingsPreset(presetKey) {
+if (!canManageRoles(currentChatUser)) return;
+const statusDiv = document.getElementById('admin-casino-status');
+const labelMap = {
+  'player-favored': 'Player favored',
+  fair: 'Fair',
+  'casino-favored': 'Casino favored'
+};
+try {
+  const nextSettings = getCasinoGameSettingsPreset(presetKey);
+  await saveCasinoGameSettings(nextSettings);
+  populateAdminCasinoGameSettingsForm(nextSettings);
+  await writeAuditLog('casino_update_preset', 'casino_settings', `${labelMap[presetKey] || 'Custom'} preset applied`);
+  if (statusDiv) statusDiv.textContent = `${labelMap[presetKey] || 'Preset'} preset applied.`;
+  if (document.getElementById('casino-modal')?.style.display === 'flex') {
+    renderActiveCasinoGamePanel();
+    renderSlotsVisualization(slotsVisualState, nextSettings);
+  }
+} catch (err) {
+  if (statusDiv) statusDiv.textContent = 'Failed to apply casino preset.';
+}
 }
 
 async function adminSaveCasinoGameSettings() {
@@ -13890,6 +14076,109 @@ function saveStatsStore(store) {
 localStorage.setItem(USER_STATS_STORAGE_KEY, JSON.stringify(store));
 }
 
+function getArchiveStatsRecoveryStore() {
+try {
+return JSON.parse(localStorage.getItem(USER_ARCHIVE_STATS_RECOVERY_KEY) || '{}');
+} catch (err) {
+return {};
+}
+}
+
+function saveArchiveStatsRecoveryStore(store) {
+localStorage.setItem(USER_ARCHIVE_STATS_RECOVERY_KEY, JSON.stringify(store));
+}
+
+function clearArchiveRecoveryCacheEntry(userKey) {
+const key = normalizeUsername(userKey);
+if (!key) return;
+const store = getArchiveStatsRecoveryStore();
+if (!Object.prototype.hasOwnProperty.call(store, key)) return;
+delete store[key];
+saveArchiveStatsRecoveryStore(store);
+}
+
+async function getArchivedMessageStatsForUser(userKey, currentUsername = '', accountStartMs = 0, liveMessageIds = new Set()) {
+const archiveDb = getArchiveDb();
+if (!archiveDb) {
+return { messagesSent: 0, mediaShared: 0, recovered: false };
+}
+
+const queryTargets = [
+  ['authoredBy', userKey],
+  ['profileUser', userKey],
+  ['user', currentUsername],
+  ['user', userKey]
+].filter(([field, value], index, source) => {
+  const normalizedValue = String(value || '').trim();
+  if (!normalizedValue) return false;
+  return source.findIndex(([otherField, otherValue]) => otherField === field && String(otherValue || '').trim() === normalizedValue) === index;
+});
+
+if (!queryTargets.length) {
+return { messagesSent: 0, mediaShared: 0, recovered: false };
+}
+
+const seenMessageIds = new Set();
+let messagesSent = 0;
+let mediaShared = 0;
+let recovered = false;
+
+const consumeArchivedMessageDocs = (docs = []) => {
+  docs.forEach((doc) => {
+    const data = doc.data() || {};
+    const authorKey = normalizeUsername(data.authoredBy || data.profileUser || data.user || '');
+    if (!authorKey || authorKey !== userKey || data.system) return;
+
+    const messageId = String(data.originalId || doc.id || '');
+    if (messageId && (liveMessageIds.has(messageId) || seenMessageIds.has(messageId))) return;
+    if (messageId) seenMessageIds.add(messageId);
+
+    const timestampMs = getTimestampMs(data.timestamp) || getTimestampMs(data.archivedAt);
+    if (accountStartMs && timestampMs && timestampMs < accountStartMs) return;
+
+    const hasMedia = !!(data.imageData || data.gifUrl || data.type === 'gif');
+    const hasTextMessage = !!sanitizeNullableText(data.message, '');
+    if (hasTextMessage && !hasMedia) {
+      messagesSent += 1;
+    }
+    if (hasMedia) {
+      mediaShared += 1;
+    }
+  });
+};
+
+if (typeof archiveDb.collectionGroup === 'function') {
+  const queryResults = await Promise.allSettled(queryTargets.map(([field, value]) => archiveDb.collectionGroup('messages').where(field, '==', value).get()));
+  queryResults.forEach((result) => {
+    if (result.status !== 'fulfilled') return;
+    recovered = true;
+    consumeArchivedMessageDocs(result.value && result.value.docs ? result.value.docs : []);
+  });
+}
+
+if (messagesSent > 0 || mediaShared > 0) {
+  return { messagesSent, mediaShared, recovered: true };
+}
+
+try {
+  const sessionsSnapshot = await archiveDb.collection('chat_archives').orderBy('archivedAt', 'desc').limit(80).get();
+  const sessionDocs = sessionsSnapshot && Array.isArray(sessionsSnapshot.docs) ? sessionsSnapshot.docs : [];
+  for (const sessionDoc of sessionDocs) {
+    const sessionRef = archiveDb.collection('chat_archives').doc(sessionDoc.id).collection('messages');
+    const sessionResults = await Promise.allSettled(queryTargets.map(([field, value]) => sessionRef.where(field, '==', value).get()));
+    sessionResults.forEach((result) => {
+      if (result.status !== 'fulfilled') return;
+      recovered = true;
+      consumeArchivedMessageDocs(result.value && result.value.docs ? result.value.docs : []);
+    });
+  }
+} catch (fallbackErr) {
+  console.error('Failed to scan archive sessions for stat recovery:', fallbackErr);
+}
+
+return { messagesSent, mediaShared, recovered };
+}
+
 function pushUserStatsToFirestore(userKey, stats) {
 try {
 const db = getPrimaryDb();
@@ -13938,6 +14227,146 @@ return getStatsForUserKey(userKey);
 
 function getCurrentUserStats() {
 return getStatsForUserKey(getStatsUserKey());
+}
+
+async function rebuildUserMessageStats(userKey, options = {}) {
+const normalizedUserKey = normalizeUsername(userKey);
+if (!normalizedUserKey) return null;
+
+const forceArchiveRefresh = !!options.forceArchiveRefresh;
+const usernameCandidates = Array.isArray(options.usernameCandidates) ? options.usernameCandidates : [];
+const db = getPrimaryDb();
+const adminDb = getAdminDb();
+
+try {
+const fsDoc = await db.collection(USER_STATS_COLLECTION).doc(normalizedUserKey).get();
+if (fsDoc.exists) {
+  const fsData = fsDoc.data() || {};
+  const store = getStatsStore();
+  const local = store[normalizedUserKey] || {};
+  const statFields = ['gamesOpened', 'reactionsUsed'];
+  const merged = {};
+  statFields.forEach((field) => {
+    merged[field] = Math.max(local[field] || 0, fsData[field] || 0);
+  });
+  merged.messagesSent = Math.max(local.messagesSent || 0, fsData.messagesSent || 0);
+  merged.mediaShared = Math.max(local.mediaShared || 0, fsData.mediaShared || 0);
+  store[normalizedUserKey] = merged;
+  saveStatsStore(store);
+}
+} catch (e) {}
+
+let accountStartMs = 0;
+try {
+const accountDoc = await adminDb.collection(LOGIN_REQUESTS_COLLECTION).doc(normalizedUserKey).get();
+if (accountDoc.exists) {
+  const accountData = accountDoc.data() || {};
+  accountStartMs = Number(accountData.createdAtMs)
+    || getTimestampMs(accountData.createdAt)
+    || getTimestampMs(accountData.approvedAt)
+    || Number(accountData.approvedAtMs)
+    || getTimestampMs(accountData.submittedAt)
+    || Number(accountData.submittedAtMs)
+    || 0;
+}
+} catch (e) {}
+
+const snapshot = await db.collection('site_messages').get();
+let messageCount = 0;
+let mediaCount = 0;
+let totalMessageCount = 0;
+let totalMediaCount = 0;
+const liveMessageIds = new Set();
+
+snapshot.forEach((doc) => {
+const data = doc.data() || {};
+const author = normalizeUsername(data.authoredBy || data.profileUser || data.user || '');
+if (!author || author !== normalizedUserKey || data.system) return;
+liveMessageIds.add(String(doc.id || ''));
+const hasMedia = !!(data.imageData || data.gifUrl || data.type === 'gif');
+const hasTextMessage = !!sanitizeNullableText(data.message, '');
+if (hasTextMessage && !hasMedia) {
+  totalMessageCount += 1;
+}
+if (hasMedia) {
+  totalMediaCount += 1;
+}
+const timestampMs = getTimestampMs(data.timestamp);
+if (accountStartMs && timestampMs && timestampMs < accountStartMs) return;
+if (hasTextMessage && !hasMedia) {
+  messageCount += 1;
+}
+if (hasMedia) {
+  mediaCount += 1;
+}
+});
+
+if (totalMessageCount > messageCount && (messageCount <= 1 || totalMessageCount >= messageCount * 2)) {
+messageCount = totalMessageCount;
+mediaCount = totalMediaCount;
+}
+
+if (forceArchiveRefresh) {
+clearArchiveRecoveryCacheEntry(normalizedUserKey);
+}
+
+const recoveryStore = getArchiveStatsRecoveryStore();
+let archivedMessageCount = Math.max(0, Number(recoveryStore[normalizedUserKey] && recoveryStore[normalizedUserKey].messagesSent) || 0);
+let archivedMediaCount = Math.max(0, Number(recoveryStore[normalizedUserKey] && recoveryStore[normalizedUserKey].mediaShared) || 0);
+
+if (!recoveryStore[normalizedUserKey]) {
+  try {
+    const archiveStats = await getArchivedMessageStatsForUser(
+      normalizedUserKey,
+      usernameCandidates[0] || normalizedUserKey,
+      accountStartMs,
+      liveMessageIds
+    );
+    if (archiveStats.recovered) {
+      archivedMessageCount = Math.max(0, Number(archiveStats.messagesSent) || 0);
+      archivedMediaCount = Math.max(0, Number(archiveStats.mediaShared) || 0);
+      recoveryStore[normalizedUserKey] = {
+        recoveredAtMs: Date.now(),
+        messagesSent: archivedMessageCount,
+        mediaShared: archivedMediaCount
+      };
+      saveArchiveStatsRecoveryStore(recoveryStore);
+    }
+  } catch (archiveErr) {
+    console.error('Failed to recover archived message stats:', archiveErr);
+  }
+}
+
+const store = getStatsStore();
+const current = store[normalizedUserKey] || getStatsForUserKey(normalizedUserKey);
+let changed = false;
+const nextMessageCount = Math.max(Number(current.messagesSent) || 0, messageCount + archivedMessageCount);
+const nextMediaCount = Math.max(Number(current.mediaShared) || 0, mediaCount + archivedMediaCount);
+
+if ((current.messagesSent || 0) !== nextMessageCount) {
+current.messagesSent = nextMessageCount;
+changed = true;
+}
+if ((current.mediaShared || 0) !== nextMediaCount) {
+current.mediaShared = nextMediaCount;
+changed = true;
+}
+
+if (changed) {
+store[normalizedUserKey] = current;
+saveStatsStore(store);
+}
+pushUserStatsToFirestore(normalizedUserKey, current);
+return {
+  userKey: normalizedUserKey,
+  stats: current,
+  changed,
+  archiveRecovered: archivedMessageCount > 0 || archivedMediaCount > 0,
+  archivedMessageCount,
+  archivedMediaCount,
+  liveMessageCount: messageCount,
+  liveMediaCount: mediaCount
+};
 }
 
 function incrementUserStat(stat, amount = 1) {
@@ -15223,6 +15652,47 @@ ${auditEntries.length ? auditEntries.map((item) => {
 </div>`;
 } catch (err) {
 container.textContent = 'Failed to load user history.';
+}
+}
+
+async function adminRebuildSelectedUserStats() {
+if (!canAdminSettings(currentChatUser)) return;
+const username = normalizeUsername(resolveAdminTargetUsername('admin-history-username'));
+const statusDiv = document.getElementById('admin-ban-status');
+const historyContainer = document.getElementById('admin-user-history');
+if (!username) {
+  if (statusDiv) statusDiv.textContent = 'Select a username to rebuild stats.';
+  return;
+}
+  if (statusDiv) statusDiv.textContent = `Rebuilding stats for ${username}...`;
+  if (historyContainer) historyContainer.textContent = 'Rebuilding user stats...';
+try {
+  const result = await rebuildUserMessageStats(username, {
+    forceArchiveRefresh: true,
+    usernameCandidates: [username]
+  });
+  await writeAuditLog(
+    'rebuild_user_stats',
+    username,
+    `Messages ${result && result.stats ? result.stats.messagesSent || 0 : 0}, Media ${result && result.stats ? result.stats.mediaShared || 0 : 0}`
+  );
+  if (typeof loadAdminAnalytics === 'function') loadAdminAnalytics();
+  if (typeof loadAdminAccountManager === 'function') loadAdminAccountManager();
+  if (document.getElementById('leaderboard-modal')?.style.display === 'flex') {
+    await loadLeaderboard();
+  }
+  scheduleDynamicLeaderboardTagRefresh();
+  if ((currentProfileViewUser || getStatsUserKey()) === username) {
+    renderProfileModal(username);
+  }
+  if (statusDiv) {
+    statusDiv.textContent = `Rebuilt ${username}: ${result && result.stats ? result.stats.messagesSent || 0 : 0} messages, ${result && result.stats ? result.stats.mediaShared || 0 : 0} media.`;
+  }
+  await loadAdminUserHistory(username);
+} catch (err) {
+  console.error('Failed to rebuild user stats:', err);
+  if (statusDiv) statusDiv.textContent = 'Failed to rebuild user stats.';
+  if (historyContainer) historyContainer.textContent = 'Failed to rebuild user stats.';
 }
 }
 
@@ -17157,95 +17627,9 @@ const userKey = getStatsUserKey();
 if (!userKey) return;
 
 try {
-const db = getPrimaryDb();
-const adminDb = getAdminDb();
-
-// Restore stats from Firestore first so a localStorage wipe doesn't lose data.
-// Keep non-message counters merged, then rebuild message/media counts from chat history.
-try {
-const fsDoc = await db.collection(USER_STATS_COLLECTION).doc(userKey).get();
-if (fsDoc.exists) {
-const fsData = fsDoc.data() || {};
-const store = getStatsStore();
-const local = store[userKey] || {};
-const STAT_FIELDS = ['gamesOpened', 'reactionsUsed'];
-const merged = {};
-STAT_FIELDS.forEach(f => { merged[f] = Math.max(local[f] || 0, fsData[f] || 0); });
-merged.messagesSent = Math.max(local.messagesSent || 0, fsData.messagesSent || 0);
-merged.mediaShared = Math.max(local.mediaShared || 0, fsData.mediaShared || 0);
-store[userKey] = merged;
-saveStatsStore(store);
-}
-} catch (e) {}
-
-let accountStartMs = 0;
-try {
-const accountDoc = await adminDb.collection(LOGIN_REQUESTS_COLLECTION).doc(userKey).get();
-if (accountDoc.exists) {
-  const accountData = accountDoc.data() || {};
-  accountStartMs = Number(accountData.createdAtMs)
-    || getTimestampMs(accountData.createdAt)
-    || getTimestampMs(accountData.approvedAt)
-    || Number(accountData.approvedAtMs)
-    || getTimestampMs(accountData.submittedAt)
-    || Number(accountData.submittedAtMs)
-    || 0;
-}
-} catch (e) {}
-
-const snapshot = await db.collection('site_messages').get();
-
-let messageCount = 0;
-let mediaCount = 0;
-let totalMessageCount = 0;
-let totalMediaCount = 0;
-
-snapshot.forEach((doc) => {
-const data = doc.data() || {};
-const author = normalizeUsername(data.user || '');
-if (!author || author !== userKey || data.system) return;
-const hasMedia = !!(data.imageData || data.gifUrl || data.type === 'gif');
-const hasTextMessage = !!sanitizeNullableText(data.message, '');
-if (hasTextMessage && !hasMedia) {
-totalMessageCount += 1;
-}
-if (hasMedia) {
-totalMediaCount += 1;
-}
-const timestampMs = getTimestampMs(data.timestamp);
-if (accountStartMs && timestampMs && timestampMs < accountStartMs) return;
-
-if (hasTextMessage && !hasMedia) {
-messageCount += 1;
-}
-if (hasMedia) {
-mediaCount += 1;
-}
+await rebuildUserMessageStats(userKey, {
+  usernameCandidates: [currentChatUser || getUserName() || userKey]
 });
-
-if (totalMessageCount > messageCount && (messageCount <= 1 || totalMessageCount >= messageCount * 2)) {
-messageCount = totalMessageCount;
-mediaCount = totalMediaCount;
-}
-
-const store = getStatsStore();
-const current = store[userKey] || getCurrentUserStats();
-let changed = false;
-
-if ((current.messagesSent || 0) !== messageCount) {
-current.messagesSent = messageCount;
-changed = true;
-}
-if ((current.mediaShared || 0) !== mediaCount) {
-current.mediaShared = mediaCount;
-changed = true;
-}
-
-if (changed) {
-store[userKey] = current;
-saveStatsStore(store);
-}
-pushUserStatsToFirestore(userKey, current);
 } catch (err) {
 console.error('Failed to backfill legacy message stats:', err);
 }
