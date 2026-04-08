@@ -9348,7 +9348,6 @@ try {
       approvedAtMs: data.approvedAt && typeof data.approvedAt.toDate === 'function' ? data.approvedAt.toDate().getTime() : (data.approvedAtMs || 0)
     };
   });
-      if (activeGeneralShopTradeInviteId === tradeId) closeGeneralShopTradeInviteModal();
   gameSubmissionsLoaded = true;
   updateReviewQueueBadges();
   renderGameStorefront();
