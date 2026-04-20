@@ -1,5 +1,52 @@
 let siteLoginPassed = false;
 
+const firebaseConfig = {
+apiKey: "AIzaSyC9SMr54yXr0uk0M7JEeuawj0J98IylU20",
+authDomain: "balright--chat.firebaseapp.com",
+projectId: "balright--chat",
+databaseURL: "https://balright--chat-default-rtdb.firebaseio.com",
+storageBucket: "balright--chat.firebasestorage.app",
+messagingSenderId: "233595240223",
+appId: "1:233595240223:web:8477fa939d4491d375fa2a"
+};
+
+const adminFirebaseConfig = {
+apiKey: "AIzaSyDYQNtr7l1G35coXkOS0yU1hAN0SaqUwnI",
+authDomain: "balright-admin.firebaseapp.com",
+projectId: "balright-admin",
+storageBucket: "balright-admin.firebasestorage.app",
+messagingSenderId: "217574354625",
+appId: "1:217574354625:web:f7da2650966911a56f2e40"
+};
+
+const archiveFirebaseConfig = {
+apiKey: "AIzaSyD_mTLJiBJUc7OgVKQ4A0vTrJ8b3u2tnlY",
+authDomain: "balright-archive.firebaseapp.com",
+projectId: "balright-archive",
+storageBucket: "balright-archive.firebasestorage.app",
+messagingSenderId: "696203941105",
+appId: "1:696203941105:web:5b8d370ad383537c19c550"
+};
+
+const casinoFirebaseConfig = {
+apiKey: "AIzaSyABMyvYjhr7gvLOrxdDMKUoCuVtfLEBOTg",
+authDomain: "balright-casino.firebaseapp.com",
+projectId: "balright-casino",
+storageBucket: "balright-casino.firebasestorage.app",
+messagingSenderId: "534969019133",
+appId: "1:534969019133:web:e2a4169fd920077816ac94"
+};
+
+const ADMIN_APP_NAME = 'balright-admin';
+const ARCHIVE_APP_NAME = 'balright-archive';
+const CASINO_APP_NAME = 'balright-casino';
+const configuredFirestoreDbs = new WeakSet();
+
+let chatInitialized = false;
+let currentChatUser = '';
+let currentChatColor = '#1565c0';
+let chatRoomToolbarOpen = localStorage.getItem('chatRoomToolbarOpen') !== '0';
+
 window.getActiveTimedBan = window.getActiveTimedBan || async function() {
   return null;
 };
@@ -136,6 +183,8 @@ function siteLoginSubmit() {
   })();
 }
 
+window.siteLoginSubmit = siteLoginSubmit;
+
 async function getApprovedLoginRequest(username) {
   const key = normalizeUsername(username);
   if (!key) return null;
@@ -173,6 +222,8 @@ function showNameModal() {
   document.getElementById('user-name-input').focus();
 }
 
+window.showNameModal = showNameModal;
+
 function submitUserName() {
   const name = document.getElementById('user-name-input').value.trim();
   if (!name) {
@@ -184,6 +235,8 @@ function submitUserName() {
   setDocumentScrollLock(false);
   initIPLogging();
 }
+
+window.submitUserName = submitUserName;
 
 window.openLoginRequestModal = window.openLoginRequestModal || function() {
   const modal = document.getElementById('login-request-modal');
@@ -259,11 +312,24 @@ function getCasinoGameSettingsDoc() {
 }
 
 const CASINO_BAILOUT_COOLDOWN_MS = 60 * 60 * 1000;
+const CASINO_DAILY_BONUS_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const CASINO_DAILY_BONUS_BASE_AMOUNT = 250;
+const CASINO_DAILY_BONUS_STREAK_STEP = 100;
+const CASINO_DAILY_BONUS_STREAK_CAP = 7;
 const CASINO_RESET_STARTING_BALANCE = 1000;
 const CASINO_SEASON_STATE_DOC_ID = 'weekly_season_state';
 const CHUD_WALL_DOC_ID = 'chud_wall';
 const CASINO_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const CASINO_WEEKLY_RESET_LOCK_MS = 5 * 60 * 1000;
+const CASINO_SEASON_TIME_ZONE = 'America/New_York';
+const CASINO_SEASON_OPEN_WEEKDAY = 1;
+const CASINO_SEASON_CLOSE_WEEKDAY = 5;
+const CASINO_SEASON_CLOSE_HOUR = 14;
+const CASINO_SEASON_CLOSE_MINUTE = 9;
+const GLOBAL_ALERT_DEFAULT_ACTIVE_MINUTES = 30;
+const PROFILE_BADGE_SHOWCASE_LIMIT = 3;
+const IFRAME_RECENT_HISTORY_KEY = 'iframeRecentHistoryV1';
+const IFRAME_RECENT_HISTORY_LIMIT = 10;
 
 function getCasinoSeasonStateDoc() {
   return getCasinoConfigCollection().doc(CASINO_SEASON_STATE_DOC_ID);
@@ -306,16 +372,232 @@ function normalizeChudWallData(data = {}) {
   };
 }
 
+function getTimeZoneCalendarParts(referenceMs = Date.now(), timeZone = CASINO_SEASON_TIME_ZONE) {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    weekday: 'short',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+    hour12: false
+  });
+  const weekdayMap = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const partMap = {};
+  formatter.formatToParts(new Date(referenceMs)).forEach((part) => {
+    if (part.type !== 'literal') partMap[part.type] = part.value;
+  });
+  const hourValue = Number(partMap.hour || 0);
+  return {
+    year: Number(partMap.year || 0),
+    month: Number(partMap.month || 1),
+    day: Number(partMap.day || 1),
+    weekday: weekdayMap[partMap.weekday] ?? 0,
+    hour: hourValue === 24 ? 0 : hourValue,
+    minute: Number(partMap.minute || 0),
+    second: Number(partMap.second || 0)
+  };
+}
+
+function shiftCalendarDateParts(year, month, day, deltaDays = 0) {
+  const shifted = new Date(Date.UTC(year, month - 1, day + deltaDays, 12, 0, 0));
+  return {
+    year: shifted.getUTCFullYear(),
+    month: shifted.getUTCMonth() + 1,
+    day: shifted.getUTCDate()
+  };
+}
+
+function buildTimeZoneTimestamp(year, month, day, hour = 0, minute = 0, second = 0, timeZone = CASINO_SEASON_TIME_ZONE) {
+  let guessMs = Date.UTC(year, month - 1, day, hour, minute, second);
+  const targetUtcMs = Date.UTC(year, month - 1, day, hour, minute, second);
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const observed = getTimeZoneCalendarParts(guessMs, timeZone);
+    const observedUtcMs = Date.UTC(observed.year, observed.month - 1, observed.day, observed.hour, observed.minute, observed.second);
+    const offsetMs = targetUtcMs - observedUtcMs;
+    if (!offsetMs) break;
+    guessMs += offsetMs;
+  }
+  return guessMs;
+}
+
+function formatCasinoSeasonDateTime(timestampMs) {
+  if (!timestampMs) return '';
+  return new Date(timestampMs).toLocaleString([], {
+    timeZone: CASINO_SEASON_TIME_ZONE,
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short'
+  });
+}
+
+function getCasinoSeasonEndMs(startMs = 0) {
+  const normalizedStartMs = Math.max(0, Number(startMs || 0));
+  if (!normalizedStartMs) return 0;
+  const parts = getTimeZoneCalendarParts(normalizedStartMs);
+  const fridayDate = shiftCalendarDateParts(parts.year, parts.month, parts.day, CASINO_SEASON_CLOSE_WEEKDAY - CASINO_SEASON_OPEN_WEEKDAY);
+  return buildTimeZoneTimestamp(fridayDate.year, fridayDate.month, fridayDate.day, CASINO_SEASON_CLOSE_HOUR, CASINO_SEASON_CLOSE_MINUTE, 0);
+}
+
+function getCasinoSeasonBaseStartMs(entries = normalizeChudWallData(chudWallCache || {}).entries || [], state = casinoSeasonStateCache, referenceMs = Date.now()) {
+  const normalizedState = normalizeCasinoSeasonStateData(state || {}, referenceMs);
+  const referenceStarts = [];
+  if (normalizedState.currentWeekStartMs) referenceStarts.push(normalizedState.currentWeekStartMs);
+  if (normalizedState.currentWeekStartMs >= CASINO_WEEK_MS) referenceStarts.push(normalizedState.currentWeekStartMs - CASINO_WEEK_MS);
+  (Array.isArray(entries) ? entries : []).forEach((entry) => {
+    if (sanitizeNullableText(entry && entry.source, '') !== 'weekly-winner') return;
+    const seasonWeekStartMs = Math.max(0, Number(entry && entry.seasonWeekStartMs || 0));
+    if (seasonWeekStartMs) referenceStarts.push(seasonWeekStartMs);
+  });
+  return referenceStarts.length ? Math.min(...referenceStarts) : normalizedState.currentWeekStartMs;
+}
+
+function getCasinoSeasonNumber(startMs = 0, entries = normalizeChudWallData(chudWallCache || {}).entries || [], state = casinoSeasonStateCache) {
+  const normalizedStartMs = Math.max(0, Number(startMs || 0));
+  if (!normalizedStartMs) return 0;
+  const baseStartMs = getCasinoSeasonBaseStartMs(entries, state, normalizedStartMs) || normalizedStartMs;
+  if (normalizedStartMs <= baseStartMs) return 1;
+  return Math.floor((normalizedStartMs - baseStartMs) / CASINO_WEEK_MS) + 1;
+}
+
+function getCasinoSeasonStartMsFromNumber(seasonNumber, entries = normalizeChudWallData(chudWallCache || {}).entries || [], state = casinoSeasonStateCache, referenceMs = Date.now()) {
+  const resolvedNumber = Math.max(1, Math.floor(Number(seasonNumber) || 0));
+  if (!resolvedNumber) return 0;
+  const baseStartMs = getCasinoSeasonBaseStartMs(entries, state, referenceMs) || getCasinoWeekStartMs(referenceMs);
+  if (!baseStartMs) return 0;
+  const parts = getTimeZoneCalendarParts(baseStartMs);
+  const shiftedDate = shiftCalendarDateParts(parts.year, parts.month, parts.day, (resolvedNumber - 1) * 7);
+  return buildTimeZoneTimestamp(shiftedDate.year, shiftedDate.month, shiftedDate.day, 0, 0, 0);
+}
+
+function formatCasinoSeasonLabel(startMs = 0) {
+  const normalizedStartMs = Math.max(0, Number(startMs || 0));
+  if (!normalizedStartMs) return 'Unknown season';
+  const seasonNumber = getCasinoSeasonNumber(normalizedStartMs);
+  return seasonNumber > 0 ? `Season ${seasonNumber}` : 'Unknown season';
+}
+
+function formatCasinoBalanceSummary(value, options = {}) {
+  const amount = Math.max(0, Math.floor(Number(value || 0)));
+  const compact = !!options.compact;
+  if (!compact) return `$${amount.toLocaleString()}`;
+  return `$${new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    maximumFractionDigits: amount >= 1000000 ? 1 : 0
+  }).format(amount)}`;
+}
+
+function getLatestWeeklyWinnerChudWallEntry(entries = normalizeChudWallData(chudWallCache || {}).entries || []) {
+  return (Array.isArray(entries) ? entries : [])
+    .filter((entry) => sanitizeNullableText(entry && entry.source, '') === 'weekly-winner')
+    .sort((a, b) => {
+      const seasonDelta = Math.max(0, Number(b && b.seasonWeekStartMs || 0)) - Math.max(0, Number(a && a.seasonWeekStartMs || 0));
+      if (seasonDelta !== 0) return seasonDelta;
+      const addedDelta = Math.max(0, Number(b && b.addedAtMs || 0)) - Math.max(0, Number(a && a.addedAtMs || 0));
+      if (addedDelta !== 0) return addedDelta;
+      return normalizeUsername(a && a.username).localeCompare(normalizeUsername(b && b.username));
+    })[0] || null;
+}
+
+function getCasinoDisplayedLastWinnerData(state = casinoSeasonStateCache, entries = normalizeChudWallData(chudWallCache || {}).entries || []) {
+  const normalizedState = normalizeCasinoSeasonStateData(state || {});
+  const latestWallWinner = getLatestWeeklyWinnerChudWallEntry(entries);
+  if (latestWallWinner && latestWallWinner.username) {
+    return {
+      username: latestWallWinner.username,
+      displayName: latestWallWinner.displayName || latestWallWinner.username,
+      balance: Math.max(0, Number(latestWallWinner.recordedBalance || 0)),
+      seasonWeekStartMs: Math.max(0, Number(latestWallWinner.seasonWeekStartMs || 0))
+    };
+  }
+  return {
+    username: normalizedState.previousWinnerUsername,
+    displayName: normalizedState.previousWinnerDisplayName || normalizedState.previousWinnerUsername,
+    balance: Math.max(0, Number(normalizedState.previousWinnerBalance || 0)),
+    seasonWeekStartMs: Math.max(0, normalizedState.currentWeekStartMs - CASINO_WEEK_MS)
+  };
+}
+
+function getChudWallSeasonWinsForUsername(username, entries = normalizeChudWallData(chudWallCache || {}).entries || []) {
+  const key = normalizeUsername(username);
+  if (!key) return [];
+  const seasonMap = new Map();
+  (Array.isArray(entries) ? entries : []).forEach((entry) => {
+    if (sanitizeNullableText(entry && entry.source, '') !== 'weekly-winner') return;
+    if (normalizeUsername(entry && entry.username) !== key) return;
+    const seasonWeekStartMs = Math.max(0, Number(entry && entry.seasonWeekStartMs || 0));
+    if (!seasonWeekStartMs) return;
+    const existing = seasonMap.get(seasonWeekStartMs);
+    if (!existing || Math.max(0, Number(entry && entry.addedAtMs || 0)) >= Math.max(0, Number(existing.addedAtMs || 0))) {
+      seasonMap.set(seasonWeekStartMs, normalizeChudWallEntryData(entry));
+    }
+  });
+  return Array.from(seasonMap.values()).sort((a, b) => {
+    const seasonDelta = Math.max(0, Number(b.seasonWeekStartMs || 0)) - Math.max(0, Number(a.seasonWeekStartMs || 0));
+    if (seasonDelta !== 0) return seasonDelta;
+    return Math.max(0, Number(b.addedAtMs || 0)) - Math.max(0, Number(a.addedAtMs || 0));
+  });
+}
+
+function renderChudWallSeasonWinsMarkup(username, entries = normalizeChudWallData(chudWallCache || {}).entries || []) {
+  const wins = getChudWallSeasonWinsForUsername(username, entries);
+  if (!wins.length) return '';
+  const useCompact = wins.length > 1 || wins.some((entry) => Math.max(0, Number(entry.recordedBalance || 0)) >= 1000000);
+  const containerClass = `leaderboard-chud-season-summary${wins.length > 1 ? ' is-multi' : ''}`;
+  return `<span class="${containerClass}">${wins.map((entry) => `<span class="leaderboard-chud-season-chip">${escapeHtml(formatCasinoSeasonLabel(entry.seasonWeekStartMs))} ${escapeHtml(formatCasinoBalanceSummary(entry.recordedBalance, { compact: useCompact }))}</span>`).join('')}</span>`;
+}
+
+function getCasinoSeasonSchedule(referenceMs = Date.now()) {
+  const nowParts = getTimeZoneCalendarParts(referenceMs);
+  const diffFromMonday = (nowParts.weekday + 7 - CASINO_SEASON_OPEN_WEEKDAY) % 7;
+  const thisMondayDate = shiftCalendarDateParts(nowParts.year, nowParts.month, nowParts.day, -diffFromMonday);
+  const thisFridayDate = shiftCalendarDateParts(thisMondayDate.year, thisMondayDate.month, thisMondayDate.day, CASINO_SEASON_CLOSE_WEEKDAY - CASINO_SEASON_OPEN_WEEKDAY);
+  const thisMondayStartMs = buildTimeZoneTimestamp(thisMondayDate.year, thisMondayDate.month, thisMondayDate.day, 0, 0, 0);
+  const thisFridayCloseMs = buildTimeZoneTimestamp(thisFridayDate.year, thisFridayDate.month, thisFridayDate.day, CASINO_SEASON_CLOSE_HOUR, CASINO_SEASON_CLOSE_MINUTE, 0);
+  const isOpen = referenceMs >= thisMondayStartMs && referenceMs < thisFridayCloseMs;
+  const activeSeasonDate = isOpen
+    ? thisMondayDate
+    : shiftCalendarDateParts(thisMondayDate.year, thisMondayDate.month, thisMondayDate.day, 7);
+  const activeSeasonStartMs = buildTimeZoneTimestamp(activeSeasonDate.year, activeSeasonDate.month, activeSeasonDate.day, 0, 0, 0);
+  const activeSeasonFridayDate = shiftCalendarDateParts(activeSeasonDate.year, activeSeasonDate.month, activeSeasonDate.day, CASINO_SEASON_CLOSE_WEEKDAY - CASINO_SEASON_OPEN_WEEKDAY);
+  const nextResetAtMs = buildTimeZoneTimestamp(activeSeasonFridayDate.year, activeSeasonFridayDate.month, activeSeasonFridayDate.day, CASINO_SEASON_CLOSE_HOUR, CASINO_SEASON_CLOSE_MINUTE, 0);
+  const previousSeasonDate = shiftCalendarDateParts(activeSeasonDate.year, activeSeasonDate.month, activeSeasonDate.day, -7);
+  return {
+    isOpen,
+    currentWeekStartMs: activeSeasonStartMs,
+    nextResetAtMs,
+    nextOpenAtMs: activeSeasonStartMs,
+    lastCompletedWeekStartMs: buildTimeZoneTimestamp(previousSeasonDate.year, previousSeasonDate.month, previousSeasonDate.day, 0, 0, 0),
+    thisFridayCloseMs,
+    weekendClosed: !isOpen
+  };
+}
+
+function isCasinoCurrentlyOpen(referenceMs = Date.now()) {
+  return getCasinoSeasonSchedule(referenceMs).isOpen;
+}
+
+function getCasinoClosedMessage(referenceMs = Date.now()) {
+  const schedule = getCasinoSeasonSchedule(referenceMs);
+  return `Casino is closed for the weekend. It reopens ${formatCasinoSeasonDateTime(schedule.nextOpenAtMs)}.`;
+}
+
+function assertCasinoOpen(referenceMs = Date.now()) {
+  const schedule = getCasinoSeasonSchedule(referenceMs);
+  if (schedule.isOpen) return schedule;
+  throw new Error(getCasinoClosedMessage(referenceMs));
+}
+
 function getCasinoWeekStartMs(referenceMs = Date.now()) {
-  const date = new Date(referenceMs);
-  const diffFromMonday = (date.getUTCDay() + 6) % 7;
-  date.setUTCDate(date.getUTCDate() - diffFromMonday);
-  date.setUTCHours(0, 0, 0, 0);
-  return date.getTime();
+  return getCasinoSeasonSchedule(referenceMs).currentWeekStartMs;
 }
 
 function getCasinoNextWeekStartMs(referenceMs = Date.now()) {
-  return getCasinoWeekStartMs(referenceMs) + CASINO_WEEK_MS;
+  return getCasinoSeasonSchedule(referenceMs).nextResetAtMs;
 }
 
 function normalizeCasinoSeasonStateData(data = {}, referenceMs = Date.now()) {
@@ -343,17 +625,24 @@ function normalizeCasinoSeasonStateData(data = {}, referenceMs = Date.now()) {
 
 function isCasinoWeeklyChampion(username) {
   const key = normalizeUsername(username);
-  return !!key && key === normalizeUsername(casinoSeasonStateCache.previousWinnerUsername || '');
+  const highlightedUsername = normalizeUsername(casinoSeasonStateCache.previousWinnerUsername || '');
+  return !!key && key === highlightedUsername;
 }
 
 function getCasinoSeasonStatusText() {
   const state = normalizeCasinoSeasonStateData(casinoSeasonStateCache || {});
+  const schedule = getCasinoSeasonSchedule();
   const nowMs = Date.now();
-  const remainingMs = Math.max(0, state.nextResetAtMs - nowMs);
-  const winnerText = state.previousWinnerUsername
-    ? `${state.previousWinnerDisplayName || state.previousWinnerUsername} won last week with $${state.previousWinnerBalance.toLocaleString()} and keeps a gold-plated Chud Wall name this week.`
-    : 'The weekly balance winner gets a gold-plated Chud Wall name for the next week.';
-  return `Weekly casino season: balances, casino inventory, and coin flips reset in ${formatRemainingDuration(remainingMs)}. ${winnerText}`;
+  const activeSeasonLabel = formatCasinoSeasonLabel(schedule.currentWeekStartMs);
+  const displayedWinner = getCasinoDisplayedLastWinnerData(state);
+  const remainingMs = Math.max(0, schedule.isOpen ? (state.nextResetAtMs - nowMs) : (schedule.nextOpenAtMs - nowMs));
+  const winnerText = displayedWinner.username
+    ? `${displayedWinner.displayName || displayedWinner.username} owns the latest recorded Chud Wall season win${displayedWinner.seasonWeekStartMs ? ` for ${formatCasinoSeasonLabel(displayedWinner.seasonWeekStartMs)}` : ''} with ${formatCasinoBalanceSummary(displayedWinner.balance)}.`
+    : 'The weekly balance winner gets a gold-plated Chud Wall name for the next season.';
+  if (!schedule.isOpen) {
+    return `Next season ${activeSeasonLabel} opens ${formatCasinoSeasonDateTime(schedule.nextOpenAtMs)} and ends ${formatCasinoSeasonDateTime(state.nextResetAtMs)}. ${winnerText}`;
+  }
+  return `Season ${activeSeasonLabel} is live until ${formatCasinoSeasonDateTime(state.nextResetAtMs)} and resets in ${formatRemainingDuration(remainingMs)}. ${winnerText}`;
 }
 
 function updateCasinoSeasonUi() {
@@ -406,8 +695,9 @@ async function ensureCasinoWeeklyReset(force = false) {
   if (!force && casinoWeeklyResetPromise) return casinoWeeklyResetPromise;
   casinoWeeklyResetPromise = (async () => {
     const nowMs = Date.now();
-    const targetWeekStartMs = getCasinoWeekStartMs(nowMs);
-    const nextResetAtMs = getCasinoNextWeekStartMs(nowMs);
+    const schedule = getCasinoSeasonSchedule(nowMs);
+    const targetWeekStartMs = schedule.currentWeekStartMs;
+    const nextResetAtMs = schedule.nextResetAtMs;
     const stateRef = getCasinoSeasonStateDoc();
     const balancesSnapshot = await getCasinoBalanceCollection().get().catch(() => null);
     const winner = (() => {
@@ -476,15 +766,15 @@ async function ensureCasinoWeeklyReset(force = false) {
         source: 'weekly-winner',
         note: 'Added by weekly casino reset',
         recordedBalance: winner.balance,
-        seasonWeekStartMs: targetWeekStartMs
+        seasonWeekStartMs: schedule.lastCompletedWeekStartMs
       }).catch(() => {});
     }
     await publishCasinoActivity([{
       type: 'season',
       title: winner.username ? `${winner.displayName} won last week's casino season` : 'Casino weekly season reset',
       body: winner.username
-        ? `${winner.displayName} finished with $${winner.balance.toLocaleString()}. Everyone is back to $${CASINO_RESET_STARTING_BALANCE.toLocaleString()} for the new week.`
-        : `Everyone is back to $${CASINO_RESET_STARTING_BALANCE.toLocaleString()} for the new week.`,
+        ? `${winner.displayName} finished with $${winner.balance.toLocaleString()}. Everyone is back to $${CASINO_RESET_STARTING_BALANCE.toLocaleString()} for Monday, and the casino stays closed through the weekend.`
+        : `Everyone is back to $${CASINO_RESET_STARTING_BALANCE.toLocaleString()} for Monday, and the casino stays closed through the weekend.`,
       by: winner.username || 'system'
     }]).catch(() => {});
     scheduleDynamicLeaderboardTagRefresh();
@@ -867,7 +1157,7 @@ function getCasinoUnlockedAchievementIds(stats) {
 
 function sanitizeOwnedProfileBackgroundIds(ids) {
   return Array.from(new Set((Array.isArray(ids) ? ids : [])
-    .map((id) => normalizeRoomId(id))
+    .map((id) => normalizeOptionalProfileBackgroundId(id))
     .filter(Boolean))).slice(0, 120);
 }
 
@@ -915,6 +1205,21 @@ function sanitizeOwnedGeneralShopCaseCounts(rawCounts) {
     if (itemId && count > 0) next[itemId] = count;
   });
   return next;
+}
+
+function buildOwnedGeneralShopCaseCountFieldPatch(previousCounts, nextCounts) {
+  const previous = sanitizeOwnedGeneralShopCaseCounts(previousCounts);
+  const next = sanitizeOwnedGeneralShopCaseCounts(nextCounts);
+  const patch = {};
+  Object.keys(next).forEach((itemId) => {
+    patch[`ownedGeneralShopCaseCounts.${itemId}`] = next[itemId];
+  });
+  Object.keys(previous).forEach((itemId) => {
+    if (!Object.prototype.hasOwnProperty.call(next, itemId)) {
+      patch[`ownedGeneralShopCaseCounts.${itemId}`] = firebase.firestore.FieldValue.delete();
+    }
+  });
+  return patch;
 }
 
 function normalizeOptionalGeneralShopItemId(value) {
@@ -1159,6 +1464,9 @@ function normalizeCasinoProfileStatsData(username, data = {}) {
     coldTableUntilMs: Math.max(0, Number(data.coldTableUntilMs ?? 0)),
     reliefClaims: Math.max(0, Number(data.reliefClaims ?? 0)),
     lastReliefClaimAtMs: Math.max(0, Number(data.lastReliefClaimAtMs ?? 0)),
+    dailyBonusClaimCount: Math.max(0, Number(data.dailyBonusClaimCount ?? 0)),
+    dailyBonusClaimStreak: Math.max(0, Number(data.dailyBonusClaimStreak ?? 0)),
+    lastDailyBonusClaimAtMs: Math.max(0, Number(data.lastDailyBonusClaimAtMs ?? 0)),
     lastGameAtMs: Math.max(0, Number(data.lastGameAtMs ?? 0)),
     ownedGeneralShopCaseCounts: sanitizeOwnedGeneralShopCaseCounts(data.ownedGeneralShopCaseCounts),
     ownedGeneralShopItemIds: sanitizeOwnedGeneralShopItemIds(data.ownedGeneralShopItemIds),
@@ -1468,6 +1776,7 @@ function renderCasinoSidebar(stats = getCachedCasinoProfileStats(getCasinoPlayer
   const transferNode = document.getElementById('casino-transfer-panel');
   const achievementNode = document.getElementById('casino-achievement-list');
   if (!statsNode || !achievementNode) return;
+  const seasonSchedule = getCasinoSeasonSchedule();
   const resolvedStats = normalizeCasinoProfileStatsData((stats && stats.username) || getCasinoPlayerKey(), stats || {});
   const winRate = resolvedStats.gamesPlayed ? `${Math.round((resolvedStats.wins / resolvedStats.gamesPlayed) * 100)}%` : '0%';
   const hotHandActive = resolvedStats.hotHandUntilMs > Date.now();
@@ -1484,26 +1793,35 @@ function renderCasinoSidebar(stats = getCachedCasinoProfileStats(getCasinoPlayer
   ];
   statsNode.innerHTML = `<div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:0.45rem;">${summaryItems.map(([label, value]) => `<div style="padding:0.55rem; background:#121720; border:1px solid #263140; border-radius:0.6rem;"><div style="font-size:0.72rem; color:#90a4ae;">${escapeHtml(label)}</div><div style="margin-top:0.2rem; color:#fff; font-weight:700;">${escapeHtml(value)}</div></div>`).join('')}</div>`;
   if (transferNode) {
-    const transferUsers = getCachedCasinoTransferUsers();
-    if (!casinoTransferUsersLoaded && !casinoTransferUsersLoadPromise) {
-      loadCasinoTransferUsers().catch(() => {});
+    if (!seasonSchedule.isOpen) {
+      transferNode.innerHTML = `
+        <div style="display:grid; gap:0.55rem;">
+          <div style="font-size:0.78rem; color:#f3d27a;">Casino transfers are paused for the weekend.</div>
+          <div style="font-size:0.74rem; color:#9fb0c2;">Reopens ${escapeHtml(formatCasinoSeasonDateTime(seasonSchedule.nextOpenAtMs))}.</div>
+          <div style="font-size:0.74rem; color:#90a4ae;">Available: $${resolvedStats.balance.toLocaleString()}</div>
+        </div>`;
+    } else {
+      const transferUsers = getCachedCasinoTransferUsers();
+      if (!casinoTransferUsersLoaded && !casinoTransferUsersLoadPromise) {
+        loadCasinoTransferUsers().catch(() => {});
+      }
+      const existingUserValue = document.getElementById('casino-transfer-username')?.value || '';
+      const existingAmountValue = document.getElementById('casino-transfer-amount')?.value || '100';
+      const transferOptions = transferUsers.length
+        ? '<option value="">-- Select a player --</option>' + transferUsers.map((username) => `<option value="${escapeHtml(username)}"${username === existingUserValue ? ' selected' : ''}>${escapeHtml(username)}</option>`).join('')
+        : `<option value="">${casinoTransferUsersLoaded ? '-- No players found --' : 'Loading players...'}</option>`;
+      transferNode.innerHTML = `
+        <div style="display:grid; gap:0.55rem;">
+          <div style="font-size:0.78rem; color:#9fb0c2;">Send part of your casino balance to another player.</div>
+          <select id="casino-transfer-username" style="padding:0.5rem 0.7rem; border-radius:0.55rem; border:1px solid #31425f; background:#182231; color:#fff;" ${transferUsers.length ? '' : 'disabled'}>${transferOptions}</select>
+          <div style="display:flex; gap:0.45rem; flex-wrap:wrap; align-items:center;">
+            <input id="casino-transfer-amount" type="number" min="1" max="1000000" value="${escapeHtml(existingAmountValue || '100')}" style="padding:0.5rem 0.7rem; border-radius:0.55rem; border:1px solid #31425f; background:#182231; color:#fff; width:110px;" />
+            <button onclick="transferCasinoMoney()" style="padding:0.5rem 0.85rem; border:none; border-radius:0.55rem; background:#1565c0; color:#fff; font-weight:700;" ${transferUsers.length ? '' : 'disabled'}>Send Money</button>
+          </div>
+          <div style="font-size:0.72rem; color:#90a4ae;">Player list pulls from approved accounts, saved casino balances, and known site stats.</div>
+          <div style="font-size:0.74rem; color:#90a4ae;">Available: $${resolvedStats.balance.toLocaleString()}</div>
+        </div>`;
     }
-    const existingUserValue = document.getElementById('casino-transfer-username')?.value || '';
-    const existingAmountValue = document.getElementById('casino-transfer-amount')?.value || '100';
-    const transferOptions = transferUsers.length
-      ? '<option value="">-- Select a player --</option>' + transferUsers.map((username) => `<option value="${escapeHtml(username)}"${username === existingUserValue ? ' selected' : ''}>${escapeHtml(username)}</option>`).join('')
-      : `<option value="">${casinoTransferUsersLoaded ? '-- No players found --' : 'Loading players...'}</option>`;
-    transferNode.innerHTML = `
-      <div style="display:grid; gap:0.55rem;">
-        <div style="font-size:0.78rem; color:#9fb0c2;">Send part of your casino balance to another player.</div>
-        <select id="casino-transfer-username" style="padding:0.5rem 0.7rem; border-radius:0.55rem; border:1px solid #31425f; background:#182231; color:#fff;" ${transferUsers.length ? '' : 'disabled'}>${transferOptions}</select>
-        <div style="display:flex; gap:0.45rem; flex-wrap:wrap; align-items:center;">
-          <input id="casino-transfer-amount" type="number" min="1" max="1000000" value="${escapeHtml(existingAmountValue || '100')}" style="padding:0.5rem 0.7rem; border-radius:0.55rem; border:1px solid #31425f; background:#182231; color:#fff; width:110px;" />
-          <button onclick="transferCasinoMoney()" style="padding:0.5rem 0.85rem; border:none; border-radius:0.55rem; background:#1565c0; color:#fff; font-weight:700;" ${transferUsers.length ? '' : 'disabled'}>Send Money</button>
-        </div>
-        <div style="font-size:0.72rem; color:#90a4ae;">Player list pulls from approved accounts, saved casino balances, and known site stats.</div>
-        <div style="font-size:0.74rem; color:#90a4ae;">Available: $${resolvedStats.balance.toLocaleString()}</div>
-      </div>`;
   }
   achievementNode.innerHTML = CASINO_ACHIEVEMENTS.map((item) => {
     const progress = Math.max(0, Number(resolvedStats[item.stat] || 0));
@@ -1536,7 +1854,7 @@ function openCasinoModal() {
     modal.innerHTML = `
       <div style="background:#181c24;padding:2rem;border-radius:1.2rem;box-shadow:0 8px 32px #000;width:min(74rem, calc(100vw - 2rem));max-width:95vw;max-height:88vh;overflow:auto;text-align:left;color:#fff;position:relative;">
         <h2 style="margin-top:0;margin-bottom:0.6rem;font-size:2rem;">Casino 🎰</h2>
-        <div id="casino-season-note" style="margin-bottom:0.8rem; color:#f3d27a; font-size:0.86rem; line-height:1.45; max-width:52rem;">Weekly casino season: balances, casino inventory, and coin flips reset every week. The balance winner gets a gold-plated Chud Wall name.</div>
+        <div id="casino-season-note" style="margin-bottom:0.8rem; color:#f3d27a; font-size:0.86rem; line-height:1.45; max-width:52rem;">Season loading...</div>
         <div id="casino-balance" style="font-size:1.1rem;margin-bottom:1rem;">Loading...</div>
         <div id="casino-game-area"></div>
         <button onclick="closeCasinoModal()" style="position:absolute;top:1rem;right:1rem;background:#222;border:none;border-radius:50%;width:36px;height:36px;color:#fff;font-size:1.2rem;">×</button>
@@ -1607,6 +1925,10 @@ function listenForChudWall() {
   try {
     chudWallUnsub = getChudWallDoc().onSnapshot((doc) => {
       chudWallCache = normalizeChudWallData(doc.exists ? (doc.data() || {}) : {});
+      updateCasinoSeasonUi();
+      if (document.getElementById('leaderboard-modal')?.style.display === 'flex') {
+        loadLeaderboard().catch(() => {});
+      }
       if (document.getElementById('casino-leaderboard-modal')?.style.display === 'flex' && casinoLeaderboardModalMode === 'chud-wall') {
         loadCasinoLeaderboard().catch(() => {});
       }
@@ -1623,18 +1945,24 @@ async function appendChudWallEntry(entry = {}) {
   if (!normalizedEntry.username) throw new Error('Choose a valid username.');
   const current = await loadChudWall(true);
   if (normalizedEntry.source === 'weekly-winner' && normalizedEntry.seasonWeekStartMs) {
-    const alreadyRecorded = current.entries.some((existingEntry) => existingEntry.source === 'weekly-winner'
-      && existingEntry.username === normalizedEntry.username
+    const existingSeasonWinner = current.entries.find((existingEntry) => existingEntry.source === 'weekly-winner'
       && existingEntry.seasonWeekStartMs === normalizedEntry.seasonWeekStartMs);
+    const alreadyRecorded = !!existingSeasonWinner
+      && existingSeasonWinner.username === normalizedEntry.username
+      && existingSeasonWinner.recordedBalance === normalizedEntry.recordedBalance;
     if (alreadyRecorded) return current;
   }
-  const nextEntries = normalizeChudWallData({ entries: [normalizedEntry, ...current.entries] }).entries;
+  const baseEntries = normalizedEntry.source === 'weekly-winner' && normalizedEntry.seasonWeekStartMs
+    ? current.entries.filter((existingEntry) => !(existingEntry.source === 'weekly-winner' && existingEntry.seasonWeekStartMs === normalizedEntry.seasonWeekStartMs))
+    : current.entries;
+  const nextEntries = normalizeChudWallData({ entries: [normalizedEntry, ...baseEntries] }).entries;
   await getChudWallDoc().set({
     entries: nextEntries,
     updatedAtMs: Date.now(),
     updatedBy: currentChatUser || getUserName() || 'system'
   }, { merge: true });
   chudWallCache = { entries: nextEntries };
+  updateCasinoSeasonUi();
   return chudWallCache;
 }
 
@@ -1672,6 +2000,11 @@ function formatChudWallEntryDate(entry) {
   return new Date(entry.addedAtMs).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+function isGoldPlatedChudWallEntry(entry = {}) {
+  const source = sanitizeNullableText(entry.source, 'manual');
+  return source === 'weekly-winner' || source === 'owner-added';
+}
+
 async function promptAddChudWallEntry() {
   if (!canManageChudWall()) return;
   const rawUsername = prompt('Add which username to the Chud Wall?', '');
@@ -1706,6 +2039,7 @@ async function removeChudWallEntry(encodedEntryId) {
     updatedBy: currentChatUser || getUserName() || 'owner'
   }, { merge: true });
   chudWallCache = { entries: nextEntries };
+  updateCasinoSeasonUi();
   await loadCasinoLeaderboard();
 }
 
@@ -1866,9 +2200,139 @@ function adjustRoleNameEffectColor(color, delta = 0) {
   return `#${red.toString(16).padStart(2, '0')}${green.toString(16).padStart(2, '0')}${blue.toString(16).padStart(2, '0')}`;
 }
 
+const USERNAME_EFFECT_PRESETS = Object.freeze({
+  silver: { label: 'Silver', primary: '#f8fbff', secondary: '#96a3b1' },
+  bronze: { label: 'Bronze', primary: '#f7dfc6', secondary: '#8c5528' },
+  gold: { label: 'Gold', primary: '#fff1ae', secondary: '#c98b12' },
+  frost: { label: 'Frost', primary: '#dff6ff', secondary: '#4f86ff' },
+  ember: { label: 'Ember', primary: '#ffb680', secondary: '#d9345a' },
+  toxic: { label: 'Toxic', primary: '#d8ff84', secondary: '#29a35a' },
+  royal: { label: 'Royal', primary: '#c7b8ff', secondary: '#4e5bff' },
+  ocean: { label: 'Ocean', primary: '#9ffcff', secondary: '#0d7abf' },
+  cottoncandy: { label: 'Cotton Candy', primary: '#ffc2f0', secondary: '#7bd8ff' },
+  sunset: { label: 'Sunset', primary: '#ffd08a', secondary: '#ff5f7a' },
+  midnight: { label: 'Midnight', primary: '#8fa8ff', secondary: '#111827' },
+  glitch: { label: 'Glitch', primary: '#7dffcf', secondary: '#ff4fd8' },
+  custompulse: { label: 'Custom Pulse', custom: true, pulse: true, ownerOnly: true },
+  custom: { label: 'Custom Gradient', custom: true }
+});
+
+function normalizeUsernameEffectId(value) {
+  const normalized = normalizeUsername(value);
+  return normalized && USERNAME_EFFECT_PRESETS[normalized] ? normalized : '';
+}
+
+function getUsernameEffectPreset(effectId) {
+  const normalized = normalizeUsernameEffectId(effectId);
+  return normalized ? USERNAME_EFFECT_PRESETS[normalized] : null;
+}
+
+function canUserUseAssignedUsernameEffect(effectId, username, explicitRole = '') {
+  const preset = getUsernameEffectPreset(effectId);
+  if (!preset) return false;
+  if (!preset.ownerOnly) return true;
+  const role = normalizeUsername(explicitRole || getUserRole(username));
+  return role === 'owner';
+}
+
+function getUsernameEffectPresetOptions(targetUsername = '') {
+  const targetRole = normalizeUsername(getUserRole(targetUsername));
+  return Object.entries(USERNAME_EFFECT_PRESETS)
+    .filter(([id]) => canUserUseAssignedUsernameEffect(id, targetUsername, targetRole || 'member'))
+    .map(([id, entry]) => ({
+    id,
+    label: entry.label,
+    custom: !!entry.custom
+  }));
+}
+
+function roleNameEffectColorToRgba(color, alpha = 1) {
+  const normalized = normalizeRoleNameEffectColor(color);
+  const safeAlpha = Math.max(0, Math.min(1, Number(alpha) || 0));
+  const red = parseInt(normalized.slice(1, 3), 16);
+  const green = parseInt(normalized.slice(3, 5), 16);
+  const blue = parseInt(normalized.slice(5, 7), 16);
+  return `rgba(${red}, ${green}, ${blue}, ${safeAlpha})`;
+}
+
+function getUsernameEffectGradientColors(effectId, primaryColor, secondaryColor) {
+  const preset = getUsernameEffectPreset(effectId);
+  if (!preset) return null;
+  if (preset.custom) {
+    const primary = normalizeRoleNameEffectColor(primaryColor || '#8fe3ff', '#8fe3ff');
+    const secondary = normalizeRoleNameEffectColor(secondaryColor || '#4f78ff', '#4f78ff');
+    return { primary, secondary };
+  }
+  return {
+    primary: normalizeRoleNameEffectColor(preset.primary, '#dfe7f2'),
+    secondary: normalizeRoleNameEffectColor(preset.secondary, '#8ea0b4')
+  };
+}
+
+function getOwnerDiamondEffectColors() {
+  return {
+    primary: '#8fdcff',
+    secondary: '#79bfff'
+  };
+}
+
+function getUsernameEffectStyleParts(effectId, primaryColor, secondaryColor) {
+  const colors = getUsernameEffectGradientColors(effectId, primaryColor, secondaryColor);
+  if (!colors) return [];
+  const lightPrimary = adjustRoleNameEffectColor(colors.primary, 36);
+  const lightSecondary = adjustRoleNameEffectColor(colors.secondary, 32);
+  const midTone = effectId === 'toxic'
+    ? adjustRoleNameEffectColor(colors.primary, 18)
+    : effectId === 'ember'
+      ? adjustRoleNameEffectColor(colors.primary, 54)
+      : '#ffffff';
+  return [
+    `background-image:linear-gradient(115deg, ${lightPrimary} 0%, ${colors.primary} 24%, ${midTone} 46%, ${colors.secondary} 72%, ${lightSecondary} 100%)`,
+    `text-shadow:0 0 14px ${roleNameEffectColorToRgba(colors.primary, 0.18)}, 0 0 22px ${roleNameEffectColorToRgba(colors.secondary, 0.12)}`
+  ];
+}
+
+function buildAssignedUsernameEffectMarkup(displayName, effectId, primaryColor, secondaryColor, options = {}) {
+  const baseClass = sanitizeNullableText(options.baseClass, '').trim();
+  const classes = [];
+  if (baseClass) classes.push(baseClass);
+  classes.push('role-name-copy', 'role-name-shine');
+  if (isSiteGlowWeekActive()) classes.push('site-event-glow-week');
+  if (normalizeUsernameEffectId(effectId) === 'custompulse') {
+    classes.push('role-name-custom-pulse');
+  }
+  const styleParts = getUsernameEffectStyleParts(effectId, primaryColor, secondaryColor);
+  const styleAttr = styleParts.length ? ` style="${styleParts.join(';')}"` : '';
+  return `<span class="${classes.join(' ')}"${styleAttr}>${escapeHtml(sanitizeNullableText(displayName, 'Unknown'))}</span>`;
+}
+
+function getResolvedUsernameEffectData(username, role, options = {}) {
+  const resolvedUsername = normalizeUsername(username);
+  if (role === 'owner') {
+    const diamondColors = getOwnerDiamondEffectColors();
+    return {
+      kind: 'owner',
+      effectId: 'owner',
+      primaryColor: diamondColors.primary,
+      secondaryColor: diamondColors.secondary
+    };
+  }
+  const profile = resolvedUsername ? getCachedProfile(resolvedUsername) : getProfileDefaults('');
+  const assignedEffectId = normalizeUsernameEffectId(profile.usernameEffectId);
+  if (assignedEffectId && canUserUseAssignedUsernameEffect(assignedEffectId, resolvedUsername, role)) {
+    return {
+      kind: 'assigned',
+      effectId: assignedEffectId,
+      primaryColor: profile.usernameEffectPrimaryColor || '',
+      secondaryColor: profile.usernameEffectSecondaryColor || ''
+    };
+  }
+  return null;
+}
+
 function canUseRoleNameEffect(role) {
   const normalizedRole = normalizeUsername(role);
-  return normalizedRole === 'owner' || normalizedRole === 'admin' || normalizedRole === 'moderator';
+  return normalizedRole === 'owner' || normalizedRole === 'admin' || normalizedRole === 'moderator' || normalizedRole === 'hivise';
 }
 
 function getRoleNameEffectMarkup(username, displayName, options = {}) {
@@ -1878,9 +2342,11 @@ function getRoleNameEffectMarkup(username, displayName, options = {}) {
   const isWeeklyChampion = /(^|\s)is-casino-weekly-champion(\s|$)/.test(baseClass);
   const role = normalizeUsername(getUserRole(resolvedUsername));
   const defaultColor = normalizeRoleNameEffectColor(options.defaultColor || '#1565c0', options.defaultColor || '#1565c0');
+  const activeEffect = getResolvedUsernameEffectData(resolvedUsername, role, options);
   const classes = baseClass ? [baseClass] : [];
+  if (isSiteGlowWeekActive()) classes.push('site-event-glow-week');
 
-  if (isWeeklyChampion || !roleNameEffectsEnabled || !canUseRoleNameEffect(role)) {
+  if (isWeeklyChampion || !roleNameEffectsEnabled || (!activeEffect && !canUseRoleNameEffect(role))) {
     const styleAttr = options.includeDefaultColor === false ? '' : ` style="color:${escapeHtml(defaultColor)};"`;
     return {
       containerStyle: options.includeDefaultColor === false ? '' : `color:${defaultColor};`,
@@ -1888,13 +2354,20 @@ function getRoleNameEffectMarkup(username, displayName, options = {}) {
     };
   }
 
+  if (activeEffect && activeEffect.kind === 'assigned') {
+    return {
+      containerStyle: '',
+      html: buildAssignedUsernameEffectMarkup(resolvedName, activeEffect.effectId, activeEffect.primaryColor, activeEffect.secondaryColor, { baseClass })
+    };
+  }
+
   classes.push('role-name-copy', `role-name-${role}`, 'role-name-shine');
   const styleParts = [];
-  if (role === 'owner') {
-    const accentBase = normalizeRoleNameEffectColor(options.accentColor || options.defaultColor || (resolvedUsername === normalizeUsername(currentChatUser) ? currentChatColor : '#ff8a65'), '#ff8a65');
-    styleParts.push(`--role-accent:${accentBase}`);
-    styleParts.push(`--role-accent-soft:${adjustRoleNameEffectColor(accentBase, 56)}`);
-    styleParts.push(`--role-accent-strong:${adjustRoleNameEffectColor(accentBase, -42)}`);
+  if (role === 'owner' && activeEffect && activeEffect.kind === 'owner') {
+    styleParts.push(`--role-owner-primary:${activeEffect.primaryColor}`);
+    styleParts.push(`--role-owner-primary-soft:${adjustRoleNameEffectColor(activeEffect.primaryColor, 44)}`);
+    styleParts.push(`--role-owner-secondary:${activeEffect.secondaryColor}`);
+    styleParts.push(`--role-owner-secondary-soft:${adjustRoleNameEffectColor(activeEffect.secondaryColor, 32)}`);
   }
   const styleAttr = styleParts.length ? ` style="${styleParts.join(';')}"` : '';
   return {
@@ -1904,7 +2377,7 @@ function getRoleNameEffectMarkup(username, displayName, options = {}) {
 }
 
 function getLeaderboardNameCopyMarkup(username, displayName, options = {}) {
-  const shouldGoldPlate = !!options.forceGoldPlate || isCasinoWeeklyChampion(username);
+  const shouldGoldPlate = !!options.forceGoldPlate;
   if (shouldGoldPlate) {
     return `<span class="leaderboard-name-copy is-casino-weekly-champion" style="display:inline-block;background:linear-gradient(135deg,#fff8c6 0%,#f9d86a 24%,#c88f16 55%,#fff0a0 78%,#fffbe2 100%);background-size:170% 170%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;text-shadow:0 0 12px rgba(244,196,48,0.22);font-weight:800;">${escapeHtml(displayName)}</span>`;
   }
@@ -1916,16 +2389,17 @@ function getLeaderboardNameCopyMarkup(username, displayName, options = {}) {
   }).html;
 }
 
-function renderCasinoLeaderboardEntry({ username, displayName, rank, levelMarkup, levelStyle = '', pointsLabel, pointsSubLabel = '', actionsHtml = '', forceGoldPlate = false }) {
+function renderCasinoLeaderboardEntry({ username, displayName, rank, levelMarkup, levelStyle = '', pointsLabel, pointsSubLabel = '', actionsHtml = '', forceGoldPlate = false, entryClassName = '', nameSupplementHtml = '' }) {
   const ownerTag = getOwnerTagHtml(username);
   const customTag = getUserTagHtml(username);
   const profileTarget = encodeURIComponent(username);
   const bannerStyle = getCasinoLeaderboardBannerStyle(username);
   const levelStyleAttribute = levelStyle ? ` style="${escapeHtml(levelStyle)}"` : '';
-  return `<div class="leaderboard-entry">
+  const entryClass = ['leaderboard-entry', sanitizeNullableText(entryClassName, '').trim()].filter(Boolean).join(' ');
+  return `<div class="${entryClass}">
   <div class="leaderboard-entry-banner" style="${escapeHtml(bannerStyle)}"></div>
   <div class="leaderboard-rank">${getCasinoLeaderboardMedal(rank)}</div>
-  <div class="leaderboard-username" onclick="openUserProfileFromChat('${profileTarget}', event)"><span class="leaderboard-identity">${getStatusDotHtml(username)}${renderInlineProfileAvatarHtml(username, 'leaderboard-avatar')}${getLeaderboardNameCopyMarkup(username, displayName, { forceGoldPlate })}${ownerTag}${customTag}</span></div>
+  <div class="leaderboard-username" onclick="openUserProfileFromChat('${profileTarget}', event)"><span class="leaderboard-identity">${getStatusDotHtml(username)}${renderInlineProfileAvatarHtml(username, 'leaderboard-avatar')}${getLeaderboardNameCopyMarkup(username, displayName, { forceGoldPlate })}${ownerTag}${customTag}${nameSupplementHtml}</span></div>
   <div class="leaderboard-level"${levelStyleAttribute}>${levelMarkup}</div>
   <div class="leaderboard-points"><div>${escapeHtml(pointsLabel)}</div>${pointsSubLabel ? `<div style="margin-top:0.18rem; font-size:0.72rem; color:#9fb0c2;">${escapeHtml(pointsSubLabel)}</div>` : ''}${actionsHtml ? `<div style="margin-top:0.35rem; display:flex; justify-content:flex-end;">${actionsHtml}</div>` : ''}</div>
 </div>`;
@@ -1953,7 +2427,9 @@ async function loadCasinoLeaderboard() {
         pointsLabel: formatChudWallEntryDate(entry),
         pointsSubLabel: entry.source === 'weekly-winner' ? 'Added by reset' : 'Manual entry',
         actionsHtml: ownerCanManage ? `<button type="button" onclick="removeChudWallEntry('${encodeURIComponent(entry.id)}')" style="padding:0.26rem 0.55rem; border:none; border-radius:0.45rem; background:#5d4037; color:#fff; font-size:0.72rem; font-weight:700; cursor:pointer;">Remove</button>` : '',
-        forceGoldPlate: entry.source === 'weekly-winner' || normalizeUsername(entry.username) === normalizeUsername(casinoSeasonStateCache.previousWinnerUsername || '')
+        forceGoldPlate: true,
+        entryClassName: 'leaderboard-entry-chud-wall',
+        nameSupplementHtml: renderChudWallSeasonWinsMarkup(entry.username, chudWallEntries)
       })).join('');
       return;
     }
@@ -2153,6 +2629,7 @@ async function transferCasinoMoney() {
     return;
   }
   try {
+    assertCasinoOpen();
     const [recipientBalanceDoc, approvedRecipientDoc] = await Promise.all([
       getCasinoBalanceCollection().doc(recipient).get().catch(() => null),
       getAdminDb().collection(LOGIN_REQUESTS_COLLECTION).doc(recipient).get().catch(() => null)
@@ -2228,6 +2705,17 @@ function getCasinoBailoutRemainingMs(stats) {
   return Math.max(0, CASINO_BAILOUT_COOLDOWN_MS - (Date.now() - lastClaimAtMs));
 }
 
+function getCasinoDailyBonusRemainingMs(stats) {
+  const lastClaimAtMs = Math.max(0, Number(stats && stats.lastDailyBonusClaimAtMs || 0));
+  if (!lastClaimAtMs) return 0;
+  return Math.max(0, CASINO_DAILY_BONUS_COOLDOWN_MS - (Date.now() - lastClaimAtMs));
+}
+
+function getCasinoDailyBonusAmount(stats) {
+  const streak = Math.max(1, Math.min(CASINO_DAILY_BONUS_STREAK_CAP, Number(stats && stats.dailyBonusClaimStreak || 0) + 1));
+  return CASINO_DAILY_BONUS_BASE_AMOUNT + ((streak - 1) * CASINO_DAILY_BONUS_STREAK_STEP);
+}
+
 function setCasinoStatus(message = '', tone = 'neutral') {
   const statusNode = document.getElementById('casino-game-status');
   if (!statusNode) return;
@@ -2251,9 +2739,19 @@ async function refreshCasinoProfileUiForUser(username) {
 function renderCasinoRecoveryAction(stats) {
   const actionNode = document.getElementById('casino-recovery-action');
   if (!actionNode) return;
+  const seasonSchedule = getCasinoSeasonSchedule();
   const resolvedStats = typeof stats === 'object' && stats ? stats : getDefaultCasinoProfileStats(getCasinoPlayerKey());
+  if (!seasonSchedule.isOpen) {
+    actionNode.innerHTML = `<div style="margin-top:0.85rem; display:grid; gap:0.45rem; justify-items:center;"><div style="font-size:0.82rem; color:#f3d27a; text-align:center;">Daily bonus and bailout claims are paused for the weekend.</div><div style="font-size:0.78rem; color:#9fb0c2; text-align:center;">Reopens ${escapeHtml(formatCasinoSeasonDateTime(seasonSchedule.nextOpenAtMs))}.</div></div>`;
+    return;
+  }
+  const dailyBonusRemainingMs = getCasinoDailyBonusRemainingMs(resolvedStats);
+  const dailyBonusAmount = getCasinoDailyBonusAmount(resolvedStats);
+  const dailyBonusMarkup = dailyBonusRemainingMs > 0
+    ? `<div style="margin-top:0.85rem; display:grid; gap:0.45rem; justify-items:center;"><div style="font-size:0.82rem; color:#9fb0c2;">Daily bonus recharges in ${escapeHtml(formatRemainingDuration(dailyBonusRemainingMs))}.</div><button disabled style="padding:0.55rem 1rem; border-radius:0.6rem; background:#37474f; color:#b0bec5; border:none; font-weight:700; cursor:not-allowed;">Daily Bonus Claimed</button></div>`
+    : `<div style="margin-top:0.85rem; display:grid; gap:0.45rem; justify-items:center;"><div style="font-size:0.82rem; color:#9fe3a5;">Daily claim ready. Streak ${Math.max(0, Number(resolvedStats.dailyBonusClaimStreak || 0))} • Claim $${dailyBonusAmount.toLocaleString()}.</div><button onclick="claimCasinoDailyBonus()" style="padding:0.55rem 1rem; border-radius:0.6rem; background:#1565c0; color:#fff; border:none; font-weight:700;">Claim Daily Bonus</button></div>`;
   if (resolvedStats.balance !== 0) {
-    actionNode.innerHTML = '';
+    actionNode.innerHTML = dailyBonusMarkup;
     return;
   }
   const remainingMs = getCasinoBailoutRemainingMs(resolvedStats);
@@ -2263,6 +2761,7 @@ function renderCasinoRecoveryAction(stats) {
         <div style="font-size:0.82rem; color:#ffcc80;">You are bankrupt. Bailout unlocks in ${escapeHtml(formatRemainingDuration(remainingMs))}.</div>
         <button disabled style="padding:0.55rem 1rem; border-radius:0.6rem; background:#37474f; color:#b0bec5; border:none; font-weight:700; cursor:not-allowed;">Claim $1,000</button>
       </div>
+      ${dailyBonusMarkup}
     `;
     return;
   }
@@ -2271,7 +2770,58 @@ function renderCasinoRecoveryAction(stats) {
       <div style="font-size:0.82rem; color:#ffcc80;">You are bankrupt. Claim a fresh $1,000 to keep playing.</div>
       <button onclick="claimCasinoRelief()" style="padding:0.55rem 1rem; border-radius:0.6rem; background:#2e7d32; color:#fff; border:none; font-weight:700;">Claim $1,000</button>
     </div>
+    ${dailyBonusMarkup}
   `;
+}
+
+async function claimCasinoDailyBonus() {
+  const user = getCasinoPlayerKey();
+  if (!user) {
+    setCasinoStatus('You must be logged in to claim the daily bonus.', 'error');
+    return;
+  }
+  try {
+    assertCasinoOpen();
+    const db = getCasinoDb();
+    const ref = getCasinoBalanceCollection().doc(user);
+    const displayName = getCasinoPlayerDisplayName();
+    let nextStats = getDefaultCasinoProfileStats(user);
+    let bonusAmount = 0;
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const currentStats = normalizeCasinoProfileStatsData(user, snap.exists ? (snap.data() || {}) : {});
+      const remainingMs = getCasinoDailyBonusRemainingMs(currentStats);
+      if (remainingMs > 0) {
+        throw new Error(`Daily bonus is on cooldown for ${formatRemainingDuration(remainingMs)}.`);
+      }
+      const lastClaimAtMs = Math.max(0, Number(currentStats.lastDailyBonusClaimAtMs || 0));
+      const keepStreak = lastClaimAtMs > 0 && (Date.now() - lastClaimAtMs) <= (CASINO_DAILY_BONUS_COOLDOWN_MS * 2);
+      const nextStreak = keepStreak ? Math.max(1, Number(currentStats.dailyBonusClaimStreak || 0) + 1) : 1;
+      bonusAmount = CASINO_DAILY_BONUS_BASE_AMOUNT + ((Math.min(nextStreak, CASINO_DAILY_BONUS_STREAK_CAP) - 1) * CASINO_DAILY_BONUS_STREAK_STEP);
+      nextStats = {
+        ...currentStats,
+        balance: currentStats.balance + bonusAmount,
+        biggestBalance: Math.max(currentStats.biggestBalance, currentStats.balance + bonusAmount),
+        dailyBonusClaimCount: Math.max(0, Number(currentStats.dailyBonusClaimCount || 0)) + 1,
+        dailyBonusClaimStreak: nextStreak,
+        lastDailyBonusClaimAtMs: Date.now()
+      };
+      nextStats.achievementIds = getCasinoUnlockedAchievementIds(nextStats);
+      tx.set(ref, {
+        username: user,
+        displayName,
+        ...nextStats,
+        updatedAtMs: Date.now()
+      }, { merge: true });
+    });
+    casinoProfileStatsCache[user] = nextStats;
+    await publishCasinoActivity([{ type: 'daily-bonus', title: `${displayName} claimed a daily bonus`, body: `+$${bonusAmount.toLocaleString()} • streak ${nextStats.dailyBonusClaimStreak}`, by: user }]);
+    await loadCasinoBalance();
+    await refreshCasinoProfileUiForUser(user);
+    setCasinoStatus(`Daily bonus claimed for $${bonusAmount.toLocaleString()}.`, 'success');
+  } catch (err) {
+    setCasinoStatus(err && err.message ? err.message : 'Could not claim the daily bonus.', 'error');
+  }
 }
 
 async function claimCasinoRelief() {
@@ -2281,6 +2831,7 @@ async function claimCasinoRelief() {
     return;
   }
   try {
+    assertCasinoOpen();
     const db = getCasinoDb();
     const ref = getCasinoBalanceCollection().doc(user);
     const displayName = getCasinoPlayerDisplayName();
@@ -2343,7 +2894,8 @@ function buildNextCasinoProfileStats(currentStats, delta, options = {}) {
   const wager = Math.max(0, Number(options.wager || 0));
   const outcome = String(options.outcome || 'push');
   const nowMs = Math.max(0, Number(options.nowMs || Date.now()));
-  const nextBalance = Math.max(0, currentStats.balance + delta);
+  const appliedDelta = getCasinoEventAdjustedDelta(delta);
+  const nextBalance = Math.max(0, currentStats.balance + appliedDelta);
   const nextBankruptcies = nextBalance === 0 && currentStats.balance > 0 ? currentStats.bankruptcies + 1 : currentStats.bankruptcies;
   const nextWinStreak = outcome === 'win' ? currentStats.currentWinStreak + 1 : 0;
   const nextLossStreak = outcome === 'loss' ? currentStats.currentLossStreak + 1 : 0;
@@ -2356,7 +2908,7 @@ function buildNextCasinoProfileStats(currentStats, delta, options = {}) {
     losses: currentStats.losses + (outcome === 'loss' ? 1 : 0),
     pushes: currentStats.pushes + (outcome === 'push' ? 1 : 0),
     totalWagered: currentStats.totalWagered + wager,
-    biggestWin: Math.max(currentStats.biggestWin, Math.max(0, delta)),
+    biggestWin: Math.max(currentStats.biggestWin, Math.max(0, appliedDelta)),
     biggestBalance: Math.max(currentStats.biggestBalance, nextBalance),
     currentWinStreak: nextWinStreak,
     currentLossStreak: nextLossStreak,
@@ -2372,7 +2924,7 @@ function buildNextCasinoProfileStats(currentStats, delta, options = {}) {
   };
   nextStats.achievementIds = getCasinoUnlockedAchievementIds(nextStats);
   const unlockedAchievements = getCasinoUnlockedAchievements(nextStats).filter((item) => !currentStats.achievementIds.includes(item.id));
-  return { nextStats, unlockedAchievements };
+  return { nextStats, unlockedAchievements, appliedDelta };
 }
 
 async function updateCasinoBalance(delta, options = {}) {
@@ -2388,6 +2940,7 @@ async function updateCasinoBalance(delta, options = {}) {
   let nextStats = getDefaultCasinoProfileStats(user);
   let previousStats = getDefaultCasinoProfileStats(user);
   let unlockedAchievements = [];
+  let appliedDelta = Math.trunc(Number(delta) || 0);
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     const currentStats = normalizeCasinoProfileStatsData(user, snap.exists ? (snap.data() || {}) : {});
@@ -2395,6 +2948,7 @@ async function updateCasinoBalance(delta, options = {}) {
     const computed = buildNextCasinoProfileStats(currentStats, delta, { wager, outcome, nowMs });
     nextStats = computed.nextStats;
     unlockedAchievements = computed.unlockedAchievements;
+    appliedDelta = computed.appliedDelta;
     tx.set(ref, {
       username: user,
       displayName,
@@ -2404,9 +2958,9 @@ async function updateCasinoBalance(delta, options = {}) {
   });
   casinoProfileStatsCache[user] = nextStats;
   await publishCasinoActivity([
-    ...(outcome === 'win' && delta > 0 ? [{
+    ...(outcome === 'win' && appliedDelta > 0 ? [{
       type: 'win',
-      title: `${displayName} won $${delta.toLocaleString()} in ${getCasinoGameLabel(game)}`,
+      title: `${displayName} won $${appliedDelta.toLocaleString()} in ${getCasinoGameLabel(game)}`,
       body: `Bet $${wager.toLocaleString()} and climbed to $${nextStats.balance.toLocaleString()}.`,
       by: user
     }] : []),
@@ -2438,7 +2992,7 @@ async function updateCasinoBalance(delta, options = {}) {
   await loadCasinoBalance();
   await refreshCasinoProfileUiForUser(user);
   scheduleDynamicLeaderboardTagRefresh();
-  return { stats: nextStats, unlockedAchievements };
+  return { stats: nextStats, unlockedAchievements, appliedDelta };
 }
 
 function getPokerRoomsCollection() {
@@ -2949,6 +3503,10 @@ async function foldPokerHand() {
   const room = getSelectedPokerRoom();
   const user = getCasinoPlayerKey();
   if (!room || !room.id || !user) return;
+  if (!isCasinoCurrentlyOpen()) {
+    setCasinoStatus(getCasinoClosedMessage(), 'error');
+    return;
+  }
   const roomRef = getPokerRoomsCollection().doc(room.id);
   let nextState = null;
   try {
@@ -3415,6 +3973,7 @@ function chooseAiPokerDiscardIndexes(hand) {
 }
 
 async function validateCasinoBetAmount(rawBet) {
+  assertCasinoOpen();
   const bet = Math.floor(Number(rawBet) || 0);
   setCasinoStatus('');
   if (!Number.isFinite(bet) || bet < 1) {
@@ -3633,6 +4192,10 @@ async function createPokerRoom() {
     setCasinoStatus('You must be logged in to create a poker room.', 'error');
     return;
   }
+  if (!isCasinoCurrentlyOpen()) {
+    setCasinoStatus(getCasinoClosedMessage(), 'error');
+    return;
+  }
   const nameInput = document.getElementById('poker-room-name');
   const stakeInput = document.getElementById('poker-room-stake');
   const roomTypeSelect = document.getElementById('poker-room-type');
@@ -3690,6 +4253,10 @@ async function createPokerRoom() {
 }
 
 async function joinPokerRoom(roomId) {
+  if (!isCasinoCurrentlyOpen()) {
+    setCasinoStatus(getCasinoClosedMessage(), 'error');
+    return;
+  }
   const previousRoomId = currentPokerRoomId;
   currentPokerRoomId = sanitizeNullableText(roomId, '');
   pokerState = null;
@@ -3748,6 +4315,10 @@ async function startPokerHand() {
   const room = getSelectedPokerRoom();
   if (!room) {
     setCasinoStatus('Join a poker room first.', 'error');
+    return;
+  }
+  if (!isCasinoCurrentlyOpen()) {
+    setCasinoStatus(getCasinoClosedMessage(), 'error');
     return;
   }
   const user = getCasinoPlayerKey();
@@ -3856,6 +4427,10 @@ async function advancePokerStreet() {
   const room = getSelectedPokerRoom();
   const state = (room && room.gameState) || pokerState;
   if (!room || !state || state.phase === 'showdown') return;
+  if (!isCasinoCurrentlyOpen()) {
+    setCasinoStatus(getCasinoClosedMessage(), 'error');
+    return;
+  }
   try {
     const activePlayers = (state.players || []).filter((participant) => !participant.folded);
     if ((room.roomType === 'human' && activePlayers.length <= 1) || (room.roomType !== 'human' && activePlayers.length === 0) || state.phase === 'river') {
@@ -4061,6 +4636,46 @@ function renderCasinoCoinFlipPanel() {
 function renderCasinoGame() {
   const area = document.getElementById('casino-game-area');
   if (!area) return;
+  const seasonSchedule = getCasinoSeasonSchedule();
+  if (!seasonSchedule.isOpen) {
+    area.innerHTML = `
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap:1rem; align-items:start;">
+        <div style="display:grid; gap:0.9rem; min-width:0;">
+          <div style="padding:1rem; border-radius:0.95rem; background:radial-gradient(circle at top, rgba(82,57,24,0.34) 0%, rgba(18,15,9,0.96) 76%); border:1px solid #5a4428; display:grid; gap:0.6rem;">
+            <div style="font-size:1rem; font-weight:700; color:#fff;">Casino closed for the weekend</div>
+            <div style="font-size:0.84rem; color:#d7c5a7; line-height:1.55;">The casino season reopens ${escapeHtml(formatCasinoSeasonDateTime(seasonSchedule.nextOpenAtMs))}. The next season ends ${escapeHtml(formatCasinoSeasonDateTime(seasonSchedule.nextResetAtMs))}.</div>
+            <div id="casino-game-status" style="margin-top:0.2rem;color:#f3d27a;min-height:1.2rem;">${escapeHtml(getCasinoClosedMessage())}</div>
+            <div id="casino-recovery-action"></div>
+            <div id="casino-game-panel" style="margin-top:0.2rem;">
+              <div style="padding:0.95rem; border-radius:0.85rem; background:rgba(8, 15, 23, 0.72); border:1px solid #2b3442; color:#c9d6e3;">Blackjack, Coin Flip, Roulette, Slots, Poker, transfers, and claims are paused until the next Monday reset.</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid; gap:0.85rem; min-width:0;">
+          <div style="padding:0.85rem; background:#10151d; border:1px solid #263140; border-radius:0.9rem;">
+            <div style="font-size:0.88rem; font-weight:700; color:#fff; margin-bottom:0.65rem;">Casino Stats</div>
+            <div id="casino-sidebar-stats"></div>
+          </div>
+          <div style="padding:0.85rem; background:#10151d; border:1px solid #263140; border-radius:0.9rem;">
+            <div style="font-size:0.88rem; font-weight:700; color:#fff; margin-bottom:0.65rem;">Transfer Cash</div>
+            <div id="casino-transfer-panel"></div>
+          </div>
+          <div style="padding:0.85rem; background:#10151d; border:1px solid #263140; border-radius:0.9rem;">
+            <div style="font-size:0.88rem; font-weight:700; color:#fff; margin-bottom:0.65rem;">Casino Achievements</div>
+            <div id="casino-achievement-list" class="achievement-list" style="max-height:15rem; overflow:auto;"></div>
+          </div>
+          <div style="padding:0.85rem; background:#10151d; border:1px solid #263140; border-radius:0.9rem;">
+            <div style="font-size:0.88rem; font-weight:700; color:#fff; margin-bottom:0.65rem;">Casino Feed</div>
+            <div id="casino-activity-feed" class="activity-feed-list" style="max-height:15rem; overflow:auto;"></div>
+          </div>
+        </div>
+      </div>
+    `;
+    renderCasinoRecoveryAction(getCachedCasinoProfileStats(getCasinoPlayerKey()));
+    renderCasinoSidebar(getCachedCasinoProfileStats(getCasinoPlayerKey()));
+    renderCasinoActivityFeed();
+    return;
+  }
   area.innerHTML = `
     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap:1rem; align-items:start;">
       <div style="display:grid; gap:0.9rem; min-width:0;">
@@ -4100,6 +4715,10 @@ function renderCasinoGame() {
 function renderActiveCasinoGamePanel() {
   const panel = document.getElementById('casino-game-panel');
   if (!panel) return;
+  if (!isCasinoCurrentlyOpen()) {
+    panel.innerHTML = `<div style="padding:0.95rem; border-radius:0.85rem; background:rgba(8, 15, 23, 0.72); border:1px solid #2b3442; color:#c9d6e3;">${escapeHtml(getCasinoClosedMessage())}</div>`;
+    return;
+  }
   const gameSettings = getCachedCasinoGameSettings();
   if (activeCasinoGame === 'poker') {
     renderPokerPanel();
@@ -4257,9 +4876,10 @@ function renderBlackjack() {
 function blackjackResult() {
   const playerVal = handValue(blackjackState.player);
   const dealerVal = handValue(blackjackState.dealer);
+  const winAmount = getCasinoEventAdjustedDelta(blackjackState.bet);
   if (playerVal > 21) return `You busted! -$${blackjackState.bet}`;
-  if (dealerVal > 21) return `Dealer busted! +$${blackjackState.bet}`;
-  if (playerVal > dealerVal) return `You win! +$${blackjackState.bet}`;
+  if (dealerVal > 21) return `Dealer busted! +$${winAmount}`;
+  if (playerVal > dealerVal) return `You win! +$${winAmount}`;
   if (playerVal === dealerVal) return 'Push! Bet returned.';
   return `You lose! -$${blackjackState.bet}`;
 }
@@ -4353,6 +4973,7 @@ async function spinRoulette(choice, selectedNumber = null) {
     const outcome = delta > 0 ? 'win' : 'loss';
     const betLabel = getRouletteBetLabel(choice, resolvedNumber);
     await animateRouletteSpin(winningPocket, betLabel);
+    const appliedDelta = getCasinoEventAdjustedDelta(delta);
     await updateCasinoBalance(delta, { wager: bet, outcome, game: 'roulette' });
     const area = document.getElementById('roulette-area');
     if (area) {
@@ -4360,7 +4981,7 @@ async function spinRoulette(choice, selectedNumber = null) {
         <div style="display:grid; gap:0.45rem; justify-items:center; text-align:center;">
           <div style="font-size:0.92rem; color:#dce6f2;">Ball landed on <strong>${roll}</strong> (${escapeHtml(resultColor)}).</div>
           <div style="font-size:0.82rem; color:#9fb0c2;">Your bet: ${escapeHtml(betLabel)}</div>
-          <div style="font-size:0.96rem; color:${delta > 0 ? '#9fe3a5' : '#ffb4a8'}; font-weight:700;">${delta > 0 ? `You won $${delta}.` : `You lost $${bet}.`}</div>
+          <div style="font-size:0.96rem; color:${delta > 0 ? '#9fe3a5' : '#ffb4a8'}; font-weight:700;">${delta > 0 ? `You won $${appliedDelta}.` : `You lost $${bet}.`}</div>
         </div>`;
     }
     setCasinoStatus(`Roulette result: ${roll} ${resultColor.toUpperCase()}.`, outcome === 'win' ? 'success' : 'error');
@@ -4392,11 +5013,12 @@ async function spinSlots() {
       delta = bet;
     }
     const outcome = delta > 0 ? 'win' : 'loss';
+    const appliedDelta = getCasinoEventAdjustedDelta(delta);
     await updateCasinoBalance(delta, { wager: bet, outcome, game: 'slots' });
     if (area) {
       area.innerHTML = `
         <div style="display:flex; justify-content:center; gap:0.55rem; flex-wrap:wrap;">${reels.map((symbol) => renderSlotFace(symbol)).join('')}</div>
-        <div style="margin-top:0.6rem; text-align:center; font-size:0.95rem; color:${delta > 0 ? '#9fe3a5' : '#ffb4a8'};">${delta > 0 ? `You won $${delta}.` : `You lost $${bet}.`}</div>`;
+        <div style="margin-top:0.6rem; text-align:center; font-size:0.95rem; color:${delta > 0 ? '#9fe3a5' : '#ffb4a8'};">${delta > 0 ? `You won $${appliedDelta}.` : `You lost $${bet}.`}</div>`;
     }
     setCasinoStatus(delta > 0 ? 'Slots paid out.' : 'Slots missed this round.', outcome === 'win' ? 'success' : 'error');
   } catch (err) {
@@ -4414,6 +5036,7 @@ async function createCasinoCoinFlipChallenge() {
     return;
   }
   try {
+    assertCasinoOpen();
     const { bet } = await validateCasinoBet('coinflip-bet');
     const challengerDisplayName = getCasinoPlayerDisplayName();
     const challengerSide = normalizeCoinFlipChoice(document.getElementById('coinflip-side')?.value || 'heads');
@@ -4483,6 +5106,7 @@ async function cancelCasinoCoinFlipChallenge(challengeId) {
     return;
   }
   try {
+    assertCasinoOpen();
     const db = getCasinoDb();
     const challengeRef = getCasinoCoinFlipCollection().doc(String(challengeId || '').trim());
     const challengerRef = getCasinoBalanceCollection().doc(challenger);
@@ -4540,6 +5164,7 @@ async function acceptCasinoCoinFlipChallenge(challengeId) {
     return;
   }
   try {
+    assertCasinoOpen();
     const db = getCasinoDb();
     const challengeRef = getCasinoCoinFlipCollection().doc(String(challengeId || '').trim());
     const acceptorRef = getCasinoBalanceCollection().doc(acceptor);
@@ -4839,16 +5464,16 @@ reviewSubmissions: false
 }
 };
 const EXTRA_ROLE_PERMISSION_DEFAULTS = {
-owner: { viewReports: true, viewUserHistory: true, viewArchives: true, manageAccounts: true, manageCasino: true, manageProfileBackgrounds: true, manageGeneralShop: true, manageGameBios: true, manageLeaderboard: true, useOwnerTool: true, viewAppeals: true, viewAuditLog: true, viewAnalytics: true, manageRooms: true, manageLoginRequests: true, manageCustomTags: true },
-hivise: { viewReports: true, viewUserHistory: true, viewArchives: true, manageAccounts: true, manageCasino: true, manageProfileBackgrounds: true, manageGeneralShop: true, manageGameBios: true, manageLeaderboard: true, useOwnerTool: true, viewAppeals: true, viewAuditLog: true, viewAnalytics: true, manageRooms: true, manageLoginRequests: true, manageCustomTags: true },
-admin: { viewReports: true, viewUserHistory: true, viewArchives: true, manageAccounts: true, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: true, viewAuditLog: true, viewAnalytics: true, manageRooms: true, manageLoginRequests: false, manageCustomTags: false },
-reviewer: { viewReports: false, viewUserHistory: false, viewArchives: false, manageAccounts: false, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: false, viewAuditLog: false, viewAnalytics: false, manageRooms: false, manageLoginRequests: false, manageCustomTags: false },
-moderator: { viewReports: true, viewUserHistory: true, viewArchives: false, manageAccounts: false, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: false, viewAuditLog: false, viewAnalytics: false, manageRooms: false, manageLoginRequests: false, manageCustomTags: false },
-mod: { viewReports: true, viewUserHistory: true, viewArchives: false, manageAccounts: false, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: false, viewAuditLog: false, viewAnalytics: false, manageRooms: false, manageLoginRequests: false, manageCustomTags: false },
-helper: { viewReports: false, viewUserHistory: false, viewArchives: false, manageAccounts: false, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: false, viewAuditLog: false, viewAnalytics: false, manageRooms: false, manageLoginRequests: false, manageCustomTags: false },
-cameronsbitch: { viewReports: false, viewUserHistory: false, viewArchives: false, manageAccounts: false, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: false, viewAuditLog: false, viewAnalytics: false, manageRooms: false, manageLoginRequests: false, manageCustomTags: false },
-chud: { viewReports: false, viewUserHistory: false, viewArchives: false, manageAccounts: false, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: false, viewAuditLog: false, viewAnalytics: false, manageRooms: false, manageLoginRequests: false, manageCustomTags: false },
-member: { viewReports: false, viewUserHistory: false, viewArchives: false, manageAccounts: false, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: false, viewAuditLog: false, viewAnalytics: false, manageRooms: false, manageLoginRequests: false, manageCustomTags: false }
+owner: { viewReports: true, viewUserHistory: true, viewArchives: true, manageAccounts: true, manageCasino: true, manageProfileBackgrounds: true, manageGeneralShop: true, manageGameBios: true, manageLeaderboard: true, useOwnerTool: true, viewAppeals: true, viewAuditLog: true, viewAnalytics: true, manageRooms: true, manageLoginRequests: true, manageCustomTags: true, manageSeasonRepair: true, viewUserTimeline: true, manageLiveRooms: true, manageProfileCleanup: true, manageCasinoRollback: true, viewImpersonation: true, manageRewardGrants: true },
+hivise: { viewReports: true, viewUserHistory: true, viewArchives: true, manageAccounts: true, manageCasino: true, manageProfileBackgrounds: true, manageGeneralShop: true, manageGameBios: true, manageLeaderboard: true, useOwnerTool: true, viewAppeals: true, viewAuditLog: true, viewAnalytics: true, manageRooms: true, manageLoginRequests: true, manageCustomTags: true, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: false, manageRewardGrants: false },
+admin: { viewReports: true, viewUserHistory: true, viewArchives: true, manageAccounts: true, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: true, viewAuditLog: true, viewAnalytics: true, manageRooms: true, manageLoginRequests: false, manageCustomTags: false, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: false, manageRewardGrants: false },
+reviewer: { viewReports: false, viewUserHistory: false, viewArchives: false, manageAccounts: false, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: false, viewAuditLog: false, viewAnalytics: false, manageRooms: false, manageLoginRequests: false, manageCustomTags: false, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: false, manageRewardGrants: false },
+moderator: { viewReports: true, viewUserHistory: true, viewArchives: false, manageAccounts: false, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: false, viewAuditLog: false, viewAnalytics: false, manageRooms: false, manageLoginRequests: false, manageCustomTags: false, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: false, manageRewardGrants: false },
+mod: { viewReports: true, viewUserHistory: true, viewArchives: false, manageAccounts: false, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: false, viewAuditLog: false, viewAnalytics: false, manageRooms: false, manageLoginRequests: false, manageCustomTags: false, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: false, manageRewardGrants: false },
+helper: { viewReports: false, viewUserHistory: false, viewArchives: false, manageAccounts: false, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: false, viewAuditLog: false, viewAnalytics: false, manageRooms: false, manageLoginRequests: false, manageCustomTags: false, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: false, manageRewardGrants: false },
+cameronsbitch: { viewReports: false, viewUserHistory: false, viewArchives: false, manageAccounts: false, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: false, viewAuditLog: false, viewAnalytics: false, manageRooms: false, manageLoginRequests: false, manageCustomTags: false, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: false, manageRewardGrants: false },
+chud: { viewReports: false, viewUserHistory: false, viewArchives: false, manageAccounts: false, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: false, viewAuditLog: false, viewAnalytics: false, manageRooms: false, manageLoginRequests: false, manageCustomTags: false, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: false, manageRewardGrants: false },
+member: { viewReports: false, viewUserHistory: false, viewArchives: false, manageAccounts: false, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: false, viewAuditLog: false, viewAnalytics: false, manageRooms: false, manageLoginRequests: false, manageCustomTags: false, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: false, manageRewardGrants: false }
 };
 Object.keys(DEFAULT_ROLE_PERMISSIONS).forEach((roleKey) => {
 Object.assign(DEFAULT_ROLE_PERMISSIONS[roleKey], EXTRA_ROLE_PERMISSION_DEFAULTS[roleKey] || {});
@@ -5052,12 +5677,13 @@ function getUserTagHtml(username) {
 const dynamicTagsHtml = getDynamicUserTagHtml(username);
 const tagKey = getUserProfileTagKey(username);
 const tags = getAllProfileTags();
-if (!tagKey || !tags[tagKey]) return dynamicTagsHtml;
+const eventTagHtml = getActiveSiteEventTagHtml();
+if (!tagKey || !tags[tagKey]) return `${dynamicTagsHtml}${eventTagHtml}`;
 const tagData = tags[tagKey];
 const inlineStyle = tagData.isCustom
 ? ` style="background:${escapeHtml(tagData.background)}; color:${escapeHtml(tagData.color)}; border-color:${escapeHtml(tagData.border)};"`
 : '';
-return `${dynamicTagsHtml}<span class="custom-tag ${tagData.className || ''}"${inlineStyle}>${escapeHtml(tagData.label)}</span>`;
+return `${dynamicTagsHtml}${eventTagHtml}<span class="custom-tag ${tagData.className || ''}"${inlineStyle}>${escapeHtml(tagData.label)}</span>`;
 }
 
 function getProfileTagOptionsHtml(selectedTag = '') {
@@ -5325,6 +5951,16 @@ const userList = document.getElementById('admin-user-list');
 return normalizeUsername(userList ? userList.value : '');
 }
 
+function getSelectedAdminEffectUser() {
+const userList = document.getElementById('admin-user-effect-user');
+return normalizeUsername(userList ? userList.value : '');
+}
+
+function getSelectedAdminCustomTitleUser() {
+const userList = document.getElementById('admin-custom-title-user');
+return normalizeUsername(userList ? userList.value : '');
+}
+
 function applySelectedAdminUser(username) {
 const selected = normalizeUsername(username);
 const targetIds = [
@@ -5335,12 +5971,27 @@ const targetIds = [
 'admin-tempban-username',
 'admin-role-username',
 'admin-history-username',
-'admin-casino-username'
+'admin-casino-username',
+'admin-season-repair-username',
+'admin-timeline-username',
+'admin-profile-cleanup-username',
+'admin-casino-rollback-username',
+'admin-reward-grant-username'
 ];
 targetIds.forEach((id) => {
 const el = document.getElementById(id);
 if (el) el.value = selected;
 });
+const effectUserSelect = document.getElementById('admin-user-effect-user');
+if (effectUserSelect && selected) {
+  effectUserSelect.value = selected;
+  renderAdminUserEffectManager();
+}
+const customTitleUserSelect = document.getElementById('admin-custom-title-user');
+if (customTitleUserSelect && selected) {
+  customTitleUserSelect.value = selected;
+  renderAdminCustomTitleManager();
+}
 }
 
 function copySelectedUserToHistory() {
@@ -5350,11 +6001,28 @@ if (input) input.value = selected;
 if (selected) loadAdminUserHistory(selected);
 }
 
+function setAdminToolStatus(nodeId, message = '', tone = 'neutral') {
+const node = document.getElementById(nodeId);
+if (!node) return;
+node.textContent = message || '';
+node.style.color = tone === 'error'
+  ? '#ffb4a8'
+  : tone === 'success'
+    ? '#9fe3a5'
+    : '#9fb0c2';
+}
+
 async function loadAdminUserList() {
 const userList = document.getElementById('admin-user-list');
-if (!userList) return;
-const previousSelection = normalizeUsername(userList.value || resolveAdminTargetUsername('admin-ban-username'));
-userList.innerHTML = '<option value="">Loading users...</option>';
+const effectUserList = document.getElementById('admin-user-effect-user');
+const customTitleUserList = document.getElementById('admin-custom-title-user');
+if (!userList && !effectUserList && !customTitleUserList) return;
+const previousSelection = normalizeUsername((userList ? userList.value : '') || resolveAdminTargetUsername('admin-ban-username'));
+const previousEffectSelection = normalizeUsername((effectUserList && effectUserList.value) || previousSelection || currentChatUser || getUserName() || '');
+const previousTitleSelection = normalizeUsername((customTitleUserList && customTitleUserList.value) || previousSelection || currentChatUser || getUserName() || '');
+if (userList) userList.innerHTML = '<option value="">Loading users...</option>';
+if (effectUserList) effectUserList.innerHTML = '<option value="">Loading users...</option>';
+if (customTitleUserList) customTitleUserList.innerHTML = '<option value="">Loading users...</option>';
 
 const knownUsers = new Set();
 const addUser = (value) => {
@@ -5385,15 +6053,38 @@ statsSnapshot.forEach((doc) => addUser(doc.id));
 
 const options = Array.from(knownUsers).filter(Boolean).sort((a, b) => a.localeCompare(b));
 if (!options.length) {
-userList.innerHTML = '<option value="">-- No users found --</option>';
+if (userList) userList.innerHTML = '<option value="">-- No users found --</option>';
+if (effectUserList) effectUserList.innerHTML = '<option value="">-- No users found --</option>';
+if (customTitleUserList) customTitleUserList.innerHTML = '<option value="">-- No users found --</option>';
 return;
 }
 
-userList.innerHTML = '<option value="">-- Select a user --</option>' + options.map((username) => `<option value="${escapeHtml(username)}">${escapeHtml(username)}</option>`).join('');
+const optionMarkup = '<option value="">-- Select a user --</option>' + options.map((username) => `<option value="${escapeHtml(username)}">${escapeHtml(username)}</option>`).join('');
+if (userList) userList.innerHTML = optionMarkup;
+if (effectUserList) effectUserList.innerHTML = optionMarkup;
+if (customTitleUserList) customTitleUserList.innerHTML = optionMarkup;
 
-if (previousSelection && knownUsers.has(previousSelection)) {
+if (userList && previousSelection && knownUsers.has(previousSelection)) {
 userList.value = previousSelection;
 applySelectedAdminUser(previousSelection);
+}
+if (effectUserList) {
+  const resolvedEffectSelection = previousEffectSelection && knownUsers.has(previousEffectSelection)
+    ? previousEffectSelection
+    : normalizeUsername(currentChatUser || getUserName() || '');
+  if (resolvedEffectSelection && knownUsers.has(resolvedEffectSelection)) {
+    effectUserList.value = resolvedEffectSelection;
+  }
+  renderAdminUserEffectManager();
+}
+if (customTitleUserList) {
+  const resolvedTitleSelection = previousTitleSelection && knownUsers.has(previousTitleSelection)
+    ? previousTitleSelection
+    : normalizeUsername(currentChatUser || getUserName() || '');
+  if (resolvedTitleSelection && knownUsers.has(resolvedTitleSelection)) {
+    customTitleUserList.value = resolvedTitleSelection;
+  }
+  renderAdminCustomTitleManager();
 }
 }
 
@@ -5468,7 +6159,8 @@ const card = document.querySelector(`#admin-menu .admin-section-card[data-admin-
 if (!card) return;
 const button = card.querySelector('.admin-section-toggle');
 const storedPreference = localStorage.getItem(getAdminSectionPreferenceKey(sectionId));
-const collapsed = storedPreference === null ? true : storedPreference === '1';
+const defaultCollapsed = String(card.dataset.adminDefaultCollapsed || 'true').toLowerCase() !== 'false';
+const collapsed = storedPreference === null ? defaultCollapsed : storedPreference === '1';
 card.classList.toggle('is-collapsed', collapsed);
 if (button) button.textContent = collapsed ? 'Expand' : 'Minimize';
 }
@@ -5545,6 +6237,7 @@ renderAdminRolePermissions();
 updateAdminSectionVisibility();
 updateAdminOwnerToolState();
 renderAdminSlowModeBypassState();
+renderAdminUserEffectManager();
 renderAdminCustomTagManager();
 syncAdminSectionCardStates();
 loadAdminUserList();
@@ -5555,7 +6248,9 @@ loadAuditLogs();
 loadAdminChatArchives();
 loadAdminAnalytics();
 loadAdminRoomManager();
+loadAdminLiveRoomControls();
 loadAdminAccountManager();
+loadAdminProfileCleanupManager();
 renderAdminGameBioManager();
 listenForGameSubmissions();
 listenForCaseSuggestions();
@@ -5567,6 +6262,11 @@ renderSubmissionQueue();
 renderCaseSuggestionQueue();
 renderLoginRequestQueue();
 loadAdminCasinoManager();
+loadAdminCasinoSeasonRepair();
+loadAdminCasinoRollbackTool();
+loadAdminRewardGrantTool();
+loadAdminUserTimeline();
+loadAdminImpersonationVisibility();
 loadAdminCasinoGameSettings();
 document.getElementById('admin-menu').style.display = 'flex';
 }
@@ -5797,6 +6497,8 @@ await archiveBatch.commit();
 }
 await batch.commit();
 }
+
+clearRoomActivityNotifications();
 
 statusDiv.textContent = deletedCount
 ? `Archived and deleted ${deletedCount} chat messages${archiveDb ? '' : ' (archive project not configured, so no off-project backup was made)'}.`
@@ -6160,11 +6862,26 @@ textEl.textContent = message;
 notification.style.display = 'flex';
 
 const ms = Math.max(2000, Math.min(30000, (parseInt(durationSeconds, 10) || 10) * 1000));
-setTimeout(() => {
+if (globalAlertHideTimeout !== null) {
+window.clearTimeout(globalAlertHideTimeout);
+globalAlertHideTimeout = null;
+}
+globalAlertHideTimeout = window.setTimeout(() => {
 if (notification.style.display !== 'none') {
 notification.style.display = 'none';
 }
+globalAlertHideTimeout = null;
 }, ms);
+}
+
+function closeGlobalAlertNotification() {
+const notification = document.getElementById('global-alert-notification');
+if (!notification) return;
+if (globalAlertHideTimeout !== null) {
+  window.clearTimeout(globalAlertHideTimeout);
+  globalAlertHideTimeout = null;
+}
+notification.style.display = 'none';
 }
 
 function closeDMNotification() {
@@ -6545,6 +7262,7 @@ let adminArchiveExpandedSessionId = '';
 let adminArchiveMessagesCache = {};
 let adminAccountManagerCache = [];
 let adminAccountManagerWarnings = [];
+let adminRewardGrantCatalogCache = [];
 let activeRoomModerationId = '';
 let siteActivityUnsub = null;
 let siteActivityCache = [];
@@ -6644,6 +7362,7 @@ const UI_PREFS_STORAGE_KEY = 'uiPreferences';
 const ROOM_FAVORITES_STORAGE_KEY = 'roomFavorites';
 const CHAT_READ_STORAGE_KEY = 'chatReadMarkers';
 const GAME_RATINGS_STORAGE_KEY = 'gameRatings';
+const DM_INBOX_PREFS_STORAGE_KEY = 'dmInboxPrefs';
 const GAME_REPORTS_COLLECTION = 'game_reports';
 const UX_WHATS_NEW_VERSION = '2026-04-03';
 const UX_WHATS_NEW_ITEMS = [
@@ -6657,7 +7376,6 @@ let updateNotesUpdatedAtCache = null;
 let updateNotesUpdatedByCache = '';
 let uiPreferences = {
 density: 'default',
-accent: '#4f83ff',
 dismissedWhatsNewVersion: '',
 chatDock: 'right'
 };
@@ -6696,7 +7414,6 @@ if (stored && typeof stored === 'object') {
 uiPreferences = {
 ...uiPreferences,
 density: ['compact', 'default', 'large'].includes(stored.density) ? stored.density : 'default',
-accent: /^#[0-9a-fA-F]{6}$/.test(stored.accent || '') ? stored.accent : '#4f83ff',
 dismissedWhatsNewVersion: String(stored.dismissedWhatsNewVersion || ''),
 chatDock: stored.chatDock === 'left' ? 'left' : 'right'
 };
@@ -6709,23 +7426,13 @@ writeJsonStorage(UI_PREFS_STORAGE_KEY, uiPreferences);
 
 function applyUiPreferences() {
 document.body.dataset.uiDensity = uiPreferences.density || 'default';
-document.body.style.setProperty('--site-accent', uiPreferences.accent || '#4f83ff');
 const densitySelect = document.getElementById('ui-density-select');
-const accentInput = document.getElementById('site-accent-input');
 if (densitySelect) densitySelect.value = uiPreferences.density || 'default';
-if (accentInput) accentInput.value = uiPreferences.accent || '#4f83ff';
 applyChatDockPreference();
 }
 
 function updateUiDensity(value) {
 uiPreferences.density = ['compact', 'default', 'large'].includes(value) ? value : 'default';
-saveUiPreferences();
-applyUiPreferences();
-}
-
-function updateSiteAccent(value) {
-if (!/^#[0-9a-fA-F]{6}$/.test(value || '')) return;
-uiPreferences.accent = value;
 saveUiPreferences();
 applyUiPreferences();
 }
@@ -7042,6 +7749,7 @@ const source = data || {};
 return {
 featured: typeof source.featured === 'number' ? source.featured : null,
 description: typeof source.description === 'string' ? source.description.trim() : '',
+hidden: !!source.hidden,
 createdAtMs: source.createdAt && typeof source.createdAt.toDate === 'function' ? source.createdAt.toDate().getTime() : (typeof source.createdAtMs === 'number' ? source.createdAtMs : 0),
 newUntilMs: source.newUntil && typeof source.newUntil.toDate === 'function' ? source.newUntil.toDate().getTime() : (typeof source.newUntilMs === 'number' ? source.newUntilMs : 0)
 };
@@ -7058,12 +7766,13 @@ return key ? (builtInGameMetadataCache[key] || null) : null;
 }
 
 function getGameMetadata(game) {
-if (!game) return { featured: 0 };
+if (!game) return { featured: 0, hidden: false };
 const serverMeta = getBuiltInGameMetadata(game) || {};
 const fallbackMeta = GAME_METADATA_FALLBACK[game.name] || {};
 return {
 featured: typeof game.featured === 'number' ? game.featured : (typeof serverMeta.featured === 'number' ? serverMeta.featured : (GAME_FEATURED_SCORES[game.name] || 0)),
 description: typeof game.description === 'string' && game.description.trim() ? game.description.trim() : (serverMeta.description || ''),
+hidden: !!serverMeta.hidden,
 createdAtMs: typeof game.createdAtMs === 'number' && game.createdAtMs > 0 ? game.createdAtMs : (serverMeta.createdAtMs || fallbackMeta.createdAtMs || 0),
 newUntilMs: typeof game.newUntilMs === 'number' && game.newUntilMs > 0 ? game.newUntilMs : (serverMeta.newUntilMs || fallbackMeta.newUntilMs || 0)
 };
@@ -7086,11 +7795,12 @@ return {
 source: 'builtin',
 description: meta.description || getGameSummary(game),
 featured: meta.featured,
+hidden: meta.hidden,
 createdAtMs: meta.createdAtMs,
 newUntilMs: meta.newUntilMs,
 submitter: ''
 };
-});
+}).filter((game) => !game.hidden);
 const community = communityGameSubmissionsCache
   .filter((item) => item && item.status === 'approved' && item.url && item.title)
   .map((item) => {
@@ -7117,6 +7827,59 @@ function getStoreGameById(gameId) {
 return getStoreGames().find((game) => game.id === gameId) || null;
 }
 
+function canOwnerDeleteStoreGames(username = currentChatUser) {
+return getUserRole(username) === 'owner';
+}
+
+async function deleteStorefrontGame(encodedGameId) {
+if (!canOwnerDeleteStoreGames()) return;
+const gameId = decodeURIComponent(encodedGameId || '');
+const game = getStoreGameById(gameId);
+const statusDiv = document.getElementById('admin-ban-status');
+if (!game) {
+  if (statusDiv) statusDiv.textContent = 'Could not find that game.';
+  return;
+}
+  openConfirmActionModal(
+    'Delete Home Page Game',
+    game.source === 'community'
+      ? `This permanently removes "${game.name}" from the home page and deletes its approved community submission.`
+      : `This removes "${game.name}" from the home page by hiding the built-in card.`,
+    async () => {
+      const db = getAdminDb();
+      if (game.source === 'community') {
+        const submissionId = String(game.submissionId || '').trim();
+        if (!submissionId) throw new Error('Missing community submission id.');
+        await db.collection(GAME_SUBMISSIONS_COLLECTION).doc(submissionId).delete();
+        communityGameSubmissionsCache = communityGameSubmissionsCache.filter((entry) => !(entry && entry.id === submissionId));
+      } else {
+        const metadataId = getBuiltInGameMetadataKey(game);
+        if (!metadataId) throw new Error('Missing built-in game metadata id.');
+        await db.collection(GAME_METADATA_COLLECTION).doc(metadataId).set({
+          name: game.name,
+          gameName: game.name,
+          hidden: true,
+          updatedBy: currentChatUser,
+          updatedAtMs: Date.now(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        builtInGameMetadataCache[metadataId] = {
+          ...(builtInGameMetadataCache[metadataId] || {}),
+          hidden: true
+        };
+      }
+      await db.collection(GAME_THUMBNAIL_POLLS_COLLECTION).doc(game.id).delete().catch(() => {});
+      await writeAuditLog('delete_store_game', game.name || game.id, `${game.source || 'builtin'} removed from storefront`);
+      addSiteActivity('game_delete', `${currentChatUser} removed ${game.name}`, game.source === 'community' ? 'Community game deleted from storefront.' : 'Built-in game hidden from storefront.');
+      if (statusDiv) statusDiv.textContent = `${game.name} was removed from the home page.`;
+      renderGameStorefront();
+      renderPersonalShelf();
+      renderAdminGameBioManager();
+    },
+    'Delete Game'
+  );
+}
+
 function getGameSubtitle(game) {
 if (!game) return '';
 return 'Ready to launch';
@@ -7131,9 +7894,18 @@ return {
 bio: '',
 statusQuote: '',
 profileTitle: '',
+adminAssignedTitle: '',
+adminAssignedTitleBy: '',
 profileAccentId: '',
+roleEffectPrimaryColor: '',
+roleEffectSecondaryColor: '',
+usernameEffectId: '',
+usernameEffectPrimaryColor: '',
+usernameEffectSecondaryColor: '',
+usernameEffectAssignedBy: '',
 avatarData: '',
 bannerData: '',
+showcasedBadgeLabels: [],
 favoriteGameId: '',
 favoriteGameName: '',
 joinLabel: new Date().toLocaleDateString(),
@@ -7642,7 +8414,18 @@ function getGeneralShopItem(itemId) {
 
 function getRenderableGeneralShopItems(stats) {
   const ownedIds = new Set(sanitizeOwnedGeneralShopItemIds(stats && stats.ownedGeneralShopItemIds));
-  const items = getAllGeneralShopItems().filter((item) => item && item.itemType === 'shop-item' && item.active);
+  const activeItems = getAllGeneralShopItems().filter((item) => item && item.itemType === 'shop-item' && item.active).sort((a, b) => {
+    if (a.price !== b.price) return a.price - b.price;
+    return a.title.localeCompare(b.title);
+  });
+  let items = activeItems;
+  if (activeItems.length > 6) {
+    const pageSize = 6;
+    const rotationCount = Math.max(1, Math.ceil(activeItems.length / pageSize));
+    const rotationIndex = Math.floor(Date.now() / (3 * 24 * 60 * 60 * 1000)) % rotationCount;
+    const start = rotationIndex * pageSize;
+    items = activeItems.slice(start, start + pageSize);
+  }
   getAllGeneralShopItems().forEach((item) => {
     if (item && item.itemType === 'shop-item' && ownedIds.has(item.id) && !items.some((existing) => existing.id === item.id)) {
       items.push(item);
@@ -8018,9 +8801,18 @@ return {
   bio: sanitizeNullableText(data.bio, '').slice(0, 220),
   statusQuote: sanitizeNullableText(data.statusQuote, '').slice(0, 120),
   profileTitle: sanitizeNullableText(data.profileTitle, '').slice(0, 40),
+  adminAssignedTitle: sanitizeNullableText(data.adminAssignedTitle, '').slice(0, 40),
+  adminAssignedTitleBy: sanitizeNullableText(data.adminAssignedTitleBy, '').slice(0, 32),
   profileAccentId: sanitizeNullableText(data.profileAccentId, '').slice(0, 24),
+  roleEffectPrimaryColor: normalizeRoleNameEffectColor(data.roleEffectPrimaryColor || '', ''),
+  roleEffectSecondaryColor: normalizeRoleNameEffectColor(data.roleEffectSecondaryColor || '', ''),
+  usernameEffectId: normalizeUsernameEffectId(data.usernameEffectId),
+  usernameEffectPrimaryColor: normalizeRoleNameEffectColor(data.usernameEffectPrimaryColor || '', ''),
+  usernameEffectSecondaryColor: normalizeRoleNameEffectColor(data.usernameEffectSecondaryColor || '', ''),
+  usernameEffectAssignedBy: sanitizeNullableText(data.usernameEffectAssignedBy, '').slice(0, 32),
   avatarData: sanitizeProfileAvatar(data.avatarData),
   bannerData: sanitizeProfileBanner(data.bannerData),
+  showcasedBadgeLabels: Array.from(new Set((Array.isArray(data.showcasedBadgeLabels) ? data.showcasedBadgeLabels : []).map((value) => sanitizeNullableText(value, '').slice(0, 40)).filter(Boolean))).slice(0, PROFILE_BADGE_SHOWCASE_LIMIT),
   favoriteGameId: sanitizeNullableText(data.favoriteGameId, '').slice(0, 120),
   favoriteGameName: sanitizeNullableText(data.favoriteGameName, '').slice(0, 80),
   joinLabel: sanitizeNullableText(data.joinLabel, ''),
@@ -8080,6 +8872,26 @@ if ((stats.mediaShared || 0) >= 10) badges.push({ label: 'Media Dropper', icon: 
 if (unlocked.length >= 5) badges.push({ label: 'Collector', icon: '🏅' });
 if (profileUserKey === OWNER_TAG_USERNAME) badges.push({ label: 'Owner', icon: '👑' });
 return badges.slice(0, 6);
+}
+
+function getProfileBackgroundRarityMeta(itemOrId) {
+const item = typeof itemOrId === 'string' ? getProfileBackgroundShopItem(itemOrId) : itemOrId;
+const price = Math.max(0, Number(item && item.price || 0));
+if (price >= 50000) return { id: 'legendary', label: 'Legendary', color: '#ffd54f' };
+if (price >= 15000) return { id: 'epic', label: 'Epic', color: '#ff8a65' };
+if (price >= 5000) return { id: 'rare', label: 'Rare', color: '#64b5f6' };
+if (price >= 1500) return { id: 'uncommon', label: 'Uncommon', color: '#81c784' };
+return { id: 'common', label: 'Common', color: '#b0bec5' };
+}
+
+function getShowcasedProfileBadges(profileUserKey, stats, profile) {
+const allBadges = getProfileBadges(profileUserKey, stats, profile);
+const savedLabels = Array.isArray(profile && profile.showcasedBadgeLabels) ? profile.showcasedBadgeLabels : [];
+const selected = savedLabels.map((label) => allBadges.find((badge) => badge.label === label)).filter(Boolean);
+if (selected.length) {
+  return Array.from(new Set(selected.map((badge) => badge.label))).map((label) => selected.find((badge) => badge.label === label)).filter(Boolean).slice(0, PROFILE_BADGE_SHOWCASE_LIMIT);
+}
+  return allBadges.slice(0, PROFILE_BADGE_SHOWCASE_LIMIT);
 }
 
 function syncStoreFilterControls() {
@@ -8308,6 +9120,24 @@ const notification = {
   renderNotificationCenter();
 }
 
+function clearRoomActivityNotifications(roomId = '') {
+const roomNotificationTypes = new Set(['room-message', 'mention', 'reply', 'typing']);
+const normalizedRoomId = normalizeUsername(roomId || '');
+const nextNotifications = (localNotificationCache || []).filter((item) => {
+  const type = String(item && item.type || '');
+  const action = item && item.action;
+  const actionRoomId = normalizeUsername(action && typeof action === 'object' ? action.roomId || '' : '');
+  const isRoomNotification = roomNotificationTypes.has(type) || !!(action && typeof action === 'object' && action.kind === 'room');
+  if (!isRoomNotification) return true;
+  if (!normalizedRoomId) return false;
+  return actionRoomId && actionRoomId !== normalizedRoomId;
+});
+if (nextNotifications.length === (localNotificationCache || []).length) return;
+localNotificationCache = nextNotifications;
+saveLocalNotifications();
+renderNotificationCenter();
+}
+
 function updateNotificationBadge() {
 const badge = document.getElementById('notification-badge');
 if (!badge) return;
@@ -8494,6 +9324,8 @@ element.style.setProperty('--reward-accent-glow', cosmetic.glow || 'rgba(40, 122
 }
 
 function getEquippedProfileRewardTitle(profileUserKey, stats, casinoStats, profile) {
+const adminAssignedTitle = sanitizeNullableText(profile && profile.adminAssignedTitle, '').slice(0, 40);
+if (adminAssignedTitle) return adminAssignedTitle;
 const available = getUnlockedProfileRewardTitles(stats, casinoStats, profileUserKey);
 const savedTitle = sanitizeNullableText(profile && profile.profileTitle, '').slice(0, 40);
 if (savedTitle && available.includes(savedTitle)) return savedTitle;
@@ -9289,12 +10121,106 @@ async function respondToGeneralShopTradeOffer(encodedTradeId, action = 'reject')
   }
 }
 
+function normalizeSiteEventThemeMode(value = '') {
+  const normalized = sanitizeNullableText(value, '').toLowerCase();
+  return ['double-payouts', 'glow-week', 'owner-tag', 'limited-background'].includes(normalized) ? normalized : '';
+}
+
+function getSiteEventThemeLabel(themeMode = '') {
+  switch (normalizeSiteEventThemeMode(themeMode)) {
+    case 'double-payouts': return 'Double Casino Payouts';
+    case 'glow-week': return 'Special Glow Week';
+    case 'owner-tag': return 'Owner-Picked Tag';
+    case 'limited-background': return 'Limited Profile Background';
+    default: return 'Site Event';
+  }
+}
+
 function normalizeSiteEventData(data = {}) {
-  const title = sanitizeNullableText(data.title, '').slice(0, 80);
+  const themeMode = normalizeSiteEventThemeMode(data.themeMode || data.mode || '');
+  const title = sanitizeNullableText(data.title, '').slice(0, 80) || (themeMode ? getSiteEventThemeLabel(themeMode) : '');
   const body = sanitizeNullableText(data.body, '').slice(0, 240);
   const accent = /^#[0-9a-fA-F]{6}$/.test(String(data.accent || '')) ? String(data.accent) : '#2f8d46';
   const endsAtMs = data.endsAt && typeof data.endsAt.toDate === 'function' ? data.endsAt.toDate().getTime() : Math.max(0, Number(data.endsAtMs || 0));
-  return title ? { title, body, accent, endsAtMs } : null;
+  const payoutMultiplier = themeMode === 'double-payouts'
+    ? Math.max(1, Math.min(5, Math.floor(Number(data.payoutMultiplier || 2) || 2)))
+    : 1;
+  const eventTagLabel = sanitizeNullableText(data.eventTagLabel || data.tagLabel, '').slice(0, 24);
+  const eventTagBackground = normalizeProfileTagColor(data.eventTagBackground || data.tagBackground, '#3d2612');
+  const eventTagColor = normalizeProfileTagColor(data.eventTagColor || data.tagTextColor, '#fff6d6');
+  const eventTagBorder = normalizeProfileTagColor(data.eventTagBorder || data.tagBorderColor, '#f0c15a');
+  const limitedProfileBackground = sanitizeProfileBanner(data.limitedProfileBackground || data.profileBackground || '');
+  return title || themeMode ? {
+    title,
+    body,
+    accent,
+    endsAtMs,
+    themeMode,
+    payoutMultiplier,
+    eventTagLabel,
+    eventTagBackground,
+    eventTagColor,
+    eventTagBorder,
+    limitedProfileBackground
+  } : null;
+}
+
+function getActiveSiteEventData() {
+  if (!activeSiteEventCache) return null;
+  if (activeSiteEventCache.endsAtMs && activeSiteEventCache.endsAtMs <= Date.now()) return null;
+  return activeSiteEventCache;
+}
+
+function getActiveSiteEventThemeMode() {
+  return getActiveSiteEventData()?.themeMode || '';
+}
+
+function getSiteEventThemeNote(eventData = getActiveSiteEventData()) {
+  if (!eventData) return '';
+  switch (eventData.themeMode) {
+    case 'double-payouts':
+      return `${Math.max(1, Number(eventData.payoutMultiplier || 2))}x payouts on casino wins.`;
+    case 'glow-week':
+      return 'Every username gets a temporary site glow.';
+    case 'owner-tag':
+      return eventData.eventTagLabel ? `Everyone gets the ${eventData.eventTagLabel} event tag.` : 'Everyone gets a temporary owner-picked tag.';
+    case 'limited-background':
+      return eventData.limitedProfileBackground ? 'Profiles use a temporary event background.' : 'Profiles use a limited-time event background.';
+    default:
+      return '';
+  }
+}
+
+function getSiteEventSummaryText(eventData = getActiveSiteEventData()) {
+  if (!eventData) return '';
+  return eventData.body || getSiteEventThemeNote(eventData);
+}
+
+function getSiteEventCasinoPayoutMultiplier() {
+  const eventData = getActiveSiteEventData();
+  if (!eventData || eventData.themeMode !== 'double-payouts') return 1;
+  return Math.max(1, Number(eventData.payoutMultiplier || 2) || 2);
+}
+
+function getCasinoEventAdjustedDelta(delta) {
+  const numericDelta = Math.trunc(Number(delta) || 0);
+  if (numericDelta <= 0) return numericDelta;
+  return Math.trunc(numericDelta * getSiteEventCasinoPayoutMultiplier());
+}
+
+function isSiteGlowWeekActive() {
+  return getActiveSiteEventThemeMode() === 'glow-week';
+}
+
+function getActiveSiteEventTagHtml() {
+  const eventData = getActiveSiteEventData();
+  if (!eventData || eventData.themeMode !== 'owner-tag' || !eventData.eventTagLabel) return '';
+  return `<span class="custom-tag custom-tag--event" style="background:${escapeHtml(eventData.eventTagBackground)}; color:${escapeHtml(eventData.eventTagColor)}; border-color:${escapeHtml(eventData.eventTagBorder)};">${escapeHtml(eventData.eventTagLabel)}</span>`;
+}
+
+function getActiveSiteEventProfileBackground() {
+  const eventData = getActiveSiteEventData();
+  return eventData && eventData.themeMode === 'limited-background' ? eventData.limitedProfileBackground : '';
 }
 
 async function loadActiveSiteEvent() {
@@ -9304,14 +10230,16 @@ async function loadActiveSiteEvent() {
   } catch (_) {
     activeSiteEventCache = null;
   }
+  syncAdminEventModeFormFromCache();
+  renderAdminEventModePreview();
   return activeSiteEventCache;
 }
 
 function renderActiveSiteEventBanner() {
   const banner = document.getElementById('site-announcement-banner');
   if (!banner) return;
-  const eventData = activeSiteEventCache;
-  if (!eventData || (eventData.endsAtMs && eventData.endsAtMs <= Date.now())) {
+  const eventData = getActiveSiteEventData();
+  if (!eventData) {
     if (!moderationSettings.announcementText) {
       banner.style.display = 'none';
       banner.textContent = '';
@@ -9321,7 +10249,7 @@ function renderActiveSiteEventBanner() {
   banner.style.display = 'block';
   banner.style.background = `${eventData.accent}`;
   banner.style.borderColor = eventData.accent;
-  banner.textContent = `${eventData.title}${eventData.body ? ` • ${eventData.body}` : ''}${eventData.endsAtMs ? ` • Ends ${new Date(eventData.endsAtMs).toLocaleString()}` : ''}`;
+  banner.textContent = `${eventData.title}${getSiteEventSummaryText(eventData) ? ` • ${getSiteEventSummaryText(eventData)}` : ''}${eventData.endsAtMs ? ` • Ends ${new Date(eventData.endsAtMs).toLocaleString()}` : ''}`;
 }
 
 function setPlayerHubTab(tab) {
@@ -9483,8 +10411,8 @@ function renderPlayerHubModal() {
     return;
   }
   if (currentPlayerHubTab === 'events') {
-    const eventData = activeSiteEventCache;
-    container.innerHTML = eventData ? `<div class="store-mini-card"><div class="store-mini-card-title">${escapeHtml(eventData.title)}</div><div class="store-mini-card-meta">${escapeHtml(eventData.body || 'Limited-time event')}</div><div class="store-mini-card-meta" style="color:#9fb0c2;">${eventData.endsAtMs ? `Ends ${new Date(eventData.endsAtMs).toLocaleString()}` : 'No end date set'}</div></div>` : '<div class="submission-empty">No active event right now.</div>';
+    const eventData = getActiveSiteEventData();
+    container.innerHTML = eventData ? `<div class="store-mini-card"><div class="store-mini-card-title">${escapeHtml(eventData.title)}</div><div class="store-mini-card-meta">${escapeHtml(getSiteEventSummaryText(eventData) || 'Limited-time event')}</div><div class="store-mini-card-meta" style="color:#9fb0c2;">${escapeHtml(getSiteEventThemeNote(eventData) || 'Special site-wide event')}</div><div class="store-mini-card-meta" style="color:#9fb0c2;">${eventData.endsAtMs ? `Ends ${new Date(eventData.endsAtMs).toLocaleString()}` : 'No end date set'}</div></div>` : '<div class="submission-empty">No active event right now.</div>';
     return;
   }
   container.innerHTML = `<div id="player-hub-thread-content">${currentChatThreadRootId ? '' : '<div class="submission-empty">Open a thread from a chat message to view it here.</div>'}</div>`;
@@ -11070,6 +11998,354 @@ try {
 }
 }
 
+async function loadAdminCasinoRollbackTool(targetUsername = '') {
+const container = document.getElementById('admin-casino-rollback-manager');
+if (!container) return;
+if (!canUseAdminPermission('manageCasinoRollback')) {
+  container.textContent = 'Insufficient permissions.';
+  return;
+}
+const username = normalizeUsername(targetUsername || resolveAdminTargetUsername('admin-casino-rollback-username'));
+const input = document.getElementById('admin-casino-rollback-username');
+if (input && username) input.value = username;
+if (!username) {
+  container.innerHTML = '<div class="submission-empty">Select a user to review rollback options.</div>';
+  return;
+}
+try {
+  const doc = await getCasinoBalanceCollection().doc(username).get();
+  const stats = normalizeCasinoProfileStatsData(username, doc.exists ? (doc.data() || {}) : {});
+  container.innerHTML = renderAdminCasinoSummaryHtml(username, stats);
+} catch (err) {
+  container.innerHTML = '<div class="submission-empty">Failed to load rollback data.</div>';
+}
+}
+
+function adminCasinoRollbackUseSelectedUser() {
+const username = getSelectedAdminUser();
+const input = document.getElementById('admin-casino-rollback-username');
+if (input) input.value = username;
+if (username) loadAdminCasinoRollbackTool(username);
+}
+
+async function adminRollbackCasinoInventory() {
+if (!canUseAdminPermission('manageCasinoRollback')) return;
+const username = normalizeUsername(resolveAdminTargetUsername('admin-casino-rollback-username'));
+if (!username) {
+  setAdminToolStatus('admin-casino-rollback-status', 'Choose a user first.', 'error');
+  return;
+}
+try {
+  const ref = getCasinoBalanceCollection().doc(username);
+  let nextStats = getDefaultCasinoProfileStats(username);
+  await getCasinoDb().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const currentStats = normalizeCasinoProfileStatsData(username, snap.exists ? (snap.data() || {}) : {});
+    nextStats = {
+      ...currentStats,
+      ownedGeneralShopCaseCounts: {},
+      ownedGeneralShopItemIds: [],
+      ownedGeneralShopItemSaleValues: [],
+      selectedGeneralShopFeaturedItemId: '',
+      allTimeBestGeneralShopDropItemId: '',
+      allTimeBestGeneralShopDropTitle: '',
+      allTimeBestGeneralShopDropRarity: 'mil-spec',
+      allTimeBestGeneralShopDropValue: 0
+    };
+    const { ownedGeneralShopCaseCounts, ...nextPayload } = nextStats;
+    tx.set(ref, {
+      username,
+      displayName: sanitizeNullableText((snap.exists ? (snap.data() || {}).displayName : '') || username, username),
+      ...nextPayload,
+      ...buildOwnedGeneralShopCaseCountFieldPatch(currentStats.ownedGeneralShopCaseCounts, ownedGeneralShopCaseCounts),
+      updatedAtMs: Date.now()
+    }, { merge: true });
+  });
+  casinoProfileStatsCache[username] = nextStats;
+  await writeAuditLog('casino_rollback_inventory', username, 'Cleared cases, items, featured item, and best drop record');
+  await loadAdminCasinoRollbackTool(username);
+  await refreshCasinoViewsAfterAdminChange(username);
+  setAdminToolStatus('admin-casino-rollback-status', `Cleared casino inventory for ${username}.`, 'success');
+} catch (err) {
+  setAdminToolStatus('admin-casino-rollback-status', 'Failed to clear casino inventory.', 'error');
+}
+}
+
+async function adminRollbackCasinoProgress() {
+if (!canUseAdminPermission('manageCasinoRollback')) return;
+const username = normalizeUsername(resolveAdminTargetUsername('admin-casino-rollback-username'));
+if (!username) {
+  setAdminToolStatus('admin-casino-rollback-status', 'Choose a user first.', 'error');
+  return;
+}
+try {
+  const ref = getCasinoBalanceCollection().doc(username);
+  let nextStats = getDefaultCasinoProfileStats(username);
+  await getCasinoDb().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const currentStats = normalizeCasinoProfileStatsData(username, snap.exists ? (snap.data() || {}) : {});
+    nextStats = normalizeCasinoProfileStatsData(username, {
+      ...currentStats,
+      wins: 0,
+      losses: 0,
+      pushes: 0,
+      gamesPlayed: 0,
+      totalWagered: 0,
+      biggestWin: 0,
+      currentWinStreak: 0,
+      currentLossStreak: 0,
+      bestWinStreak: 0,
+      worstLossStreak: 0,
+      hotHandUntilMs: 0,
+      coldTableUntilMs: 0,
+      reliefClaims: 0,
+      lastReliefClaimAtMs: 0,
+      dailyBonusClaimCount: 0,
+      dailyBonusClaimStreak: 0,
+      lastDailyBonusClaimAtMs: 0,
+      lastGameAtMs: 0
+    });
+    nextStats.achievementIds = getCasinoUnlockedAchievementIds(nextStats);
+    tx.set(ref, {
+      username,
+      displayName: sanitizeNullableText((snap.exists ? (snap.data() || {}).displayName : '') || username, username),
+      ...nextStats,
+      updatedAtMs: Date.now()
+    }, { merge: true });
+  });
+  casinoProfileStatsCache[username] = nextStats;
+  await writeAuditLog('casino_rollback_progress', username, 'Reset streaks, cooldowns, and game stats while keeping balance and inventory');
+  await loadAdminCasinoRollbackTool(username);
+  await refreshCasinoViewsAfterAdminChange(username);
+  setAdminToolStatus('admin-casino-rollback-status', `Reset casino progress and cooldowns for ${username}.`, 'success');
+} catch (err) {
+  setAdminToolStatus('admin-casino-rollback-status', 'Failed to reset casino progress.', 'error');
+}
+}
+
+async function loadAdminImpersonationVisibility() {
+const container = document.getElementById('admin-impersonation-visibility');
+if (!container) return;
+if (!canUseAdminPermission('viewImpersonation')) {
+  container.textContent = 'Insufficient permissions.';
+  return;
+}
+container.textContent = 'Loading impersonation activity...';
+try {
+  const snapshot = await getPrimaryDb().collection('site_messages').orderBy('timestamp', 'desc').limit(260).get();
+  const events = snapshot.docs
+    .map((doc) => ({ id: doc.id, ...(doc.data() || {}) }))
+    .filter((data) => {
+      const author = normalizeUsername(data.authoredBy || data.user || '');
+      const profileUser = normalizeUsername(data.profileUser || data.user || '');
+      return !!normalizeUsername(data.impersonatedUser || '') || (!!author && !!profileUser && author !== profileUser);
+    });
+  if (!events.length) {
+    container.innerHTML = '<div class="submission-empty">No recent impersonation messages were found.</div>';
+    return;
+  }
+  const summary = new Map();
+  events.forEach((entry) => {
+    const actor = normalizeUsername(entry.authoredBy || entry.user || 'unknown');
+    const current = summary.get(actor) || { count: 0, aliases: new Set() };
+    current.count += 1;
+    const alias = normalizeUsername(entry.impersonatedUser || entry.profileUser || '');
+    if (alias && alias !== actor) current.aliases.add(alias);
+    summary.set(actor, current);
+  });
+  const summaryMarkup = Array.from(summary.entries()).sort((a, b) => b[1].count - a[1].count).slice(0, 8).map(([actor, info]) => `<div style="padding:0.45rem; background:#151515; border:1px solid #2f2f2f; border-radius:0.4rem;"><div style="color:#fff; font-weight:700;">${escapeHtml(actor || 'unknown')}</div><div style="margin-top:0.18rem; color:#9fb0c2; font-size:0.76rem;">${escapeHtml(String(info.count))} recent message${info.count === 1 ? '' : 's'}</div><div style="margin-top:0.18rem; color:#8fe3ff; font-size:0.74rem;">${escapeHtml(Array.from(info.aliases).slice(0, 4).join(', ') || 'No alias list')}</div></div>`).join('');
+  const listMarkup = events.slice(0, 20).map((entry) => {
+    const actor = normalizeUsername(entry.authoredBy || entry.user || 'unknown');
+    const alias = sanitizeNullableText(entry.displayUser || entry.impersonatedUser || entry.profileUser || actor, actor);
+    const room = getChatRoomConfig(entry.room || 'general').name;
+    const timeMs = getTimestampMs(entry.timestamp);
+    const timeText = timeMs ? new Date(timeMs).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Unknown time';
+    const body = sanitizeNullableText(entry.message, entry.imageData ? '[image]' : (entry.videoData || entry.videoUrl ? '[video]' : (entry.type === 'gif' ? '[gif]' : ''))).slice(0, 160) || '[empty]';
+    return `<div style="padding:0.45rem 0; border-bottom:1px solid #2a2a2a; display:grid; gap:0.18rem;"><div style="display:flex; justify-content:space-between; gap:0.6rem;"><span style="color:#ffca28; font-size:0.78rem; font-weight:700;">${escapeHtml(actor)} -> ${escapeHtml(alias)}</span><span style="color:#75808b; font-size:0.72rem;">${escapeHtml(timeText)}</span></div><div style="color:#d7e1eb; font-size:0.8rem;">${escapeHtml(room)} • ${escapeHtml(body)}</div></div>`;
+  }).join('');
+  container.innerHTML = `<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:0.45rem; margin-bottom:0.6rem;">${summaryMarkup}</div><div>${listMarkup}</div>`;
+} catch (err) {
+  container.textContent = 'Failed to load impersonation activity.';
+}
+}
+
+async function loadAdminRewardGrantTool(targetUsername = '') {
+const container = document.getElementById('admin-reward-grant-manager');
+const select = document.getElementById('admin-reward-grant-item');
+if (!container || !select) return;
+if (!canUseAdminPermission('manageRewardGrants')) {
+  container.textContent = 'Insufficient permissions.';
+  return;
+}
+const username = normalizeUsername(targetUsername || resolveAdminTargetUsername('admin-reward-grant-username'));
+const input = document.getElementById('admin-reward-grant-username');
+if (input && username) input.value = username;
+try {
+  const snapshot = await getGeneralShopCollection().get().catch(() => null);
+  const liveItems = snapshot && Array.isArray(snapshot.docs)
+    ? snapshot.docs.map((doc) => normalizeGeneralShopItem(doc.id, doc.data() || {}))
+    : [];
+  const merged = [...liveItems];
+  getBuiltInGeneralShopItems().forEach((item) => {
+    if (!merged.some((entry) => entry.id === item.id)) merged.push(item);
+  });
+  adminRewardGrantCatalogCache = merged.sort((a, b) => a.title.localeCompare(b.title));
+  select.innerHTML = adminRewardGrantCatalogCache.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(`${item.title} (${item.itemType}${item.itemType === 'case' ? '' : ` • ${getGeneralShopRarityConfig(item.rarity).label}`})`)}</option>`).join('');
+  if (!username) {
+    container.innerHTML = '<div class="submission-empty">Select a user to preview reward grants.</div>';
+    return;
+  }
+  const doc = await getCasinoBalanceCollection().doc(username).get();
+  const stats = normalizeCasinoProfileStatsData(username, doc.exists ? (doc.data() || {}) : {});
+  container.innerHTML = `<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:0.45rem;"><div style="padding:0.45rem; background:#151515; border:1px solid #2f2f2f; border-radius:0.4rem;"><div style="color:#90a4ae; font-size:0.72rem;">Owned items</div><div style="margin-top:0.18rem; color:#fff; font-weight:700;">${escapeHtml(String((stats.ownedGeneralShopItemIds || []).length))}</div></div><div style="padding:0.45rem; background:#151515; border:1px solid #2f2f2f; border-radius:0.4rem;"><div style="color:#90a4ae; font-size:0.72rem;">Owned cases</div><div style="margin-top:0.18rem; color:#fff; font-weight:700;">${escapeHtml(String(Object.values(getOwnedGeneralShopCaseCounts(stats)).reduce((sum, value) => sum + value, 0)))}</div></div><div style="padding:0.45rem; background:#151515; border:1px solid #2f2f2f; border-radius:0.4rem;"><div style="color:#90a4ae; font-size:0.72rem;">Featured item</div><div style="margin-top:0.18rem; color:#fff; font-weight:700;">${escapeHtml(stats.selectedGeneralShopFeaturedItemId || 'None')}</div></div></div>`;
+} catch (err) {
+  container.innerHTML = '<div class="submission-empty">Failed to load reward grant data.</div>';
+}
+}
+
+function adminRewardGrantUseSelectedUser() {
+const username = getSelectedAdminUser();
+const input = document.getElementById('admin-reward-grant-username');
+if (input) input.value = username;
+if (username) loadAdminRewardGrantTool(username);
+}
+
+async function adminGrantSelectedReward() {
+if (!canUseAdminPermission('manageRewardGrants')) return;
+const username = normalizeUsername(resolveAdminTargetUsername('admin-reward-grant-username'));
+const itemId = normalizeOptionalGeneralShopItemId(document.getElementById('admin-reward-grant-item')?.value || '');
+const quantity = Math.max(1, Math.min(50, Math.floor(Number(document.getElementById('admin-reward-grant-quantity')?.value) || 1)));
+const item = adminRewardGrantCatalogCache.find((entry) => entry.id === itemId) || getGeneralShopItem(itemId);
+if (!username || !item) {
+  setAdminToolStatus('admin-reward-grant-status', 'Choose a user and reward first.', 'error');
+  return;
+}
+try {
+  const ref = getCasinoBalanceCollection().doc(username);
+  let nextStats = getDefaultCasinoProfileStats(username);
+  await getCasinoDb().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const currentStats = normalizeCasinoProfileStatsData(username, snap.exists ? (snap.data() || {}) : {});
+    if (item.itemType === 'case') {
+      const nextCounts = { ...getOwnedGeneralShopCaseCounts(currentStats) };
+      nextCounts[item.id] = Math.max(0, Number(nextCounts[item.id] || 0)) + quantity;
+      nextStats = {
+        ...currentStats,
+        ownedGeneralShopCaseCounts: nextCounts
+      };
+      const { ownedGeneralShopCaseCounts, ...nextPayload } = nextStats;
+      tx.set(ref, {
+        username,
+        displayName: sanitizeNullableText((snap.exists ? (snap.data() || {}).displayName : '') || username, username),
+        ...nextPayload,
+        ...buildOwnedGeneralShopCaseCountFieldPatch(currentStats.ownedGeneralShopCaseCounts, ownedGeneralShopCaseCounts),
+        updatedAtMs: Date.now()
+      }, { merge: true });
+      return;
+    }
+    const nextItemIds = sanitizeOwnedGeneralShopItemIds(currentStats.ownedGeneralShopItemIds).slice();
+    const nextSaleValues = sanitizeOwnedGeneralShopItemSaleValues(nextItemIds, currentStats.ownedGeneralShopItemSaleValues).slice();
+    const saleValue = item.itemType === 'case-drop' ? getLegacyGeneralShopCaseDropSaleValue(item) : 0;
+    for (let index = 0; index < quantity; index += 1) {
+      nextItemIds.push(item.id);
+      nextSaleValues.push(saleValue);
+    }
+    nextStats = {
+      ...currentStats,
+      ownedGeneralShopItemIds: sanitizeOwnedGeneralShopItemIds(nextItemIds),
+      ownedGeneralShopItemSaleValues: sanitizeOwnedGeneralShopItemSaleValues(nextItemIds, nextSaleValues)
+    };
+    tx.set(ref, {
+      username,
+      displayName: sanitizeNullableText((snap.exists ? (snap.data() || {}).displayName : '') || username, username),
+      ...nextStats,
+      updatedAtMs: Date.now()
+    }, { merge: true });
+  });
+  casinoProfileStatsCache[username] = nextStats;
+  await writeAuditLog('grant_reward', username, `Granted ${quantity}x ${item.title}`);
+  await loadAdminRewardGrantTool(username);
+  await refreshCasinoViewsAfterAdminChange(username);
+  setAdminToolStatus('admin-reward-grant-status', `Granted ${quantity}x ${item.title} to ${username}.`, 'success');
+} catch (err) {
+  setAdminToolStatus('admin-reward-grant-status', 'Failed to grant that reward.', 'error');
+}
+}
+
+async function loadAdminLiveRoomControls(targetRoomId = '') {
+const container = document.getElementById('admin-live-room-controls');
+if (!container) return;
+if (!canUseAdminPermission('manageLiveRooms')) {
+  container.textContent = 'Insufficient permissions.';
+  return;
+}
+const input = document.getElementById('admin-live-room-id');
+const roomId = normalizeUsername(targetRoomId || (input ? input.value : '') || currentChatRoom || 'general') || 'general';
+if (input) input.value = roomId;
+const room = getChatRoomConfig(roomId);
+const roomRows = getAllChatRooms().slice(0, 14).map((entry) => `<button onclick="adminUseLiveRoom('${encodeURIComponent(entry.id)}')" style="padding:0.28rem 0.55rem; background:${entry.id === room.id ? '#1565c0' : '#37474f'}; color:#fff; border:none; border-radius:999px; font-size:0.74rem;">${escapeHtml(entry.name)}</button>`).join('');
+container.innerHTML = `<div style="display:grid; gap:0.55rem;"><div style="padding:0.6rem; background:#151515; border:1px solid #2f2f2f; border-radius:0.45rem;"><div style="display:flex; justify-content:space-between; gap:0.6rem; flex-wrap:wrap;"><div><div style="font-weight:700; color:#fff;">${escapeHtml(room.name)}</div><div style="margin-top:0.18rem; color:#9fb0c2; font-size:0.78rem;">#${escapeHtml(room.id)} • ${escapeHtml(room.isPublic ? 'Public' : 'Private')} • ${escapeHtml(getRoomAudienceLabel(room))}</div></div><div style="display:flex; gap:0.35rem; flex-wrap:wrap;"><span class="admin-info-chip">${escapeHtml(room.readOnly ? 'Frozen' : 'Posting open')}</span><span class="admin-info-chip">${escapeHtml(room.mediaBlocked ? 'Media locked' : 'Media open')}</span></div></div>${room.description ? `<div style="margin-top:0.45rem; color:#dce7f5; font-size:0.8rem;">${escapeHtml(room.description)}</div>` : ''}</div><div style="display:flex; gap:0.4rem; flex-wrap:wrap;">${roomRows}</div></div>`;
+}
+
+function adminUseLiveRoom(encodedRoomId) {
+const roomId = normalizeUsername(decodeURIComponent(encodedRoomId || ''));
+const input = document.getElementById('admin-live-room-id');
+if (input) input.value = roomId;
+loadAdminLiveRoomControls(roomId);
+}
+
+function adminUseCurrentRoomForLiveControls() {
+const input = document.getElementById('admin-live-room-id');
+if (input) input.value = normalizeUsername(currentChatRoom || 'general') || 'general';
+loadAdminLiveRoomControls(currentChatRoom || 'general');
+}
+
+async function adminToggleLiveRoomFlag(flagKey) {
+if (!canUseAdminPermission('manageLiveRooms')) return;
+const roomId = normalizeUsername(document.getElementById('admin-live-room-id')?.value || currentChatRoom || 'general') || 'general';
+const room = getChatRoomConfig(roomId);
+if (!room || !canManageRoom(room)) {
+  setAdminToolStatus('admin-live-room-status', 'You cannot manage that room.', 'error');
+  return;
+}
+const nextValue = !room[flagKey];
+try {
+  await getAdminDb().collection(CHAT_ROOMS_COLLECTION).doc(room.id).set({
+    [flagKey]: nextValue,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+  chatRoomsCache = {
+    ...chatRoomsCache,
+    [room.id]: buildChatRoomConfig(room.id, { ...room, [flagKey]: nextValue })
+  };
+  await writeAuditLog(flagKey === 'readOnly' ? 'toggle_room_read_only' : 'toggle_room_media_lock', room.id, `${flagKey} -> ${nextValue}`);
+  setAdminToolStatus('admin-live-room-status', `${room.name} ${flagKey === 'readOnly' ? 'freeze' : 'media lock'} is now ${nextValue ? 'on' : 'off'}.`, 'success');
+  loadAdminLiveRoomControls(room.id);
+  renderChatRoomSummary();
+} catch (err) {
+  setAdminToolStatus('admin-live-room-status', 'Failed to update that room.', 'error');
+}
+}
+
+async function adminToggleLiveRoomPrivacy() {
+if (!canUseAdminPermission('manageLiveRooms')) return;
+const roomId = normalizeUsername(document.getElementById('admin-live-room-id')?.value || currentChatRoom || 'general') || 'general';
+activeRoomModerationId = roomId;
+await toggleRoomModerationPrivacy();
+const refreshedRoom = await getFreshChatRoomConfig(roomId);
+setAdminToolStatus('admin-live-room-status', `${refreshedRoom.name} is now ${refreshedRoom.isPublic ? 'public' : 'private'}.`, 'success');
+loadAdminLiveRoomControls(roomId);
+}
+
+async function adminClearLiveRoomMessages() {
+if (!canUseAdminPermission('manageLiveRooms')) return;
+const roomId = normalizeUsername(document.getElementById('admin-live-room-id')?.value || currentChatRoom || 'general') || 'general';
+activeRoomModerationId = roomId;
+await clearRoomModerationMessages();
+loadAdminLiveRoomControls(roomId);
+setAdminToolStatus('admin-live-room-status', `Finished the clear-room action for ${roomId}.`, 'success');
+}
+
 function setAdminProfileBackgroundShopStatus(message = '', tone = 'neutral') {
 const node = document.getElementById('admin-profile-background-shop-status');
 if (!node) return;
@@ -11701,6 +12977,43 @@ if (!isOwnProfile) {
 const ownedIds = new Set(sanitizeOwnedProfileBackgroundIds(casinoStats && casinoStats.ownedProfileBackgroundIds));
 const selectedId = normalizeOptionalProfileBackgroundId(casinoStats && casinoStats.selectedProfileBackgroundId || '');
 const items = getRenderableProfileBackgroundShopItems(casinoStats);
+const ownedItems = items.filter((item) => ownedIds.has(item.id));
+const shopItems = items.filter((item) => item.active && !ownedIds.has(item.id));
+const ownedMarkup = ownedItems.length ? ownedItems.map((item) => {
+  const equipped = selectedId === item.id;
+  const encodedId = encodeURIComponent(item.id);
+  const availabilityLabel = item.active ? 'For sale' : 'Owned legacy item';
+  return `<div style="padding:0.75rem; border-radius:0.75rem; background:#151a22; border:1px solid #2a3440; display:grid; gap:0.55rem;">
+    <div style="min-height:5.5rem; border-radius:0.7rem; border:1px solid rgba(255,255,255,0.08); ${getProfileModalBackgroundStyleText(item.backgroundData, 'display:flex; align-items:flex-end; padding:0.7rem; box-sizing:border-box; color:#fff; font-weight:700;')}">${escapeHtml(item.title)}</div>
+    <div style="display:flex; justify-content:space-between; gap:0.7rem; align-items:flex-start; flex-wrap:wrap;">
+      <div>
+        <div style="font-weight:700; color:#fff;">${escapeHtml(item.title)}</div>
+        <div style="margin-top:0.18rem; font-size:0.78rem; color:#9fb0c2;">${escapeHtml(item.description || 'Profile-wide background skin.')}</div>
+        <div style="margin-top:0.18rem; font-size:0.76rem; color:${item.active ? '#9fb0c2' : '#ffcc80'};">${escapeHtml(availabilityLabel)} • Owned</div>
+      </div>
+      <div style="display:flex; gap:0.45rem; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+        <button onclick="equipProfileBackgroundShopItem('${encodedId}')" style="padding:0.45rem 0.8rem; border:none; border-radius:0.45rem; background:${equipped ? '#2e7d32' : '#1565c0'}; color:#fff; font-weight:700;" ${equipped ? 'disabled' : ''}>${equipped ? 'Equipped' : 'Apply'}</button>
+        <button onclick="deleteOwnedProfileBackgroundShopItem('${encodedId}')" style="padding:0.45rem 0.8rem; border:none; border-radius:0.45rem; background:#5d4037; color:#fff; font-weight:700;">Delete</button>
+      </div>
+    </div>
+  </div>`;
+}).join('') : '<div style="padding:0.8rem; border-radius:0.7rem; background:#151a22; border:1px solid #2a3440; color:#9fb0c2;">You do not own any profile backgrounds yet.</div>';
+const shopMarkup = shopItems.length ? shopItems.map((item) => {
+  const encodedId = encodeURIComponent(item.id);
+  return `<div style="padding:0.75rem; border-radius:0.75rem; background:#151a22; border:1px solid #2a3440; display:grid; gap:0.55rem;">
+    <div style="min-height:5.5rem; border-radius:0.7rem; border:1px solid rgba(255,255,255,0.08); ${getProfileModalBackgroundStyleText(item.backgroundData, 'display:flex; align-items:flex-end; padding:0.7rem; box-sizing:border-box; color:#fff; font-weight:700;')}">${escapeHtml(item.title)}</div>
+    <div style="display:flex; justify-content:space-between; gap:0.7rem; align-items:flex-start; flex-wrap:wrap;">
+      <div>
+        <div style="font-weight:700; color:#fff;">${escapeHtml(item.title)}</div>
+        <div style="margin-top:0.18rem; font-size:0.78rem; color:#9fb0c2;">${escapeHtml(item.description || 'Profile-wide background skin.')}</div>
+        <div style="margin-top:0.18rem; font-size:0.76rem; color:#9fb0c2;">For sale • $${item.price.toLocaleString()}</div>
+      </div>
+      <div style="display:flex; gap:0.45rem; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+        <button onclick="buyProfileBackgroundShopItem('${encodedId}')" style="padding:0.45rem 0.8rem; border:none; border-radius:0.45rem; background:#6a1b9a; color:#fff; font-weight:700;">Buy $${item.price.toLocaleString()}</button>
+      </div>
+    </div>
+  </div>`;
+}).join('') : '<div style="padding:0.8rem; border-radius:0.7rem; background:#151a22; border:1px solid #2a3440; color:#9fb0c2;">No live profile backgrounds are for sale right now.</div>';
 section.style.display = 'block';
 section.innerHTML = `
   <div class="profile-section-title">Profile Background Shop</div>
@@ -11975,15 +13288,15 @@ generalShopCaseOpeningState = {
 
 function renderGeneralShopRarityBadge(rarity) {
 const config = getGeneralShopRarityConfig(rarity);
-return `<span style="display:inline-flex; align-items:center; padding:0.22rem 0.52rem; border-radius:999px; font-size:0.64rem; font-weight:800; letter-spacing:0.05em; text-transform:uppercase; background:rgba(12,18,28,0.74); border:1px solid ${config.color}; color:${config.color};">${escapeHtml(config.label)}</span>`;
+return `<span style="display:inline-flex; align-items:center; gap:0.35rem; border-radius:999px; padding:0.26rem 0.56rem; background:rgba(255,255,255,0.06); border:1px solid ${config.color}; color:${config.color}; font-size:0.72rem; font-weight:800; letter-spacing:0.03em; text-transform:uppercase;">${escapeHtml(config.label)}</span>`;
 }
 
 function getGeneralShopCaseOpeningEntryPresentation(entry, state) {
-const rarity = getGeneralShopRarityConfig(entry && entry.rarity);
-const maskGold = rarity.id === 'special';
+const rarity = getGeneralShopRarityConfig(entry && entry.rarity ? entry.rarity : (entry && entry.item ? entry.item.rarity : 'mil-spec'));
+const maskGold = rarity.id === 'special' && !(state && state.revealActualReward && entry && entry.item && entry.item.id === state.rewardItemId);
 return {
+  title: maskGold ? 'Rare Special Item' : sanitizeNullableText(entry && entry.item ? entry.item.title : '', 'Unknown Drop'),
   rarity,
-  title: maskGold ? 'Rare Special Item' : (entry && entry.item ? entry.item.title : 'Drop'),
   visualData: maskGold ? 'linear-gradient(135deg, #3c2704 0%, #8f5f0f 45%, #f6c453 100%)' : (entry && entry.item ? entry.item.visualData : ''),
   masked: maskGold
 };
@@ -12078,6 +13391,8 @@ const items = getRenderableGeneralShopItems(stats).filter((item) => item.active)
 const cases = getRenderableGeneralShopCases(stats).filter((item) => item.active);
 const ownedIds = new Set(sanitizeOwnedGeneralShopItemIds(stats && stats.ownedGeneralShopItemIds));
 const caseCounts = getOwnedGeneralShopCaseCounts(stats);
+const liveActiveShopItemCount = getAllGeneralShopItems().filter((item) => item && item.itemType === 'shop-item' && item.active).length;
+const rotationNote = liveActiveShopItemCount > items.length ? 'Rotating selection refreshes every 3 days.' : 'All live shop items are visible right now.';
 container.innerHTML = `
   <div class="store-shelf">
     <div class="store-shelf-header">
@@ -12122,7 +13437,7 @@ container.innerHTML = `
     <div class="store-shelf-header">
       <div>
         <div class="store-shelf-title">Shop Items</div>
-        <div class="store-shelf-subtitle">Visible items that can be bought directly from the live shop.</div>
+        <div class="store-shelf-subtitle">Visible items that can be bought directly from the live shop. ${escapeHtml(rotationNote)}</div>
       </div>
       <div class="store-shelf-subtitle">${items.length} live shop item${items.length === 1 ? '' : 's'}</div>
     </div>
@@ -12429,10 +13744,12 @@ try {
       allTimeBestGeneralShopDropRarity: shouldUpdateBestDrop ? normalizeGeneralShopRarity(rewardInfo.item.rarity) : normalizeGeneralShopRarity(liveStats.allTimeBestGeneralShopDropRarity),
       allTimeBestGeneralShopDropValue: shouldUpdateBestDrop ? rewardSaleValue : Math.max(0, Number(liveStats.allTimeBestGeneralShopDropValue || 0))
     };
+    const { ownedGeneralShopCaseCounts, ...nextStatsWithoutCaseCounts } = nextStats;
     tx.set(balanceRef, {
       username: user,
       displayName: sanitizeNullableText((snap.exists ? (snap.data() || {}).displayName : '') || displayName, user),
-      ...nextStats,
+      ...nextStatsWithoutCaseCounts,
+      ...buildOwnedGeneralShopCaseCountFieldPatch(liveStats.ownedGeneralShopCaseCounts, ownedGeneralShopCaseCounts),
       updatedAtMs: Date.now()
     }, { merge: true });
   });
@@ -12624,6 +13941,7 @@ const editBtn = document.getElementById('profile-edit-btn');
 const saveBtn = document.getElementById('profile-save-btn');
 if (!badgesEl || !detailListEl || !featuredDropEl || !editPanelEl || !editBtn || !saveBtn) return;
 const badges = getProfileBadges(profileUserKey, stats, profile);
+const showcasedBadges = getShowcasedProfileBadges(profileUserKey, stats, profile);
 const favoriteGameName = sanitizeNullableText(profile.favoriteGameName, '') || 'None set';
 const joinedLabel = sanitizeNullableText(profile.joinLabel, '') || 'Unknown';
 const mutualFriends = profileUserKey && myFriends.has(profileUserKey) ? 1 : 0;
@@ -12635,12 +13953,13 @@ const casinoPushes = Math.max(0, Number(casinoStats.pushes || 0));
 const casinoWinRate = casinoGamesPlayed ? `${Math.round((casinoWins / casinoGamesPlayed) * 100)}%` : '0%';
 const casinoAchievementsUnlocked = Array.isArray(casinoStats.achievementIds) ? casinoStats.achievementIds.length : 0;
 const equippedProfileBackground = getProfileBackgroundShopItem(casinoStats.selectedProfileBackgroundId);
+const equippedProfileBackgroundRarity = getProfileBackgroundRarityMeta(equippedProfileBackground);
 const featuredDrop = getSelectedGeneralShopFeaturedItem(casinoStats);
 const featuredDropRarity = featuredDrop ? getGeneralShopRarityConfig(featuredDrop.rarity) : null;
 const equippedRewardTitle = getEquippedProfileRewardTitle(profileUserKey, stats, casinoStats, profile);
 const equippedRewardCosmetic = getEquippedProfileRewardCosmetic(profileUserKey, stats, casinoStats, profile);
 const statusQuote = sanitizeNullableText(profile.statusQuote, '');
-badgesEl.innerHTML = badges.length ? badges.map((badge) => `<span class="profile-badge">${escapeHtml(badge.icon)} ${escapeHtml(badge.label)}</span>`).join('') : '<span style="color:#888; font-size:0.84rem;">No badges yet.</span>';
+badgesEl.innerHTML = badges.length ? `${showcasedBadges.length ? `<div class="profile-showcase-row">${showcasedBadges.map((badge) => `<span class="profile-badge profile-badge--showcase">${escapeHtml(badge.icon)} ${escapeHtml(badge.label)}</span>`).join('')}</div>` : ''}<div class="profile-showcase-row">${badges.map((badge) => `<span class="profile-badge">${escapeHtml(badge.icon)} ${escapeHtml(badge.label)}</span>`).join('')}</div>` : '<span style="color:#888; font-size:0.84rem;">No badges yet.</span>';
 detailListEl.innerHTML = [
   ['Title', equippedRewardTitle || 'None equipped'],
   ['Accent', equippedRewardCosmetic ? equippedRewardCosmetic.label : 'None equipped'],
@@ -12649,6 +13968,7 @@ detailListEl.innerHTML = [
   ['Favorite Game', favoriteGameName],
   ['Joined', joinedLabel],
   ['Profile Background', equippedProfileBackground ? equippedProfileBackground.title : 'Default'],
+  ['Background Rarity', equippedProfileBackground ? equippedProfileBackgroundRarity.label : 'Default'],
   ['Best Drop', featuredDrop ? featuredDrop.title : 'None selected'],
   ['Shop Items', String(sanitizeOwnedGeneralShopItemIds(casinoStats.ownedGeneralShopItemIds).length)],
   ['Shop Cases', String(Object.values(getOwnedGeneralShopCaseCounts(casinoStats)).reduce((sum, count) => sum + count, 0))],
@@ -12680,6 +14000,8 @@ editBtn.style.display = isOwnProfile ? 'inline-block' : 'none';
 saveBtn.style.display = isOwnProfile && currentProfileEditorVisible ? 'inline-block' : 'none';
 editPanelEl.style.display = isOwnProfile && currentProfileEditorVisible ? 'grid' : 'none';
 if (isOwnProfile && currentProfileEditorVisible) {
+  const badgeOptions = getProfileBadges(profileUserKey, stats, profile);
+  const showcasedLabels = getShowcasedProfileBadges(profileUserKey, stats, profile).map((badge) => badge.label);
   pendingProfileAvatarData = pendingProfileAvatarData === null ? sanitizeProfileAvatar(profile.avatarData) : pendingProfileAvatarData;
   pendingProfileBannerData = pendingProfileBannerData === null ? sanitizeProfileBanner(profile.bannerData) : pendingProfileBannerData;
   editPanelEl.innerHTML = `
@@ -12733,6 +14055,10 @@ if (isOwnProfile && currentProfileEditorVisible) {
         <option value="">No accent</option>
         ${getUnlockedProfileRewardCosmetics(stats, casinoStats, profileUserKey).map((cosmetic) => `<option value="${escapeHtml(cosmetic.id)}" ${sanitizeNullableText(profile.profileAccentId, '') === cosmetic.id ? 'selected' : ''}>${escapeHtml(cosmetic.label)}</option>`).join('')}
       </select>
+      <div style="display:grid; gap:0.45rem;">
+        <div style="font-size:0.78rem; color:#9fb0c2;">Badge showcase slots</div>
+        ${Array.from({ length: PROFILE_BADGE_SHOWCASE_LIMIT }).map((_, index) => `<select id="profile-edit-showcase-badge-${index}"><option value="">No badge</option>${badgeOptions.map((badge) => `<option value="${escapeHtml(badge.label)}" ${showcasedLabels[index] === badge.label ? 'selected' : ''}>${escapeHtml(`${badge.icon} ${badge.label}`)}</option>`).join('')}</select>`).join('')}
+      </div>
     </div>
     <textarea id="profile-edit-bio" maxlength="220" placeholder="Short bio">${escapeHtml(profile.bio || '')}</textarea>`;
   applyProfileBannerBackground(document.getElementById('profile-edit-banner-preview'), pendingProfileBannerData, document.getElementById('profile-edit-banner-empty'));
@@ -13053,6 +14379,10 @@ const bioEl = document.getElementById('profile-edit-bio');
 const quoteEl = document.getElementById('profile-edit-quote');
 const titleEl = document.getElementById('profile-edit-title');
 const accentEl = document.getElementById('profile-edit-accent');
+const showcasedBadgeLabels = Array.from({ length: PROFILE_BADGE_SHOWCASE_LIMIT }).map((_, index) => {
+  const select = document.getElementById(`profile-edit-showcase-badge-${index}`);
+  return sanitizeNullableText(select && select.value, '').slice(0, 40);
+}).filter(Boolean);
 const favoriteIds = Array.from(getFavoriteGameIds());
 const primaryFavorite = favoriteIds.length ? getStoreGameById(favoriteIds[0]) : null;
 const nextProfile = {
@@ -13065,6 +14395,7 @@ const nextProfile = {
   statusQuote: sanitizeNullableText(quoteEl && quoteEl.value, '').slice(0, 120),
   profileTitle: sanitizeNullableText(titleEl && titleEl.value, '').slice(0, 40),
   profileAccentId: sanitizeNullableText(accentEl && accentEl.value, '').slice(0, 24),
+  showcasedBadgeLabels: Array.from(new Set(showcasedBadgeLabels)).slice(0, PROFILE_BADGE_SHOWCASE_LIMIT),
   joinLabel: getCachedProfile(key).joinLabel || new Date().toLocaleDateString(),
   updatedAtMs: Date.now()
 };
@@ -13319,6 +14650,7 @@ const subtitle = getGameSubtitle(game);
 const isNew = isGameRecentlyAdded(game);
  const myRating = getGameRating(game.id);
  const isFavorite = favorites.has(game.id);
+ const ownerDeleteButton = canOwnerDeleteStoreGames() ? `<button class="danger-button" onclick="deleteStorefrontGame('${encodeURIComponent(game.id)}')">Delete</button>` : '';
 return `<article class="game-store-card">
 <div class="game-store-thumb">
 <img src="${escapeHtml(thumb)}" alt="${escapeHtml(game.name)} thumbnail" loading="lazy" />
@@ -13344,6 +14676,7 @@ ${pollLabel ? `<span class="${pollClass}">${escapeHtml(pollLabel)}</span>` : ''}
 <button onclick="openGameById('${escapeHtml(game.id)}')">Play Now</button>
 <button class="secondary-button" onclick="openGameThumbnailPollModal('${game.id}')">${state.pollActive ? 'Vote Thumbnail' : 'Thumbnail Poll'}</button>
  <button class="utility-button" onclick="openBrokenGameReportModal('${escapeHtml(game.id)}')">Report Broken</button>
+ ${ownerDeleteButton}
 </div>
 </div>
 </article>`;
@@ -13359,12 +14692,8 @@ if (game.source === 'builtin' && typeof game.index === 'number') {
   return;
 }
   currentGameIdx = null;
-  currentCustomIframeUrl = '';
-  gameIframe.src = game.url;
-  iframeContainer.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-  refreshBtn.style.display = 'inline-block';
-  closeBtn.style.display = 'inline-block';
+  currentIframeSiteUrl = '';
+  if (!openCustomUrlInIframe(game.url)) return;
   incrementUserStat('gamesOpened');
   incrementGameOpenCount(game.id);
   recordRecentGame(game);
@@ -13694,6 +15023,7 @@ updatedAt: firebase.firestore.FieldValue.serverTimestamp()
 window.addEventListener('load', () => {
 renderGameStorefront();
 renderChatRoomToolbarState();
+renderIframeRecentHistory();
 updateCustomColorInput(getChatColor());
 });
 
@@ -13701,12 +15031,17 @@ const iframeContainer = document.getElementById('iframe-container');
 const gameIframe = document.getElementById('game-iframe');
 const refreshBtn = document.getElementById('refresh-btn');
 const iframeSiteBtn = document.getElementById('iframe-site-btn');
+const iframeOpenTabBtn = document.getElementById('iframe-open-tab-btn');
+const iframeHardRefreshBtn = document.getElementById('iframe-hard-refresh-btn');
 const closeBtn = document.getElementById('close-btn');
 const ADMIN_BLOOKET_TOOL_URL = 'https://s3.amazonaws.com/lucidestatic/index.html#/';
 const ADMIN_BLOOKET_SITE_URL = 'https://blooketbot.schoolcheats.net/';
+const SCHOOL_SCHEDULE_IFRAME_URL = 'https://docs.google.com/document/d/1xoJTA-5e444uWJm58EGiIOqhDbOaUoGQs8HY1pbrljs/preview';
 let currentGameIdx = null;
 let currentCustomIframeUrl = '';
 let currentIframeSiteUrl = '';
+let pendingIframeNavigationTimeout = null;
+let iframeNavigationToken = 0;
 
 function normalizeIframeUrl(value) {
 const raw = String(value || '').trim();
@@ -13719,6 +15054,97 @@ return parsed.toString();
 } catch (err) {
 return '';
 }
+}
+
+function clearPendingIframeNavigation() {
+iframeNavigationToken += 1;
+if (pendingIframeNavigationTimeout !== null) {
+window.clearTimeout(pendingIframeNavigationTimeout);
+pendingIframeNavigationTimeout = null;
+}
+}
+
+function navigateGameIframe(url, forceReload) {
+const nextUrl = String(url || '').trim();
+if (!nextUrl || !gameIframe) return false;
+clearPendingIframeNavigation();
+if (!forceReload) {
+gameIframe.src = nextUrl;
+return true;
+}
+const navigationToken = iframeNavigationToken;
+gameIframe.src = 'about:blank';
+pendingIframeNavigationTimeout = window.setTimeout(() => {
+  if (navigationToken !== iframeNavigationToken) return;
+  gameIframe.src = nextUrl;
+  pendingIframeNavigationTimeout = null;
+}, 40);
+return true;
+}
+
+function getCurrentIframeUrl() {
+if (currentGameIdx !== null && games[currentGameIdx] && games[currentGameIdx].url) return String(games[currentGameIdx].url);
+return String(currentCustomIframeUrl || '');
+}
+
+function getCurrentIframeLabel() {
+if (currentGameIdx !== null && games[currentGameIdx] && games[currentGameIdx].name) return sanitizeNullableText(games[currentGameIdx].name, 'Game');
+return sanitizeNullableText(currentIframeSiteUrl || currentCustomIframeUrl || 'Custom Site', 'Custom Site');
+}
+
+function normalizeIframeRecentHistoryEntries(entries) {
+return (Array.isArray(entries) ? entries : []).map((entry) => ({
+  url: normalizeIframeUrl(entry && entry.url),
+  label: sanitizeNullableText(entry && entry.label, 'Recent Site').slice(0, 80),
+  openedAtMs: Math.max(0, Number(entry && entry.openedAtMs || 0))
+})).filter((entry) => entry.url).sort((a, b) => b.openedAtMs - a.openedAtMs).slice(0, IFRAME_RECENT_HISTORY_LIMIT);
+}
+
+function saveIframeRecentHistory() {
+iframeRecentHistory = normalizeIframeRecentHistoryEntries(iframeRecentHistory);
+writeJsonStorage(IFRAME_RECENT_HISTORY_KEY, iframeRecentHistory);
+}
+
+function renderIframeRecentHistory() {
+const list = document.getElementById('iframe-recent-list');
+if (!list) return;
+iframeRecentHistory = normalizeIframeRecentHistoryEntries(iframeRecentHistory);
+if (!iframeRecentHistory.length) {
+  list.innerHTML = '<div class="iframe-recent-empty">No recent iframe launches yet.</div>';
+  return;
+}
+  list.innerHTML = iframeRecentHistory.map((entry) => `<button type="button" class="iframe-recent-item" onclick="openRecentIframeByEncoded('${encodeURIComponent(entry.url)}','${encodeURIComponent(entry.label)}')"><span>${escapeHtml(entry.label)}</span><span>${escapeHtml(formatInboxTime(entry.openedAtMs))}</span></button>`).join('');
+}
+
+function addIframeRecentHistoryEntry(url, label) {
+const normalizedUrl = normalizeIframeUrl(url);
+if (!normalizedUrl) return;
+iframeRecentHistory = normalizeIframeRecentHistoryEntries([
+  { url: normalizedUrl, label: sanitizeNullableText(label, 'Recent Site'), openedAtMs: Date.now() },
+  ...iframeRecentHistory.filter((entry) => entry.url !== normalizedUrl)
+]);
+saveIframeRecentHistory();
+renderIframeRecentHistory();
+}
+
+function openRecentIframeByEncoded(encodedUrl = '', encodedLabel = '') {
+const url = normalizeIframeUrl(decodeURIComponent(encodedUrl || ''));
+if (!url) return;
+openCustomUrlInIframe(url);
+addIframeRecentHistoryEntry(url, sanitizeNullableText(decodeURIComponent(encodedLabel || ''), 'Recent Site'));
+}
+
+function openIframeInNewTab() {
+const url = getCurrentIframeUrl();
+if (!url) return;
+window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function hardRefreshGame() {
+const url = getCurrentIframeUrl();
+if (!url) return;
+const separator = url.includes('?') ? '&' : '?';
+navigateGameIframe(`${url}${separator}_refresh=${Date.now()}`, true);
 }
 
 function openCustomUrlModal() {
@@ -13742,12 +15168,15 @@ if (!nextUrl) return false;
 currentGameIdx = null;
 currentCustomIframeUrl = nextUrl;
 currentIframeSiteUrl = '';
-gameIframe.src = nextUrl;
+if (!navigateGameIframe(nextUrl, false)) return false;
 iframeContainer.style.display = 'flex';
 document.body.style.overflow = 'hidden';
 refreshBtn.style.display = 'inline-block';
 iframeSiteBtn.style.display = 'none';
 closeBtn.style.display = 'inline-block';
+if (iframeOpenTabBtn) iframeOpenTabBtn.style.display = 'inline-block';
+if (iframeHardRefreshBtn) iframeHardRefreshBtn.style.display = 'inline-block';
+addIframeRecentHistoryEntry(nextUrl, getCurrentIframeLabel());
 return true;
 }
 
@@ -13756,12 +15185,20 @@ const opened = openCustomUrlInIframe(url);
 if (!opened) return false;
 currentIframeSiteUrl = normalizeIframeUrl(siteUrl);
 iframeSiteBtn.style.display = currentIframeSiteUrl ? 'inline-block' : 'none';
+addIframeRecentHistoryEntry(url, sanitizeNullableText(currentIframeSiteUrl || 'Owner Tool', 'Owner Tool'));
 return true;
 }
 
 function openIframeSiteLink() {
 if (!currentIframeSiteUrl) return;
 window.open(currentIframeSiteUrl, '_blank', 'noopener,noreferrer');
+}
+
+function openSchoolScheduleInIframe() {
+const opened = openCustomUrlInIframe(SCHOOL_SCHEDULE_IFRAME_URL);
+if (!opened) return;
+currentIframeSiteUrl = '';
+iframeSiteBtn.style.display = 'none';
 }
 
 function openIframeSiteInfo() {
@@ -13822,12 +15259,15 @@ const playableGame = getPlayableGames().find((game) => game.index === idx) || nu
 currentGameIdx = idx;
 currentCustomIframeUrl = '';
 currentIframeSiteUrl = '';
-gameIframe.src = games[idx].url;
+if (!navigateGameIframe(games[idx].url, false)) return;
 iframeContainer.style.display = 'flex';
 document.body.style.overflow = 'hidden';
 refreshBtn.style.display = games[idx] && games[idx].url ? 'inline-block' : 'none';
 iframeSiteBtn.style.display = 'none';
 closeBtn.style.display = games[idx] && games[idx].url ? 'inline-block' : 'none';
+if (iframeOpenTabBtn) iframeOpenTabBtn.style.display = games[idx] && games[idx].url ? 'inline-block' : 'none';
+if (iframeHardRefreshBtn) iframeHardRefreshBtn.style.display = games[idx] && games[idx].url ? 'inline-block' : 'none';
+addIframeRecentHistoryEntry(games[idx].url, sanitizeNullableText(games[idx].name, 'Game'));
 incrementUserStat('gamesOpened');
 if (playableGame) {
 incrementGameOpenCount(playableGame.id);
@@ -13837,6 +15277,7 @@ addSiteActivity('game_launch', `${getMyProfileKey() || 'guest'} opened ${playabl
 }
 
 function closeGame() {
+clearPendingIframeNavigation();
 gameIframe.src = '';
 iframeContainer.style.display = 'none';
 document.body.style.overflow = 'auto';
@@ -13846,19 +15287,23 @@ currentIframeSiteUrl = '';
 refreshBtn.style.display = 'none';
 iframeSiteBtn.style.display = 'none';
 closeBtn.style.display = 'none';
+if (iframeOpenTabBtn) iframeOpenTabBtn.style.display = 'none';
+if (iframeHardRefreshBtn) iframeHardRefreshBtn.style.display = 'none';
 }
 
 function refreshGame() {
 if (currentGameIdx !== null && games[currentGameIdx]) {
-gameIframe.src = games[currentGameIdx].url;
+  navigateGameIframe(games[currentGameIdx].url, true);
 return;
 }
 if (currentCustomIframeUrl) {
-gameIframe.src = currentCustomIframeUrl;
+  navigateGameIframe(currentCustomIframeUrl, true);
 }
 }
 
 refreshBtn.onclick = refreshGame;
+if (iframeOpenTabBtn) iframeOpenTabBtn.onclick = openIframeInNewTab;
+if (iframeHardRefreshBtn) iframeHardRefreshBtn.onclick = hardRefreshGame;
 closeBtn.onclick = closeGame;
 
 
@@ -14008,48 +15453,6 @@ const STATIC_BANNED_USERS = [
 
 ]
 
-const firebaseConfig = {
-apiKey: "AIzaSyC9SMr54yXr0uk0M7JEeuawj0J98IylU20",
-authDomain: "balright--chat.firebaseapp.com",
-projectId: "balright--chat",
-databaseURL: "https://balright--chat-default-rtdb.firebaseio.com",
-storageBucket: "balright--chat.firebasestorage.app",
-messagingSenderId: "233595240223",
-appId: "1:233595240223:web:8477fa939d4491d375fa2a"
-};                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
-
-const adminFirebaseConfig = {
-apiKey: "AIzaSyDYQNtr7l1G35coXkOS0yU1hAN0SaqUwnI",
-authDomain: "balright-admin.firebaseapp.com",
-projectId: "balright-admin",
-storageBucket: "balright-admin.firebasestorage.app",
-messagingSenderId: "217574354625",
-appId: "1:217574354625:web:f7da2650966911a56f2e40"
-};
-
-const archiveFirebaseConfig = {
-apiKey: "AIzaSyD_mTLJiBJUc7OgVKQ4A0vTrJ8b3u2tnlY",
-authDomain: "balright-archive.firebaseapp.com",
-projectId: "balright-archive",
-storageBucket: "balright-archive.firebasestorage.app",
-messagingSenderId: "696203941105",
-appId: "1:696203941105:web:5b8d370ad383537c19c550"
-};
-
-const casinoFirebaseConfig = {
-apiKey: "AIzaSyABMyvYjhr7gvLOrxdDMKUoCuVtfLEBOTg",
-authDomain: "balright-casino.firebaseapp.com",
-projectId: "balright-casino",
-storageBucket: "balright-casino.firebasestorage.app",
-messagingSenderId: "534969019133",
-appId: "1:534969019133:web:e2a4169fd920077816ac94"
-};
-
-const ADMIN_APP_NAME = 'balright-admin';
-const ARCHIVE_APP_NAME = 'balright-archive';
-const CASINO_APP_NAME = 'balright-casino';
-const configuredFirestoreDbs = new WeakSet();
-
 function isFirebaseConfigReady(config) {
 return !!(config && config.apiKey && config.projectId && config.appId);
 }
@@ -14153,11 +15556,9 @@ el.innerHTML = [
 ].join('');
 }
 
-let chatInitialized = false;
-let currentChatUser = '';
-let currentChatColor = '#1565c0';
+const OWNER_ROLE_GRADIENT_SECONDARY_STORAGE_KEY = 'ownerRoleGradientSecondaryColor';
+let ownerRoleGradientSecondaryColor = normalizeRoleNameEffectColor(localStorage.getItem(OWNER_ROLE_GRADIENT_SECONDARY_STORAGE_KEY) || '#ffd54f', '#ffd54f');
 let roleNameEffectsEnabled = localStorage.getItem('roleNameEffectsEnabled') !== '0';
-let chatRoomToolbarOpen = localStorage.getItem('chatRoomToolbarOpen') !== '0';
 let isChatDragging = false;
 let chatDragOffsetX = 0;
 let chatDragOffsetY = 0;
@@ -14181,6 +15582,7 @@ const MAX_VISIBLE_PINNED_MESSAGES = 4;
 let pinnedMessageBarCollapsed = localStorage.getItem('pinnedMessageBarCollapsed') === '1';
 let chatPreFullscreenState = null;
 let lastGlobalAlertKey = localStorage.getItem('lastGlobalAlertKey') || '';
+let globalAlertHideTimeout = null;
 let roleCache = {};
 let userTagCache = {};
 let currentProfileViewUser = '';
@@ -14191,7 +15593,15 @@ let dmKnownIncomingIds = new Set();
 let dmConversationSummaries = [];
 let dmConversationDocs = new Map();
 let dmInboxDocs = new Map();
+let dmConversationPinnedUsers = new Set();
+let dmConversationMutedUsers = new Set();
+let dmConversationSearchText = '';
+let dmConversationUnreadOnly = false;
+let dmMessageSearchText = '';
+let dmInboxPrefsLoadedForUser = '';
+let currentDmMessagesCache = [];
 let dmInboxOutgoingUnsub = null;
+let iframeRecentHistory = readJsonStorage(IFRAME_RECENT_HISTORY_KEY, []);
 let lastChatNotificationMessageId = '';
 let currentChatRoom = 'general';
 let blockedUsers = new Set();
@@ -14447,8 +15857,31 @@ return targetRoom.roleAssignments[me] || 'member';
 }
 
 function canPostInRoom(room, username = currentChatUser) {
-const role = getRoomRole(room, username);
+const targetRoom = buildChatRoomConfig(room && room.id ? room.id : 'general', room || {});
+const role = getRoomRole(targetRoom, username);
+if (targetRoom.readOnly && !canBypassRoomRestrictions(targetRoom, username)) return false;
 return role !== 'read-only';
+}
+
+function canShareMediaInRoom(room, username = currentChatUser) {
+const targetRoom = buildChatRoomConfig(room && room.id ? room.id : 'general', room || {});
+if (!canPostInRoom(targetRoom, username)) return false;
+if (targetRoom.mediaBlocked && !canBypassRoomRestrictions(targetRoom, username)) return false;
+return true;
+}
+
+async function getFreshChatRoomConfig(roomId) {
+const normalizedId = normalizeUsername(roomId) || 'general';
+const fallbackRoom = getChatRoomConfig(normalizedId);
+try {
+  const snapshot = await getAdminDb().collection(CHAT_ROOMS_COLLECTION).doc(normalizedId).get();
+  if (!snapshot || !snapshot.exists) return fallbackRoom;
+  const nextRoom = buildChatRoomConfig(normalizedId, snapshot.data() || {});
+  chatRoomsCache = { ...chatRoomsCache, [normalizedId]: nextRoom };
+  return nextRoom;
+} catch (_) {
+  return fallbackRoom;
+}
 }
 
 function isFavoriteRoom(roomId) {
@@ -14514,8 +15947,14 @@ createdBy: normalizeUsername(raw.createdBy || ''),
 members: Array.isArray(raw.members) ? raw.members.map(normalizeUsername).filter(Boolean) : [],
 icon: normalizeRoomIcon(raw.icon || ''),
 inviteCode: normalizeRoomInviteCode(raw.inviteCode || ''),
-roleAssignments: normalizeRoomRoleAssignments(raw.roleAssignments || {})
+roleAssignments: normalizeRoomRoleAssignments(raw.roleAssignments || {}),
+readOnly: !!raw.readOnly,
+mediaBlocked: !!raw.mediaBlocked
 };
+}
+
+function canBypassRoomRestrictions(room, username = currentChatUser) {
+return getRoomRole(room, username) === 'manager';
 }
 
 function canAccessRoom(room, username = currentChatUser) {
@@ -14630,7 +16069,7 @@ if (summary) {
   const audienceLabel = getRoomAudienceLabel(room);
   const roleLabel = getRoomRole(room) === 'read-only' ? 'Read-only access' : getRoomRole(room) === 'manager' ? 'Manager access' : getRoomRole(room) === 'poster' ? 'Poster access' : 'Post access';
   const roomTitle = `<span class="chat-room-summary-title">${renderRoomIconHtml(room.icon)}<span>${escapeHtml(room.name)}</span></span>`;
-  summary.innerHTML = `${roomTitle}<div class="chat-room-pill-row"><span class="chat-room-pill">${escapeHtml(accessLabel)}</span><span class="chat-room-pill">${escapeHtml(audienceLabel)}</span><span class="chat-room-pill">${escapeHtml(roleLabel)}</span>${room.inviteCode ? `<span class="chat-room-pill">Invite ready</span>` : ''}</div>${room.description ? `<div style="margin-top:0.32rem; color:#9fb0c2; font-size:0.76rem;">${escapeHtml(room.description)}</div>` : ''}`;
+  summary.innerHTML = `${roomTitle}<div class="chat-room-pill-row"><span class="chat-room-pill">${escapeHtml(accessLabel)}</span><span class="chat-room-pill">${escapeHtml(audienceLabel)}</span><span class="chat-room-pill">${escapeHtml(roleLabel)}</span>${room.readOnly ? '<span class="chat-room-pill">Room Frozen</span>' : ''}${room.mediaBlocked ? '<span class="chat-room-pill">Media Locked</span>' : ''}${room.inviteCode ? `<span class="chat-room-pill">Invite ready</span>` : ''}</div>${room.description ? `<div style="margin-top:0.32rem; color:#9fb0c2; font-size:0.76rem;">${escapeHtml(room.description)}</div>` : ''}`;
 }
 const input = document.getElementById('chat-message-input');
 if (input && !isReadOnlyForCurrentUser()) {
@@ -15537,6 +16976,7 @@ async function openUserProfileFromChat(encodedUsername, event) {
 if (event) event.stopPropagation();
 const username = normalizeUsername(decodeURIComponent(encodedUsername || ''));
 if (!username) return;
+closeLeaderboardModalForProfileNavigation();
 await fetchStatsFromFirestore(username);
 await loadProfileDetails(username);
 currentProfileEditorVisible = false;
@@ -15544,6 +16984,17 @@ profileModalBackgroundOnly = false;
 await loadFriendsData();
 renderProfileModal(username);
 document.getElementById('profile-modal').style.display = 'flex';
+}
+
+function closeLeaderboardModalForProfileNavigation() {
+const leaderboardModal = document.getElementById('leaderboard-modal');
+if (leaderboardModal && leaderboardModal.style.display === 'flex') {
+  closeLeaderboardModal();
+}
+const casinoLeaderboardModal = document.getElementById('casino-leaderboard-modal');
+if (casinoLeaderboardModal && casinoLeaderboardModal.style.display === 'flex') {
+  closeCasinoLeaderboardModal();
+}
 }
 
 function closeProfileModal() {
@@ -15598,7 +17049,7 @@ if (resolvedUserKey) {
 }
 if (profilePanelEl) {
 const equippedProfileBackground = getProfileBackgroundShopItem(casinoStats.selectedProfileBackgroundId);
-applyProfileModalBackground(profilePanelEl, equippedProfileBackground ? equippedProfileBackground.backgroundData : '');
+applyProfileModalBackground(profilePanelEl, equippedProfileBackground ? equippedProfileBackground.backgroundData : getActiveSiteEventProfileBackground());
 const equippedRewardCosmetic = getEquippedProfileRewardCosmetic(resolvedUserKey, stats, casinoStats, profile);
 applyProfileRewardCosmetic(profilePanelEl, equippedRewardCosmetic);
 profilePanelEl.classList.toggle('profile-modal-preview-only', profileModalBackgroundOnly);
@@ -15949,6 +17400,13 @@ if (!timestampValue || typeof timestampValue.toDate !== 'function') return 0;
 return timestampValue.toDate().getTime();
 }
 
+function formatChatDateTime(timestampValue) {
+if (!timestampValue) return '';
+const date = timestampValue instanceof Date ? timestampValue : new Date(timestampValue);
+if (Number.isNaN(date.getTime())) return '';
+return date.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
 function formatInboxTime(timestampMs) {
 if (!timestampMs) return '';
 const date = new Date(timestampMs);
@@ -15965,36 +17423,249 @@ const baseText = rawText || 'Sent a message';
 return `${isOwn ? 'You: ' : ''}${baseText}`.slice(0, 90);
 }
 
-function getDmConversationListHtml(activeUsername = '', emptyText = 'No conversations yet.', compact = false) {
-const active = normalizeUsername(activeUsername);
-if (!dmConversationSummaries.length) {
-return `<div class="dm-empty-state">${escapeHtml(emptyText)}</div>`;
+function getDMInboxPrefsStorageKey() {
+const key = getMyProfileKey() || normalizeUsername(currentChatUser || getUserName() || 'guest');
+return `${DM_INBOX_PREFS_STORAGE_KEY}:${key || 'guest'}`;
 }
-return dmConversationSummaries.map((summary) => {
+
+function ensureDMInboxPrefsLoaded(force = false) {
+const storageKey = getDMInboxPrefsStorageKey();
+if (!force && dmInboxPrefsLoadedForUser === storageKey) return;
+const stored = readJsonStorage(storageKey, {}) || {};
+dmConversationPinnedUsers = new Set((Array.isArray(stored.pinnedUsers) ? stored.pinnedUsers : []).map(normalizeUsername).filter(Boolean));
+dmConversationMutedUsers = new Set((Array.isArray(stored.mutedUsers) ? stored.mutedUsers : []).map(normalizeUsername).filter(Boolean));
+dmConversationSearchText = sanitizeNullableText(stored.searchText, '').slice(0, 60);
+dmConversationUnreadOnly = !!stored.unreadOnly;
+dmInboxPrefsLoadedForUser = storageKey;
+syncDMInboxControls();
+}
+
+function saveDMInboxPrefs() {
+ensureDMInboxPrefsLoaded();
+writeJsonStorage(getDMInboxPrefsStorageKey(), {
+  pinnedUsers: Array.from(dmConversationPinnedUsers).slice(0, 80),
+  mutedUsers: Array.from(dmConversationMutedUsers).slice(0, 80),
+  searchText: dmConversationSearchText,
+  unreadOnly: dmConversationUnreadOnly
+});
+}
+
+function getDMDraftStorageKey(username) {
+const me = getMyProfileKey() || normalizeUsername(currentChatUser || 'guest');
+const target = normalizeUsername(username || '');
+return `dmDraft:${me}:${target}`;
+}
+
+function getDMDraft(username) {
+return sanitizeNullableText(localStorage.getItem(getDMDraftStorageKey(username)) || '', '').slice(0, 500);
+}
+
+function setDMDraft(username, value) {
+const key = normalizeUsername(username);
+if (!key) return;
+const nextValue = sanitizeNullableText(value, '').slice(0, 500);
+try {
+  if (nextValue) {
+    localStorage.setItem(getDMDraftStorageKey(key), nextValue);
+  } else {
+    localStorage.removeItem(getDMDraftStorageKey(key));
+  }
+} catch (_) {}
+}
+
+function isDMMutedConversation(username) {
+ensureDMInboxPrefsLoaded();
+return dmConversationMutedUsers.has(normalizeUsername(username));
+}
+
+function setDMMutedConversation(username, muted) {
+const key = normalizeUsername(username);
+if (!key) return;
+ensureDMInboxPrefsLoaded();
+if (muted) {
+  dmConversationMutedUsers.add(key);
+} else {
+  dmConversationMutedUsers.delete(key);
+}
+saveDMInboxPrefs();
+renderDMConversationLists();
+syncActiveDMControls();
+}
+
+function syncDMInboxControls() {
+const searchInput = document.getElementById('dm-conversation-search');
+if (searchInput && searchInput.value !== dmConversationSearchText) {
+  searchInput.value = dmConversationSearchText;
+}
+const allBtn = document.getElementById('dm-filter-all-btn');
+const unreadBtn = document.getElementById('dm-filter-unread-btn');
+if (allBtn) allBtn.classList.toggle('is-active', !dmConversationUnreadOnly);
+if (unreadBtn) unreadBtn.classList.toggle('is-active', !!dmConversationUnreadOnly);
+}
+
+function isDMPinnedConversation(username) {
+ensureDMInboxPrefsLoaded();
+return dmConversationPinnedUsers.has(normalizeUsername(username));
+}
+
+function setDMPinnedConversation(username, pinned) {
+const key = normalizeUsername(username);
+if (!key) return;
+ensureDMInboxPrefsLoaded();
+if (pinned) {
+  dmConversationPinnedUsers.add(key);
+} else {
+  dmConversationPinnedUsers.delete(key);
+}
+saveDMInboxPrefs();
+renderDMConversationLists();
+}
+
+function toggleDMPinByEncoded(encodedUsername = '') {
+const username = normalizeUsername(decodeURIComponent(encodedUsername || ''));
+if (!username) return;
+setDMPinnedConversation(username, !isDMPinnedConversation(username));
+}
+
+function setDMUnreadFilter(unreadOnly) {
+dmConversationUnreadOnly = !!unreadOnly;
+saveDMInboxPrefs();
+renderDMConversationLists();
+}
+
+function onDMConversationSearchInput() {
+const input = document.getElementById('dm-conversation-search');
+dmConversationSearchText = sanitizeNullableText(input ? input.value : '', '').slice(0, 60);
+saveDMInboxPrefs();
+renderDMConversationLists();
+}
+
+function onDMMessageSearchInput() {
+const input = document.getElementById('dm-message-search');
+dmMessageSearchText = sanitizeNullableText(input ? input.value : '', '').slice(0, 80);
+renderActiveDMMessageList();
+}
+
+function onDMInputChanged() {
+const active = normalizeUsername(activeDMUser);
+if (!active) return;
+const input = document.getElementById('dm-input');
+setDMDraft(active, input ? input.value : '');
+rebuildDMConversationSummaries();
+}
+
+function getFilteredDMConversationSummaries() {
+ensureDMInboxPrefsLoaded();
+const query = dmConversationSearchText.trim().toLowerCase();
+return dmConversationSummaries.filter((summary) => {
+  if (dmConversationUnreadOnly && !(summary.unreadCount > 0)) return false;
+  if (!query) return true;
+  const username = sanitizeNullableText(summary.username, '').toLowerCase();
+  const preview = sanitizeNullableText(summary.preview, '').toLowerCase();
+  return username.includes(query) || preview.includes(query);
+});
+}
+
+function syncActiveDMControls() {
+const pinBtn = document.getElementById('dm-pin-btn');
+const clearBtn = document.getElementById('dm-clear-btn');
+const muteBtn = document.getElementById('dm-mute-btn');
+const jumpBtn = document.getElementById('dm-jump-unread-btn');
+if (pinBtn) {
+  const active = normalizeUsername(activeDMUser);
+  pinBtn.disabled = !active;
+  pinBtn.textContent = active && isDMPinnedConversation(active) ? 'Unpin' : 'Pin';
+}
+if (clearBtn) clearBtn.disabled = !normalizeUsername(activeDMUser);
+if (muteBtn) {
+  const active = normalizeUsername(activeDMUser);
+  muteBtn.disabled = !active;
+  muteBtn.textContent = active && isDMMutedConversation(active) ? 'Unmute' : 'Mute';
+}
+if (jumpBtn) {
+  const me = normalizeUsername(currentChatUser);
+  jumpBtn.disabled = !normalizeUsername(activeDMUser) || !currentDmMessagesCache.some((entry) => entry.to === me && !entry.readByRecipient);
+}
+}
+
+function renderActiveDMMessageList() {
+const container = document.getElementById('dm-messages');
+const searchMeta = document.getElementById('dm-search-meta');
+if (!container) return;
+if (!normalizeUsername(activeDMUser)) {
+  if (searchMeta) searchMeta.textContent = 'No conversation selected.';
+  container.innerHTML = '<div class="dm-empty-state">Pick a conversation from the inbox to read or reply.</div>';
+  syncActiveDMControls();
+  return;
+}
+const query = dmMessageSearchText.trim().toLowerCase();
+const visibleMessages = query
+  ? currentDmMessagesCache.filter((entry) => sanitizeNullableText(entry.message, '').toLowerCase().includes(query))
+  : currentDmMessagesCache.slice();
+if (searchMeta) {
+  searchMeta.textContent = query
+    ? `${visibleMessages.length} match${visibleMessages.length === 1 ? '' : 'es'} in this conversation.`
+    : `${currentDmMessagesCache.length} message${currentDmMessagesCache.length === 1 ? '' : 's'} loaded.`;
+}
+if (!currentDmMessagesCache.length) {
+  container.innerHTML = '<div class="dm-empty-state">No messages yet. Say hi!</div>';
+  syncActiveDMControls();
+  return;
+}
+if (query && !visibleMessages.length) {
+  container.innerHTML = '<div class="dm-empty-state">No messages matched your search.</div>';
+  syncActiveDMControls();
+  return;
+}
+const me = normalizeUsername(currentChatUser);
+container.innerHTML = visibleMessages.map((entry, index) => {
+  const isOwn = entry.from === me;
+  const unreadIncoming = entry.to === me && !entry.readByRecipient;
+  return `<div class="dm-message-entry${unreadIncoming ? ' is-unread' : ''}" data-dm-message-index="${index}" style="display:flex; flex-direction:column; align-items:${isOwn ? 'flex-end' : 'flex-start'}; max-width:80%; align-self:${isOwn ? 'flex-end' : 'flex-start'};"><div style="background:${isOwn ? '#1565c0' : '#2a2a2a'}; padding:0.45rem 0.75rem; border-radius:0.6rem; color:#fff; font-size:0.9rem; word-break:break-word;">${escapeHtml(entry.message)}</div><div style="font-size:0.7rem; color:#666; margin-top:0.1rem;">${escapeHtml(entry.from)} \u00b7 ${escapeHtml(entry.time)}${unreadIncoming ? ' \u00b7 New' : ''}</div></div>`;
+}).join('');
+container.scrollTop = container.scrollHeight;
+syncActiveDMControls();
+}
+
+function getDmConversationListHtml(activeUsername = '', emptyText = 'No conversations yet.', compact = false) {
+const summaries = getFilteredDMConversationSummaries();
+const active = normalizeUsername(activeUsername);
+if (!summaries.length) {
+const filteredEmptyText = dmConversationSearchText.trim()
+  ? 'No conversations matched your search.'
+  : (dmConversationUnreadOnly ? 'No unread conversations right now.' : emptyText);
+return `<div class="dm-empty-state">${escapeHtml(filteredEmptyText)}</div>`;
+}
+return summaries.map((summary) => {
 const summaryUser = normalizeUsername(summary.username);
 const displayUsername = sanitizeNullableText(summary.username, '?');
 const encodedUser = encodeURIComponent(summaryUser);
 const activeClass = summaryUser === active ? ' is-active' : '';
 const unreadClass = summary.unreadCount > 0 ? ' has-unread' : '';
 const unreadBadge = summary.unreadCount > 0 ? `<span class="dm-conversation-unread">${summary.unreadCount > 99 ? '99+' : summary.unreadCount}</span>` : '';
+const pinned = isDMPinnedConversation(summaryUser);
+const muted = isDMMutedConversation(summaryUser);
+const draft = getDMDraft(summaryUser);
 const avatar = escapeHtml(displayUsername.slice(0, 2).toUpperCase());
-const preview = escapeHtml(sanitizeNullableText(summary.preview, 'Open conversation'));
+const preview = escapeHtml(draft ? `Draft: ${draft}` : sanitizeNullableText(summary.preview, 'Open conversation'));
 const timeText = escapeHtml(formatInboxTime(summary.lastMessageAtMs));
-return `<button class="dm-conversation-item${activeClass}${unreadClass}" onclick="openDMModalByEncoded('${encodedUser}')" style="${compact ? 'padding:0.65rem 0.75rem;' : ''}">
+return `<div class="dm-conversation-row${pinned ? ' is-pinned' : ''}"><button class="dm-conversation-item${activeClass}${unreadClass}" onclick="openDMModalByEncoded('${encodedUser}')" style="${compact ? 'padding:0.65rem 0.75rem;' : ''}">
 <div class="dm-conversation-avatar">${avatar}</div>
 <div class="dm-conversation-content">
 <div class="dm-conversation-top">
-<div class="dm-conversation-name">${escapeHtml(displayUsername)}</div>
+<div class="dm-conversation-name">${escapeHtml(displayUsername)}${pinned ? ' <span class="dm-pinned-label">Pinned</span>' : ''}${muted ? ' <span class="dm-pinned-label dm-muted-label">Muted</span>' : ''}</div>
 <div class="dm-conversation-time">${timeText}</div>
 </div>
-<div class="dm-conversation-preview">${preview}</div>
+<div class="dm-conversation-preview${draft ? ' is-draft' : ''}">${preview}</div>
 </div>
 ${unreadBadge}
-</button>`;
+</button><button type="button" class="dm-conversation-pin${pinned ? ' is-active' : ''}" onclick="toggleDMPinByEncoded('${encodedUser}')" title="${pinned ? 'Unpin conversation' : 'Pin conversation'}">${pinned ? '★' : '☆'}</button></div>`;
 }).join('');
 }
 
 function renderDMConversationLists() {
+ensureDMInboxPrefsLoaded();
+syncDMInboxControls();
 const sidebarList = document.getElementById('dm-conversation-list');
 if (sidebarList) {
 sidebarList.innerHTML = getDmConversationListHtml(activeDMUser, 'No conversations yet. Start from a profile or your friends list.');
@@ -16003,6 +17674,7 @@ const inboxList = document.getElementById('friends-dm-inbox-list');
 if (inboxList) {
 inboxList.innerHTML = getDmConversationListHtml(activeDMUser, 'No DMs yet. Messages you send or receive will show up here.', true);
 }
+syncActiveDMControls();
 }
 
 function rebuildDMConversationSummaries() {
@@ -16018,6 +17690,8 @@ return;
 dmConversationSummaries = Array.from(dmConversationDocs.values()).filter((summary) => {
 return !!summary && !!summary.username && !isUserBlocked(summary.username);
 }).sort((a, b) => {
+const pinnedDelta = Number(isDMPinnedConversation(b.username)) - Number(isDMPinnedConversation(a.username));
+if (pinnedDelta !== 0) return pinnedDelta;
 if (b.unreadCount !== a.unreadCount) return b.unreadCount - a.unreadCount;
 return b.lastMessageAtMs - a.lastMessageAtMs;
 });
@@ -16250,6 +17924,8 @@ if (!key) return;
 next[key] = buildProfileCacheEntry(key, data);
 });
 userProfileCache = next;
+renderAdminUserEffectManager();
+renderAdminCustomTitleManager();
 refreshInlineProfileAvatars();
 if (currentProfileViewUser && document.getElementById('profile-modal')?.style.display === 'flex') {
 renderProfileModal(currentProfileViewUser);
@@ -16328,12 +18004,12 @@ return rawWords
 function renderAnnouncementBanner() {
 const banner = document.getElementById('site-announcement-banner');
 if (!banner) return;
-const eventData = activeSiteEventCache;
-if (eventData && (!eventData.endsAtMs || eventData.endsAtMs > Date.now())) {
+const eventData = getActiveSiteEventData();
+if (eventData) {
 banner.style.display = 'block';
 banner.style.background = eventData.accent || '#2f8d46';
 banner.style.borderColor = eventData.accent || '#2f8d46';
-banner.textContent = `${eventData.title}${eventData.body ? ` • ${eventData.body}` : ''}${eventData.endsAtMs ? ` • Ends ${new Date(eventData.endsAtMs).toLocaleString()}` : ''}`;
+banner.textContent = `${eventData.title}${getSiteEventSummaryText(eventData) ? ` • ${getSiteEventSummaryText(eventData)}` : ''}${eventData.endsAtMs ? ` • Ends ${new Date(eventData.endsAtMs).toLocaleString()}` : ''}`;
 return;
 }
 const text = moderationSettings.announcementText || '';
@@ -16396,12 +18072,27 @@ moderationSettings.announcementEndsAt = data.announcementEndsAt && typeof data.a
 
 const alertText = data.globalAlertText ? String(data.globalAlertText).trim() : '';
 const alertDurationSeconds = Math.max(2, Math.min(30, parseInt(data.globalAlertDurationSeconds, 10) || 10));
+const alertStartsAtMs = data.globalAlertStartsAt && typeof data.globalAlertStartsAt.toDate === 'function'
+? data.globalAlertStartsAt.toDate().getTime()
+: 0;
 const alertUpdatedAt = data.globalAlertUpdatedAt && typeof data.globalAlertUpdatedAt.toDate === 'function'
 ? data.globalAlertUpdatedAt.toDate().getTime()
 : 0;
+const alertEndsAtMs = data.globalAlertEndsAt && typeof data.globalAlertEndsAt.toDate === 'function'
+? data.globalAlertEndsAt.toDate().getTime()
+: 0;
+const nowMs = Date.now();
+const resolvedAlertEndsAtMs = alertEndsAtMs > 0
+? alertEndsAtMs
+: (alertUpdatedAt > 0 ? (alertUpdatedAt + (alertDurationSeconds * 1000)) : 0);
+const alertHasStarted = !alertStartsAtMs || alertStartsAtMs <= nowMs;
+const alertIsExpired = resolvedAlertEndsAtMs > 0 && resolvedAlertEndsAtMs <= nowMs;
 const nextAlertKey = getGlobalAlertStorageKey(alertText, alertUpdatedAt);
-if (nextAlertKey && !hasSeenGlobalAlert(alertText, alertUpdatedAt)) {
-showGlobalAlertNotification(alertText, alertDurationSeconds);
+if (alertHasStarted && !alertIsExpired && nextAlertKey && !hasSeenGlobalAlert(alertText, alertUpdatedAt)) {
+const remainingDurationSeconds = resolvedAlertEndsAtMs > nowMs
+? Math.max(2, Math.ceil((resolvedAlertEndsAtMs - nowMs) / 1000))
+: alertDurationSeconds;
+showGlobalAlertNotification(alertText, Math.min(alertDurationSeconds, remainingDurationSeconds));
 setLastSeenGlobalAlertKey(nextAlertKey);
 }
 
@@ -16424,6 +18115,492 @@ applyReadOnlyUiState();
 });
 } catch (err) {
 console.error('Failed to load moderation settings:', err);
+}
+}
+
+function getAdminUserEffectStatusElement() {
+const status = document.getElementById('admin-user-effect-status');
+return status || document.getElementById('admin-ban-status');
+}
+
+function syncAdminUserEffectCustomInputs() {
+const wrap = document.getElementById('admin-user-effect-custom-colors');
+const select = document.getElementById('admin-user-effect-select');
+if (!wrap || !select) return;
+const effectId = normalizeUsernameEffectId(select.value);
+wrap.style.display = effectId === 'custom' || effectId === 'custompulse' ? 'grid' : 'none';
+}
+
+function renderAdminUserEffectPreview() {
+const preview = document.getElementById('admin-user-effect-preview');
+const select = document.getElementById('admin-user-effect-select');
+if (!preview || !select) return;
+const username = getSelectedAdminEffectUser() || 'preview';
+const effectId = normalizeUsernameEffectId(select.value);
+const primaryInput = document.getElementById('admin-user-effect-primary');
+const secondaryInput = document.getElementById('admin-user-effect-secondary');
+if (!effectId || !canUserUseAssignedUsernameEffect(effectId, username)) {
+  preview.innerHTML = `<span style="color:#dfe7f2; font-weight:700;">${escapeHtml(username)}</span>`;
+  syncAdminUserEffectCustomInputs();
+  return;
+}
+preview.innerHTML = buildAssignedUsernameEffectMarkup(
+  username,
+  effectId,
+  primaryInput ? primaryInput.value : '',
+  secondaryInput ? secondaryInput.value : '',
+  { baseClass: 'leaderboard-name-copy' }
+);
+syncAdminUserEffectCustomInputs();
+}
+
+function adminLoadUserEffectForm(encodedUsername) {
+if (normalizeUsername(getUserRole(currentChatUser)) !== 'owner') return;
+const username = normalizeUsername(decodeURIComponent(encodedUsername || ''));
+if (!username) return;
+const userSelect = document.getElementById('admin-user-effect-user');
+const select = document.getElementById('admin-user-effect-select');
+const primaryInput = document.getElementById('admin-user-effect-primary');
+const secondaryInput = document.getElementById('admin-user-effect-secondary');
+const profile = getCachedProfile(username);
+const effectId = normalizeUsernameEffectId(profile.usernameEffectId);
+if (userSelect) userSelect.value = username;
+if (select) select.value = canUserUseAssignedUsernameEffect(effectId, username) ? effectId : '';
+if (primaryInput) primaryInput.value = normalizeRoleNameEffectColor(profile.usernameEffectPrimaryColor || '#8fe3ff', '#8fe3ff');
+if (secondaryInput) secondaryInput.value = normalizeRoleNameEffectColor(profile.usernameEffectSecondaryColor || '#4f78ff', '#4f78ff');
+renderAdminUserEffectPreview();
+const status = getAdminUserEffectStatusElement();
+if (status) status.textContent = `Loaded current effect for ${username}.`;
+}
+
+function renderAdminUserEffectManager() {
+const select = document.getElementById('admin-user-effect-select');
+const list = document.getElementById('admin-user-effect-list');
+if (!select || !list) return;
+const targetUsername = getSelectedAdminEffectUser();
+const currentValue = normalizeUsernameEffectId(select.value);
+select.innerHTML = ['<option value="">No extra effect</option>']
+  .concat(getUsernameEffectPresetOptions(targetUsername).map((entry) => `<option value="${escapeHtml(entry.id)}">${escapeHtml(entry.label)}</option>`))
+  .join('');
+select.value = canUserUseAssignedUsernameEffect(currentValue, targetUsername) ? currentValue : '';
+const entries = Object.values(userProfileCache || {})
+  .filter((profile) => {
+    const effectId = normalizeUsernameEffectId(profile.usernameEffectId);
+    return effectId && canUserUseAssignedUsernameEffect(effectId, profile.username);
+  })
+  .sort((left, right) => left.username.localeCompare(right.username));
+list.innerHTML = entries.length
+  ? entries.map((profile) => {
+    const effectId = normalizeUsernameEffectId(profile.usernameEffectId);
+    const preset = getUsernameEffectPreset(effectId);
+    const encodedUser = encodeURIComponent(profile.username || '');
+    const assignedByText = sanitizeNullableText(profile.usernameEffectAssignedBy, '');
+    return `<div style="display:grid; gap:0.45rem; padding:0.65rem 0; border-bottom:1px solid rgba(255,255,255,0.08);"><div style="display:flex; align-items:center; justify-content:space-between; gap:0.75rem; flex-wrap:wrap;"><div style="display:grid; gap:0.25rem; min-width:0;">${buildAssignedUsernameEffectMarkup(profile.username, effectId, profile.usernameEffectPrimaryColor, profile.usernameEffectSecondaryColor, { baseClass: 'leaderboard-name-copy' })}<div style="font-size:0.76rem; color:#8ea3b8;">${escapeHtml(preset ? preset.label : effectId)}${assignedByText ? ` • by ${escapeHtml(assignedByText)}` : ''}</div></div><div style="display:flex; gap:0.4rem; flex-wrap:wrap;"><button type="button" onclick="adminLoadUserEffectForm('${encodedUser}')" class="admin-btn admin-btn--slate">Edit</button><button type="button" onclick="adminClearUserEffect('${encodedUser}')" class="admin-btn admin-btn--maroon">Clear</button></div></div></div>`;
+  }).join('')
+  : '<div class="admin-helper-text admin-helper-text--flush">No user effects assigned yet.</div>';
+syncAdminUserEffectCustomInputs();
+renderAdminUserEffectPreview();
+}
+
+async function adminSaveUserEffect() {
+if (normalizeUsername(getUserRole(currentChatUser)) !== 'owner') return;
+const username = getSelectedAdminEffectUser();
+const select = document.getElementById('admin-user-effect-select');
+const primaryInput = document.getElementById('admin-user-effect-primary');
+const secondaryInput = document.getElementById('admin-user-effect-secondary');
+const status = getAdminUserEffectStatusElement();
+if (!username) {
+  if (status) status.textContent = 'Select a user for the effect.';
+  return;
+}
+if (!select) return;
+const effectId = normalizeUsernameEffectId(select.value);
+const preset = getUsernameEffectPreset(effectId);
+if (effectId && !canUserUseAssignedUsernameEffect(effectId, username)) {
+  if (status) status.textContent = 'Custom Pulse can only be assigned to the owner.';
+  return;
+}
+const usesCustomColors = effectId === 'custom' || effectId === 'custompulse';
+const payload = {
+  usernameEffectId: effectId,
+  usernameEffectPrimaryColor: usesCustomColors ? normalizeRoleNameEffectColor(primaryInput ? primaryInput.value : '#8fe3ff', '#8fe3ff') : '',
+  usernameEffectSecondaryColor: usesCustomColors ? normalizeRoleNameEffectColor(secondaryInput ? secondaryInput.value : '#4f78ff', '#4f78ff') : '',
+  usernameEffectAssignedBy: effectId ? normalizeUsername(currentChatUser) : '',
+  updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  updatedAtMs: Date.now()
+};
+try {
+  await getAdminDb().collection(USER_PROFILES_COLLECTION).doc(username).set(payload, { merge: true });
+  if (status) {
+    status.textContent = effectId
+      ? `Applied ${(preset || {}).label || effectId} to ${username}.`
+      : `Cleared the extra effect for ${username}.`;
+  }
+  await writeAuditLog('assign_username_effect', username, effectId ? `Effect: ${(preset || {}).label || effectId}` : 'Cleared username effect');
+  refreshRoleNameEffectUi();
+} catch (err) {
+  if (status) status.textContent = 'Failed to save the user effect.';
+}
+}
+
+async function adminClearUserEffect(encodedUsername = '') {
+if (normalizeUsername(getUserRole(currentChatUser)) !== 'owner') return;
+const username = encodedUsername
+  ? normalizeUsername(decodeURIComponent(encodedUsername || ''))
+  : getSelectedAdminEffectUser();
+const status = getAdminUserEffectStatusElement();
+if (!username) {
+  if (status) status.textContent = 'Select a user to clear.';
+  return;
+}
+try {
+  await getAdminDb().collection(USER_PROFILES_COLLECTION).doc(username).set({
+    usernameEffectId: '',
+    usernameEffectPrimaryColor: '',
+    usernameEffectSecondaryColor: '',
+    usernameEffectAssignedBy: '',
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedAtMs: Date.now()
+  }, { merge: true });
+  const userSelect = document.getElementById('admin-user-effect-user');
+  if (userSelect && normalizeUsername(userSelect.value) === username) {
+    const select = document.getElementById('admin-user-effect-select');
+    const primaryInput = document.getElementById('admin-user-effect-primary');
+    const secondaryInput = document.getElementById('admin-user-effect-secondary');
+    if (select) select.value = '';
+    if (primaryInput) primaryInput.value = '#8fe3ff';
+    if (secondaryInput) secondaryInput.value = '#4f78ff';
+    renderAdminUserEffectPreview();
+  }
+  if (status) status.textContent = `Cleared the extra effect for ${username}.`;
+  await writeAuditLog('clear_username_effect', username, 'Cleared username effect');
+  refreshRoleNameEffectUi();
+} catch (err) {
+  if (status) status.textContent = 'Failed to clear the user effect.';
+}
+}
+
+function renderAdminCustomTitlePreview() {
+const preview = document.getElementById('admin-custom-title-preview');
+if (!preview) return;
+const username = getSelectedAdminCustomTitleUser() || 'preview';
+const input = document.getElementById('admin-custom-title-input');
+const title = sanitizeNullableText(input ? input.value : '', '').slice(0, 40) || 'Event Champion';
+preview.innerHTML = `<span style="color:#dfe7f2; font-weight:700;">@${escapeHtml(username)}</span><span style="color:#9fb0c2;"> • ${escapeHtml(title)}</span>`;
+}
+
+function adminLoadCustomTitleForm(encodedUsername = '') {
+const username = normalizeUsername(decodeURIComponent(encodedUsername || getSelectedAdminCustomTitleUser() || ''));
+if (!username) return;
+const select = document.getElementById('admin-custom-title-user');
+const input = document.getElementById('admin-custom-title-input');
+const profile = getCachedProfile(username);
+if (select) select.value = username;
+if (input) input.value = sanitizeNullableText(profile.adminAssignedTitle, '').slice(0, 40);
+renderAdminCustomTitlePreview();
+}
+
+function renderAdminCustomTitleManager() {
+const list = document.getElementById('admin-custom-title-list');
+const input = document.getElementById('admin-custom-title-input');
+if (!list) return;
+if (normalizeUsername(getUserRole(currentChatUser)) !== 'owner') {
+  list.innerHTML = '<div class="admin-helper-text admin-helper-text--flush">Only the owner can assign custom titles.</div>';
+  return;
+}
+const username = getSelectedAdminCustomTitleUser();
+if (input && username) {
+  const profile = getCachedProfile(username);
+  if (document.activeElement !== input) {
+    input.value = sanitizeNullableText(profile.adminAssignedTitle, '').slice(0, 40);
+  }
+}
+const entries = Object.values(userProfileCache || {}).filter((profile) => profile && sanitizeNullableText(profile.adminAssignedTitle, ''))
+  .sort((a, b) => sanitizeNullableText(a.username, '').localeCompare(sanitizeNullableText(b.username, '')));
+list.innerHTML = entries.length
+  ? entries.map((profile) => {
+    const encodedUser = encodeURIComponent(profile.username || '');
+    const assignedBy = sanitizeNullableText(profile.adminAssignedTitleBy, '');
+    return `<div style="display:grid; gap:0.45rem; padding:0.65rem 0; border-bottom:1px solid rgba(255,255,255,0.08);"><div style="display:flex; align-items:center; justify-content:space-between; gap:0.75rem; flex-wrap:wrap;"><div style="display:grid; gap:0.25rem; min-width:0;"><div><span style="color:#dfe7f2; font-weight:700;">@${escapeHtml(profile.username)}</span><span style="color:#9fb0c2;"> • ${escapeHtml(profile.adminAssignedTitle)}</span></div><div style="font-size:0.76rem; color:#8ea3b8;">${assignedBy ? `Assigned by ${escapeHtml(assignedBy)}` : 'Owner title assigned'}</div></div><div style="display:flex; gap:0.4rem; flex-wrap:wrap;"><button type="button" onclick="adminLoadCustomTitleForm('${encodedUser}')" class="admin-btn admin-btn--slate">Edit</button><button type="button" onclick="adminClearCustomTitle('${encodedUser}')" class="admin-btn admin-btn--maroon">Clear</button></div></div></div>`;
+  }).join('')
+  : '<div class="admin-helper-text admin-helper-text--flush">No owner titles assigned yet.</div>';
+renderAdminCustomTitlePreview();
+}
+
+async function adminSaveCustomTitle() {
+if (normalizeUsername(getUserRole(currentChatUser)) !== 'owner') return;
+const username = getSelectedAdminCustomTitleUser();
+const input = document.getElementById('admin-custom-title-input');
+const status = document.getElementById('admin-custom-title-status');
+const title = sanitizeNullableText(input ? input.value : '', '').slice(0, 40);
+if (!username) {
+  if (status) status.textContent = 'Select a user for the custom title.';
+  return;
+}
+if (!title) {
+  if (status) status.textContent = 'Enter a custom title first.';
+  return;
+}
+try {
+  await getAdminDb().collection(USER_PROFILES_COLLECTION).doc(username).set({
+    adminAssignedTitle: title,
+    adminAssignedTitleBy: normalizeUsername(currentChatUser),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedAtMs: Date.now()
+  }, { merge: true });
+  userProfileCache[username] = {
+    ...getCachedProfile(username),
+    adminAssignedTitle: title,
+    adminAssignedTitleBy: normalizeUsername(currentChatUser),
+    username
+  };
+  if (status) status.textContent = `Applied ${title} to ${username}.`;
+  await writeAuditLog('assign_custom_title', username, `Title: ${title}`);
+  renderAdminCustomTitleManager();
+  if (currentProfileViewUser && normalizeUsername(currentProfileViewUser) === username) {
+    renderProfileModal(currentProfileViewUser);
+  }
+} catch (err) {
+  if (status) status.textContent = 'Failed to save the custom title.';
+}
+}
+
+async function adminClearCustomTitle(encodedUsername = '') {
+if (normalizeUsername(getUserRole(currentChatUser)) !== 'owner') return;
+const username = encodedUsername
+  ? normalizeUsername(decodeURIComponent(encodedUsername || ''))
+  : getSelectedAdminCustomTitleUser();
+const status = document.getElementById('admin-custom-title-status');
+if (!username) {
+  if (status) status.textContent = 'Select a user to clear.';
+  return;
+}
+try {
+  await getAdminDb().collection(USER_PROFILES_COLLECTION).doc(username).set({
+    adminAssignedTitle: '',
+    adminAssignedTitleBy: '',
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedAtMs: Date.now()
+  }, { merge: true });
+  userProfileCache[username] = {
+    ...getCachedProfile(username),
+    adminAssignedTitle: '',
+    adminAssignedTitleBy: '',
+    username
+  };
+  if (status) status.textContent = `Cleared the custom title for ${username}.`;
+  await writeAuditLog('clear_custom_title', username, 'Cleared custom title');
+  renderAdminCustomTitleManager();
+  if (currentProfileViewUser && normalizeUsername(currentProfileViewUser) === username) {
+    renderProfileModal(currentProfileViewUser);
+  }
+} catch (err) {
+  if (status) status.textContent = 'Failed to clear the custom title.';
+}
+}
+
+const OWNER_EVENT_MODE_PRESETS = Object.freeze({
+  'casino-weekend': {
+    themeMode: 'double-payouts',
+    title: 'Casino Weekend',
+    body: 'Double payouts are live across casino games for the weekend rush.',
+    accent: '#2f8d46',
+    hours: 48,
+    eventTagLabel: '',
+    eventTagBackground: '#3d2612',
+    eventTagColor: '#fff6d6',
+    eventTagBorder: '#f0c15a',
+    limitedProfileBackground: ''
+  },
+  'glow-week': {
+    themeMode: 'glow-week',
+    title: 'Glow Week',
+    body: 'Role accents and event banners are running in a brighter showcase mode.',
+    accent: '#ff9800',
+    hours: 168,
+    eventTagLabel: '',
+    eventTagBackground: '#3d2612',
+    eventTagColor: '#fff6d6',
+    eventTagBorder: '#f0c15a',
+    limitedProfileBackground: ''
+  },
+  'limited-background-week': {
+    themeMode: 'limited-background',
+    title: 'Limited Background Week',
+    body: 'Every profile gets a featured event backdrop for the week.',
+    accent: '#1565c0',
+    hours: 168,
+    eventTagLabel: '',
+    eventTagBackground: '#3d2612',
+    eventTagColor: '#fff6d6',
+    eventTagBorder: '#f0c15a',
+    limitedProfileBackground: 'linear-gradient(135deg, #13293d 0%, #1f4f7d 45%, #9ec5fe 100%)'
+  },
+  'owner-tag-night': {
+    themeMode: 'owner-tag',
+    title: 'Owner Tag Night',
+    body: 'The owner-picked event tag is live site-wide for a limited run.',
+    accent: '#8e24aa',
+    hours: 24,
+    eventTagLabel: 'Featured',
+    eventTagBackground: '#34124b',
+    eventTagColor: '#f7e6ff',
+    eventTagBorder: '#d28bff',
+    limitedProfileBackground: ''
+  }
+});
+
+function applyAdminEventModePreset(presetId) {
+const preset = OWNER_EVENT_MODE_PRESETS[sanitizeNullableText(presetId, '')] || null;
+if (!preset) return;
+const themeSelect = document.getElementById('admin-event-mode-theme');
+const titleInput = document.getElementById('admin-event-mode-title');
+const bodyInput = document.getElementById('admin-event-mode-body');
+const accentInput = document.getElementById('admin-event-mode-accent');
+const hoursInput = document.getElementById('admin-event-mode-hours');
+const tagLabelInput = document.getElementById('admin-event-mode-tag-label');
+const tagBgInput = document.getElementById('admin-event-mode-tag-bg');
+const tagTextInput = document.getElementById('admin-event-mode-tag-text');
+const tagBorderInput = document.getElementById('admin-event-mode-tag-border');
+const backgroundInput = document.getElementById('admin-event-mode-background');
+if (themeSelect) themeSelect.value = preset.themeMode;
+if (titleInput) titleInput.value = preset.title;
+if (bodyInput) bodyInput.value = preset.body;
+if (accentInput) accentInput.value = preset.accent;
+if (hoursInput) hoursInput.value = String(preset.hours);
+if (tagLabelInput) tagLabelInput.value = preset.eventTagLabel;
+if (tagBgInput) tagBgInput.value = preset.eventTagBackground;
+if (tagTextInput) tagTextInput.value = preset.eventTagColor;
+if (tagBorderInput) tagBorderInput.value = preset.eventTagBorder;
+if (backgroundInput) backgroundInput.value = preset.limitedProfileBackground;
+renderAdminEventModePreview();
+const status = document.getElementById('admin-event-mode-status');
+if (status) status.textContent = `${preset.title} preset loaded.`;
+}
+
+function syncAdminEventModeFormFromCache() {
+const themeSelect = document.getElementById('admin-event-mode-theme');
+if (!themeSelect) return;
+const eventData = activeSiteEventCache || null;
+const titleInput = document.getElementById('admin-event-mode-title');
+const bodyInput = document.getElementById('admin-event-mode-body');
+const accentInput = document.getElementById('admin-event-mode-accent');
+const hoursInput = document.getElementById('admin-event-mode-hours');
+const tagLabelInput = document.getElementById('admin-event-mode-tag-label');
+const tagBgInput = document.getElementById('admin-event-mode-tag-bg');
+const tagTextInput = document.getElementById('admin-event-mode-tag-text');
+const tagBorderInput = document.getElementById('admin-event-mode-tag-border');
+const backgroundInput = document.getElementById('admin-event-mode-background');
+themeSelect.value = eventData ? eventData.themeMode || '' : '';
+if (titleInput) titleInput.value = eventData ? sanitizeNullableText(eventData.title, '') : '';
+if (bodyInput) bodyInput.value = eventData ? sanitizeNullableText(eventData.body, '') : '';
+if (accentInput) accentInput.value = eventData ? normalizeProfileTagColor(eventData.accent, '#2f8d46') : '#2f8d46';
+if (hoursInput) {
+  const remainingHours = eventData && eventData.endsAtMs > Date.now()
+    ? Math.max(1, Math.round((eventData.endsAtMs - Date.now()) / 3600000))
+    : 24;
+  hoursInput.value = String(remainingHours);
+}
+if (tagLabelInput) tagLabelInput.value = eventData ? sanitizeNullableText(eventData.eventTagLabel, '') : '';
+if (tagBgInput) tagBgInput.value = eventData ? normalizeProfileTagColor(eventData.eventTagBackground, '#3d2612') : '#3d2612';
+if (tagTextInput) tagTextInput.value = eventData ? normalizeProfileTagColor(eventData.eventTagColor, '#fff6d6') : '#fff6d6';
+if (tagBorderInput) tagBorderInput.value = eventData ? normalizeProfileTagColor(eventData.eventTagBorder, '#f0c15a') : '#f0c15a';
+if (backgroundInput) backgroundInput.value = eventData ? sanitizeNullableText(eventData.limitedProfileBackground, '') : '';
+}
+
+function getAdminEventModeDraft() {
+const themeMode = normalizeSiteEventThemeMode(document.getElementById('admin-event-mode-theme')?.value || '');
+const accent = normalizeProfileTagColor(document.getElementById('admin-event-mode-accent')?.value || '#2f8d46', '#2f8d46');
+const hours = Math.max(1, Math.min(336, parseInt(document.getElementById('admin-event-mode-hours')?.value || '24', 10) || 24));
+return {
+  themeMode,
+  title: sanitizeNullableText(document.getElementById('admin-event-mode-title')?.value || '', '').slice(0, 80) || (themeMode ? getSiteEventThemeLabel(themeMode) : ''),
+  body: sanitizeNullableText(document.getElementById('admin-event-mode-body')?.value || '', '').slice(0, 240),
+  accent,
+  endsAtMs: Date.now() + (hours * 3600000),
+  payoutMultiplier: themeMode === 'double-payouts' ? 2 : 1,
+  eventTagLabel: sanitizeNullableText(document.getElementById('admin-event-mode-tag-label')?.value || '', '').slice(0, 24),
+  eventTagBackground: normalizeProfileTagColor(document.getElementById('admin-event-mode-tag-bg')?.value || '#3d2612', '#3d2612'),
+  eventTagColor: normalizeProfileTagColor(document.getElementById('admin-event-mode-tag-text')?.value || '#fff6d6', '#fff6d6'),
+  eventTagBorder: normalizeProfileTagColor(document.getElementById('admin-event-mode-tag-border')?.value || '#f0c15a', '#f0c15a'),
+  limitedProfileBackground: sanitizeProfileBanner(document.getElementById('admin-event-mode-background')?.value || '')
+};
+}
+
+function renderAdminEventModePreview() {
+const preview = document.getElementById('admin-event-mode-preview');
+if (!preview) return;
+const draft = normalizeSiteEventData(getAdminEventModeDraft());
+if (!draft) {
+  preview.innerHTML = '<div class="admin-helper-text admin-helper-text--flush">No event theme selected.</div>';
+  return;
+}
+const themeNote = getSiteEventThemeNote(draft);
+const tagMarkup = draft.themeMode === 'owner-tag' && draft.eventTagLabel
+  ? `<span class="custom-tag" style="background:${escapeHtml(draft.eventTagBackground)}; color:${escapeHtml(draft.eventTagColor)}; border-color:${escapeHtml(draft.eventTagBorder)};">${escapeHtml(draft.eventTagLabel)}</span>`
+  : '<span style="font-size:0.78rem; color:#90a4ae;">No event tag preview</span>';
+const backgroundStyle = getProfileModalBackgroundStyle(draft.limitedProfileBackground || '');
+const backgroundStyleText = draft.limitedProfileBackground
+  ? `background:${escapeHtml(backgroundStyle.background)};${backgroundStyle.backgroundSize ? `background-size:${escapeHtml(backgroundStyle.backgroundSize)};` : ''}${backgroundStyle.backgroundPosition ? `background-position:${escapeHtml(backgroundStyle.backgroundPosition)};` : ''}${backgroundStyle.backgroundRepeat ? `background-repeat:${escapeHtml(backgroundStyle.backgroundRepeat)};` : ''}`
+  : '';
+const backgroundNote = draft.themeMode === 'limited-background' && draft.limitedProfileBackground
+  ? `<div class="admin-event-background-preview" style="${backgroundStyleText}"></div>`
+  : '<div style="font-size:0.78rem; color:#90a4ae;">No profile background preview</div>';
+preview.innerHTML = `<div style="display:grid; gap:0.55rem;"><div style="font-weight:700; color:${escapeHtml(draft.accent)};">${escapeHtml(draft.title)}</div><div style="font-size:0.82rem; color:#c8d6e5;">${escapeHtml(getSiteEventSummaryText(draft) || 'Limited-time event')}</div><div style="font-size:0.76rem; color:#90a4ae;">${escapeHtml(themeNote || 'Standard event banner')}</div><div>${tagMarkup}</div>${backgroundNote}</div>`;
+}
+
+async function adminSaveEventMode() {
+if (!canUseAdminPermission('manageSettings') || normalizeUsername(getUserRole(currentChatUser)) !== 'owner') return;
+const status = document.getElementById('admin-event-mode-status');
+const draft = normalizeSiteEventData(getAdminEventModeDraft());
+if (!draft || !draft.themeMode) {
+  if (status) status.textContent = 'Choose an event theme first.';
+  return;
+}
+if (draft.themeMode === 'owner-tag' && !draft.eventTagLabel) {
+  if (status) status.textContent = 'Enter a tag label for the owner-picked tag event.';
+  return;
+}
+if (draft.themeMode === 'limited-background' && !draft.limitedProfileBackground) {
+  if (status) status.textContent = 'Enter a profile background for the limited background event.';
+  return;
+}
+try {
+  await getAdminDb().collection('chat_meta').doc(SITE_EVENT_DOC_ID).set({
+    ...draft,
+    updatedBy: currentChatUser,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+  activeSiteEventCache = draft;
+  renderAnnouncementBanner();
+  renderActiveSiteEventBanner();
+  renderPlayerHubModal();
+  syncAdminEventModeFormFromCache();
+  renderAdminEventModePreview();
+  refreshRoleNameEffectUi();
+  if (status) status.textContent = `${getSiteEventThemeLabel(draft.themeMode)} is now live.`;
+  await writeAuditLog('set_event_mode', '', `Theme: ${draft.themeMode}`);
+} catch (err) {
+  if (status) status.textContent = 'Failed to save event mode.';
+}
+}
+
+async function adminClearEventMode() {
+if (!canUseAdminPermission('manageSettings') || normalizeUsername(getUserRole(currentChatUser)) !== 'owner') return;
+const status = document.getElementById('admin-event-mode-status');
+try {
+  await getAdminDb().collection('chat_meta').doc(SITE_EVENT_DOC_ID).delete();
+  activeSiteEventCache = null;
+  renderAnnouncementBanner();
+  renderActiveSiteEventBanner();
+  renderPlayerHubModal();
+  syncAdminEventModeFormFromCache();
+  renderAdminEventModePreview();
+  refreshRoleNameEffectUi();
+  if (status) status.textContent = 'Event mode cleared.';
+  await writeAuditLog('clear_event_mode', '', 'Cleared site event mode');
+} catch (err) {
+  if (status) status.textContent = 'Failed to clear event mode.';
 }
 }
 
@@ -16547,23 +18724,80 @@ try {
 
 async function adminSendAlertPopup() {
 if (!canUseAdminPermission('manageSettings')) return;
-const text = (prompt('Alert popup text (shows to everyone):', '') || '').trim();
-if (!text) return;
-const durationInput = (prompt('How many seconds should it stay visible? (2-30)', '10') || '').trim();
-const durationSeconds = Math.max(2, Math.min(30, parseInt(durationInput, 10) || 10));
+const textInput = document.getElementById('admin-global-alert-text');
+const durationInput = document.getElementById('admin-global-alert-duration');
+const activeMinutesInput = document.getElementById('admin-global-alert-active-minutes');
+const delayMinutesInput = document.getElementById('admin-global-alert-delay-minutes');
+const statusDiv = document.getElementById('admin-ban-status');
+const text = sanitizeNullableText(textInput ? textInput.value : (prompt('Alert popup text (shows to everyone):', '') || ''), '').slice(0, 220);
+if (!text) {
+  if (statusDiv) statusDiv.textContent = 'Enter alert text first.';
+  return;
+}
+const durationSeconds = Math.max(2, Math.min(30, parseInt(durationInput ? durationInput.value : '10', 10) || 10));
+const activeMinutes = Math.max(1, Math.min(1440, parseInt(activeMinutesInput ? activeMinutesInput.value : String(GLOBAL_ALERT_DEFAULT_ACTIVE_MINUTES), 10) || GLOBAL_ALERT_DEFAULT_ACTIVE_MINUTES));
+const delayMinutes = Math.max(0, Math.min(10080, parseInt(delayMinutesInput ? delayMinutesInput.value : '0', 10) || 0));
+const startsAt = new Date(Date.now() + (delayMinutes * 60000));
+const expiresAt = new Date(startsAt.getTime() + (activeMinutes * 60000));
 try {
 const db = getAdminDb();
 await db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).set({
-globalAlertText: text.slice(0, 220),
+globalAlertText: text,
 globalAlertDurationSeconds: durationSeconds,
+globalAlertStartsAt: firebase.firestore.Timestamp.fromDate(startsAt),
+globalAlertEndsAt: firebase.firestore.Timestamp.fromDate(expiresAt),
 globalAlertUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
 updatedBy: currentChatUser,
 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
 }, { merge: true });
-const statusDiv = document.getElementById('admin-ban-status');
-if (statusDiv) statusDiv.textContent = 'Alert popup sent.';
+if (statusDiv) statusDiv.textContent = delayMinutes > 0
+  ? `Alert scheduled in ${delayMinutes} minute${delayMinutes === 1 ? '' : 's'} for a ${activeMinutes}-minute window.`
+  : `Alert popup sent. Expires in ${activeMinutes} minute${activeMinutes === 1 ? '' : 's'}.`;
 } catch (err) {
 alert('Failed to send alert popup.');
+}
+}
+
+function adminPreviewAlertPopup() {
+if (!canUseAdminPermission('manageSettings')) return;
+const textInput = document.getElementById('admin-global-alert-text');
+const durationInput = document.getElementById('admin-global-alert-duration');
+const statusDiv = document.getElementById('admin-ban-status');
+const text = sanitizeNullableText(textInput ? textInput.value : '', '').slice(0, 220);
+if (!text) {
+  if (statusDiv) statusDiv.textContent = 'Enter alert text first.';
+  return;
+}
+const durationSeconds = Math.max(2, Math.min(30, parseInt(durationInput ? durationInput.value : '10', 10) || 10));
+showGlobalAlertNotification(text, durationSeconds);
+if (statusDiv) statusDiv.textContent = 'Previewing alert popup locally.';
+}
+
+async function adminClearAlertPopup() {
+if (!canUseAdminPermission('manageSettings')) return;
+try {
+  await getAdminDb().collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).set({
+    globalAlertText: '',
+    globalAlertDurationSeconds: firebase.firestore.FieldValue.delete(),
+    globalAlertStartsAt: firebase.firestore.FieldValue.delete(),
+    globalAlertEndsAt: firebase.firestore.FieldValue.delete(),
+    globalAlertUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedBy: currentChatUser,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+  closeGlobalAlertNotification();
+  const textInput = document.getElementById('admin-global-alert-text');
+  const durationInput = document.getElementById('admin-global-alert-duration');
+  const activeMinutesInput = document.getElementById('admin-global-alert-active-minutes');
+  const delayMinutesInput = document.getElementById('admin-global-alert-delay-minutes');
+  if (textInput) textInput.value = '';
+  if (durationInput) durationInput.value = '10';
+  if (activeMinutesInput) activeMinutesInput.value = String(GLOBAL_ALERT_DEFAULT_ACTIVE_MINUTES);
+  if (delayMinutesInput) delayMinutesInput.value = '0';
+  const statusDiv = document.getElementById('admin-ban-status');
+  if (statusDiv) statusDiv.textContent = 'Alert popup cleared.';
+} catch (err) {
+  alert('Failed to clear alert popup.');
 }
 }
 
@@ -16623,8 +18857,8 @@ function renderAdminRolePermissions() {
 const container = document.getElementById('admin-role-permissions');
 if (!container) return;
 const roles = ['owner', 'hivise', 'admin', 'mod', 'moderator', 'reviewer', 'helper', 'chud', 'cameronsbitch', 'member'];
-const permissions = ['ban', 'mute', 'kick', 'warn', 'tempBan', 'manageSettings', 'assignRoles', 'manageRolePermissions', 'deleteMessage', 'reviewSubmissions', 'manageLoginRequests', 'viewReports', 'viewUserHistory', 'viewArchives', 'manageAccounts', 'manageCasino', 'manageProfileBackgrounds', 'manageGeneralShop', 'manageGameBios', 'manageLeaderboard', 'useOwnerTool', 'viewAppeals', 'viewAuditLog', 'viewAnalytics', 'manageRooms', 'manageCustomTags'];
-const permLabels = { ban: 'Ban', mute: 'Mute', kick: 'Kick', warn: 'Warn', tempBan: 'Temp Ban', manageSettings: 'Core Settings', assignRoles: 'Assign Roles', manageRolePermissions: 'Role Perms', deleteMessage: 'Delete Msg', reviewSubmissions: 'Game/Case Reviews', manageLoginRequests: 'Login Requests', viewReports: 'Message Reports', viewUserHistory: 'User History', viewArchives: 'Archived Chats', manageAccounts: 'Accounts', manageCasino: 'Casino Controls', manageProfileBackgrounds: 'Profile BG Shop', manageGeneralShop: 'General Shop', manageGameBios: 'Game Bios', manageLeaderboard: 'Reset Leaderboard', useOwnerTool: 'Owner Tool', viewAppeals: 'Appeals', viewAuditLog: 'Audit Log', viewAnalytics: 'Analytics', manageRooms: 'Rooms', manageCustomTags: 'Custom Tags' };
+const permissions = ['ban', 'mute', 'kick', 'warn', 'tempBan', 'manageSettings', 'assignRoles', 'manageRolePermissions', 'deleteMessage', 'reviewSubmissions', 'manageLoginRequests', 'viewReports', 'viewUserHistory', 'viewUserTimeline', 'viewArchives', 'manageAccounts', 'manageProfileCleanup', 'manageCasino', 'manageSeasonRepair', 'manageCasinoRollback', 'manageRewardGrants', 'manageProfileBackgrounds', 'manageGeneralShop', 'manageGameBios', 'manageLeaderboard', 'useOwnerTool', 'viewAppeals', 'viewAuditLog', 'viewAnalytics', 'manageRooms', 'manageLiveRooms', 'viewImpersonation', 'manageCustomTags'];
+const permLabels = { ban: 'Ban', mute: 'Mute', kick: 'Kick', warn: 'Warn', tempBan: 'Temp Ban', manageSettings: 'Core Settings', assignRoles: 'Assign Roles', manageRolePermissions: 'Role Perms', deleteMessage: 'Delete Msg', reviewSubmissions: 'Game/Case Reviews', manageLoginRequests: 'Login Requests', viewReports: 'Message Reports', viewUserHistory: 'User History', viewUserTimeline: 'User Timeline', viewArchives: 'Archived Chats', manageAccounts: 'Accounts', manageProfileCleanup: 'Profile Cleanup', manageCasino: 'Casino Controls', manageSeasonRepair: 'Season Repair', manageCasinoRollback: 'Casino Rollback', manageRewardGrants: 'Reward Grants', manageProfileBackgrounds: 'Profile BG Shop', manageGeneralShop: 'General Shop', manageGameBios: 'Game Bios', manageLeaderboard: 'Reset Leaderboard', useOwnerTool: 'Owner Tool', viewAppeals: 'Appeals', viewAuditLog: 'Audit Log', viewAnalytics: 'Analytics', manageRooms: 'Rooms', manageLiveRooms: 'Live Rooms', viewImpersonation: 'Impersonation', manageCustomTags: 'Custom Tags' };
 const perms = moderationSettings.rolePermissions || DEFAULT_ROLE_PERMISSIONS;
 container.innerHTML = roles.map(role => {
 const isOwner = role === 'owner';
@@ -16690,26 +18924,48 @@ alert('Failed to submit appeal. Please try again.');
 }
 
 // === AUDIT LOG ===
+let auditLogReloadTimeout = null;
+
+function scheduleAuditLogReload() {
+if (auditLogReloadTimeout) window.clearTimeout(auditLogReloadTimeout);
+auditLogReloadTimeout = window.setTimeout(() => {
+  auditLogReloadTimeout = null;
+  loadAuditLogs();
+}, 180);
+}
+
 async function loadAuditLogs() {
 const container = document.getElementById('admin-audit-log');
 if (!container) return;
 if (!canUseAdminPermission('viewAuditLog')) { container.textContent = 'Insufficient permissions.'; return; }
 container.textContent = 'Loading...';
+const filterValue = sanitizeNullableText(document.getElementById('admin-audit-filter')?.value || '', '').toLowerCase();
+const searchValue = sanitizeNullableText(document.getElementById('admin-audit-search')?.value || '', '').toLowerCase();
 try {
 const db = getAdminDb();
 const snapshot = await db.collection(AUDIT_LOG_COLLECTION).orderBy('at', 'desc').limit(50).get();
 if (snapshot.empty) { container.textContent = 'No audit log entries yet.'; return; }
-container.innerHTML = snapshot.docs.map(doc => {
+const filteredDocs = snapshot.docs.filter((doc) => {
+const d = doc.data() || {};
+const actionText = sanitizeNullableText(d.action, '').toLowerCase();
+const targetText = sanitizeNullableText(d.target, '').toLowerCase();
+const detailsText = sanitizeNullableText(d.details, '').toLowerCase();
+if (filterValue && actionText !== filterValue) return false;
+if (!searchValue) return true;
+return actionText.includes(searchValue) || targetText.includes(searchValue) || detailsText.includes(searchValue);
+});
+if (!filteredDocs.length) { container.textContent = 'No audit log entries matched that filter.'; return; }
+container.innerHTML = filteredDocs.map(doc => {
 const d = doc.data() || {};
 const time = d.at && d.at.toDate ? d.at.toDate().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
 const actionText = sanitizeNullableText(d.action, '');
 const targetText = sanitizeNullableText(d.target, '');
 const detailsText = sanitizeNullableText(d.details, '');
 const byText = sanitizeNullableText(d.by, '');
-return `<div style="padding:0.3rem 0; border-bottom:1px solid #2a2a2a; overflow:hidden;">
+return `<div style="padding:0.35rem 0; border-bottom:1px solid #2a2a2a; overflow:hidden; display:grid; gap:0.15rem;">
 <span style="color:#90caf9; font-size:0.78rem;">[${escapeHtml(actionText)}]</span>
 ${targetText ? `<span style="color:#ffca28; font-size:0.82rem;"> ${escapeHtml(targetText)}</span>` : ''}
-${detailsText ? `<span style="color:#bbb; font-size:0.78rem;"> — ${escapeHtml(detailsText)}</span>` : ''}
+${detailsText ? `<span style="color:#bbb; font-size:0.78rem; white-space:normal; word-break:break-word;">— ${escapeHtml(detailsText)}</span>` : ''}
 <span style="color:#666; font-size:0.73rem; float:right;">${escapeHtml(byText)} ${time}</span>
 </div>`;
 }).join('');
@@ -17008,6 +19264,335 @@ container.textContent = 'Failed to load user history.';
 }
 }
 
+async function loadAdminUserTimeline(targetUsername = '') {
+const container = document.getElementById('admin-user-timeline');
+if (!container) return;
+if (!canUseAdminPermission('viewUserTimeline')) {
+container.textContent = 'Insufficient permissions.';
+return;
+}
+const username = normalizeUsername(targetUsername || resolveAdminTargetUsername('admin-timeline-username'));
+const input = document.getElementById('admin-timeline-username');
+if (input && username) input.value = username;
+if (!username) {
+container.textContent = 'Enter a username to build a timeline.';
+return;
+}
+container.textContent = 'Loading timeline...';
+try {
+const db = getAdminDb();
+const primaryDb = getPrimaryDb();
+const [messagesSnapshot, reportsSnapshot, appealsSnapshot, auditSnapshot, activityDoc, warningsDoc, strikesDoc] = await Promise.all([
+  primaryDb.collection('site_messages').orderBy('timestamp', 'desc').limit(320).get(),
+  db.collection(MESSAGE_REPORTS_COLLECTION).orderBy('reportedAt', 'desc').limit(180).get(),
+  db.collection(APPEALS_COLLECTION).orderBy('submittedAt', 'desc').limit(80).get(),
+  db.collection(AUDIT_LOG_COLLECTION).orderBy('at', 'desc').limit(220).get(),
+  db.collection(USER_ACTIVITY_COLLECTION).doc(username).get(),
+  db.collection(USER_WARNINGS_COLLECTION).doc(username).get(),
+  db.collection(USER_STRIKES_COLLECTION).doc(username).get()
+]);
+const events = [];
+messagesSnapshot.forEach((doc) => {
+  const data = doc.data() || {};
+  const authorKey = normalizeUsername(data.authoredBy || data.profileUser || data.user || '');
+  if (authorKey !== username && normalizeUsername(data.impersonatedUser || '') !== username) return;
+  const room = getChatRoomConfig(data.room || 'general');
+  const text = sanitizeNullableText(data.message, data.imageData ? '[image]' : (data.videoUrl || data.videoData ? '[video]' : (data.type === 'gif' ? '[gif]' : ''))).slice(0, 180) || '[empty]';
+  const alias = normalizeUsername(data.impersonatedUser || '');
+  events.push({
+    timeMs: getTimestampMs(data.timestamp),
+    tone: alias ? '#8fe3ff' : '#90caf9',
+    label: alias ? 'Impersonated message' : 'Message',
+    detail: alias
+      ? `${sanitizeNullableText(data.displayUser || alias, alias)} in ${room.name}: ${text}`
+      : `${room.name}: ${text}`
+  });
+});
+reportsSnapshot.forEach((doc) => {
+  const data = doc.data() || {};
+  if (normalizeUsername(data.reportedUser || '') === username) {
+    events.push({
+      timeMs: getTimestampMs(data.reportedAt),
+      tone: '#ef9a9a',
+      label: 'Reported',
+      detail: `${sanitizeNullableText(data.reason, 'No reason')} • ${sanitizeNullableText(data.messageText, '').slice(0, 150) || '(no message text)'}`
+    });
+  }
+  if (normalizeUsername(data.reportedBy || '') === username) {
+    events.push({
+      timeMs: getTimestampMs(data.reportedAt),
+      tone: '#b39ddb',
+      label: 'Filed report',
+      detail: `Against ${sanitizeNullableText(data.reportedUser, 'unknown')} • ${sanitizeNullableText(data.reason, 'No reason')}`
+    });
+  }
+});
+appealsSnapshot.forEach((doc) => {
+  const data = doc.data() || {};
+  if (normalizeUsername(data.username || '') !== username) return;
+  events.push({
+    timeMs: getTimestampMs(data.submittedAt),
+    tone: '#ffca28',
+    label: 'Appeal',
+    detail: `${sanitizeNullableText(data.status, 'pending')} • ${sanitizeNullableText(data.appealText, '').slice(0, 150)}`
+  });
+});
+auditSnapshot.forEach((doc) => {
+  const data = doc.data() || {};
+  if (normalizeUsername(data.target || '') !== username && normalizeUsername(data.by || '') !== username) return;
+  events.push({
+    timeMs: getTimestampMs(data.at),
+    tone: '#ffd54f',
+    label: `Audit: ${sanitizeNullableText(data.action, '?')}`,
+    detail: `${sanitizeNullableText(data.details, '').slice(0, 170)}${normalizeUsername(data.by || '') === username ? ' • actor' : ''}`
+  });
+});
+const activityData = activityDoc.exists ? (activityDoc.data() || {}) : {};
+const activityUpdatedAtMs = getTimestampMs(activityData.updatedAt);
+if (activityUpdatedAtMs) {
+  events.push({
+    timeMs: activityUpdatedAtMs,
+    tone: '#80cbc4',
+    label: 'Presence',
+    detail: `${sanitizeNullableText(activityData.status, 'offline')} • ${sanitizeNullableText(activityData.currentRoom || '', '').slice(0, 40) || 'no room recorded'}`
+  });
+}
+const warningData = warningsDoc.exists ? (warningsDoc.data() || {}) : {};
+const strikeData = strikesDoc.exists ? (strikesDoc.data() || {}) : {};
+(Array.isArray(warningData.history) ? warningData.history : []).slice(-12).forEach((entry) => {
+  events.push({
+    timeMs: entry && entry.at ? Date.parse(entry.at) : 0,
+    tone: '#ffab91',
+    label: 'Warning',
+    detail: `${sanitizeNullableText(entry && entry.reason, 'Rule violation')} • ${sanitizeNullableText(entry && entry.by, 'system')}`
+  });
+});
+(Array.isArray(strikeData.history) ? strikeData.history : []).slice(-12).forEach((entry) => {
+  events.push({
+    timeMs: entry && entry.at ? Date.parse(entry.at) : 0,
+    tone: '#ff8a80',
+    label: 'Strike',
+    detail: `${sanitizeNullableText(entry && entry.reason, 'Rule violation')} • ${sanitizeNullableText(entry && entry.by, 'system')}`
+  });
+});
+const sorted = events.sort((a, b) => Math.max(0, b.timeMs || 0) - Math.max(0, a.timeMs || 0)).slice(0, 40);
+if (!sorted.length) {
+  container.innerHTML = '<div class="submission-empty">No timeline events found in the recent admin data.</div>';
+  return;
+}
+container.innerHTML = sorted.map((event) => {
+  const timeText = event.timeMs ? new Date(event.timeMs).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Unknown time';
+  return `<div style="padding:0.5rem 0; border-bottom:1px solid #2a2a2a; display:grid; gap:0.2rem;"><div style="display:flex; justify-content:space-between; gap:0.6rem; align-items:center;"><span style="color:${escapeHtml(event.tone || '#90caf9')}; font-weight:700; font-size:0.8rem;">${escapeHtml(event.label || 'Event')}</span><span style="color:#75808b; font-size:0.72rem;">${escapeHtml(timeText)}</span></div><div style="color:#d7e1eb; font-size:0.8rem; white-space:normal; word-break:break-word;">${escapeHtml(event.detail || '')}</div></div>`;
+  }).join('');
+} catch (err) {
+container.textContent = 'Failed to load the user timeline.';
+}
+}
+
+function adminTimelineUseSelectedUser() {
+const username = getSelectedAdminUser();
+const input = document.getElementById('admin-timeline-username');
+if (input) input.value = username;
+if (username) loadAdminUserTimeline(username);
+}
+
+async function syncCasinoWinnerStateFromChudWall() {
+const wall = await loadChudWall(true);
+const currentState = await loadCasinoSeasonState(true);
+const latestWinner = getLatestWeeklyWinnerChudWallEntry(wall.entries || []);
+const nextState = {
+  ...normalizeCasinoSeasonStateData(currentState || {}),
+  previousWinnerUsername: latestWinner ? latestWinner.username : '',
+  previousWinnerDisplayName: latestWinner ? (latestWinner.displayName || latestWinner.username) : '',
+  previousWinnerBalance: latestWinner ? Math.max(0, Number(latestWinner.recordedBalance || 0)) : 0
+};
+await getCasinoSeasonStateDoc().set(nextState, { merge: true });
+casinoSeasonStateCache = normalizeCasinoSeasonStateData(nextState);
+updateCasinoSeasonUi();
+return latestWinner;
+}
+
+async function loadAdminCasinoSeasonRepair(prefillSeasonNumber = 0) {
+const container = document.getElementById('admin-casino-season-repair');
+if (!container) return;
+if (!canUseAdminPermission('manageSeasonRepair')) {
+  container.textContent = 'Insufficient permissions.';
+  return;
+}
+try {
+  const [wall, state] = await Promise.all([loadChudWall(true), loadCasinoSeasonState(true)]);
+  const entries = (wall.entries || [])
+    .filter((entry) => sanitizeNullableText(entry && entry.source, '') === 'weekly-winner')
+    .sort((a, b) => Math.max(0, Number(b && b.seasonWeekStartMs || 0)) - Math.max(0, Number(a && a.seasonWeekStartMs || 0)));
+  const activeSeasonNumber = getCasinoSeasonNumber(state.currentWeekStartMs, wall.entries || [], state);
+  const seasonNumberInput = document.getElementById('admin-season-repair-number');
+  if (seasonNumberInput && !seasonNumberInput.value) {
+    seasonNumberInput.value = String(prefillSeasonNumber || activeSeasonNumber || 1);
+  }
+  container.innerHTML = entries.slice(0, 12).map((entry) => {
+    const seasonNumber = getCasinoSeasonNumber(entry.seasonWeekStartMs, wall.entries || [], state);
+    return `<div style="padding:0.45rem 0; border-bottom:1px solid #2a2a2a; display:flex; justify-content:space-between; gap:0.6rem; align-items:flex-start;"><div><div style="color:#ffca28; font-weight:700;">${escapeHtml(formatCasinoSeasonLabel(entry.seasonWeekStartMs))}</div><div style="color:#dbe5f0; margin-top:0.15rem;">${escapeHtml(entry.displayName || entry.username)}</div><div style="color:#90a4ae; font-size:0.76rem; margin-top:0.15rem;">${escapeHtml(formatCasinoBalanceSummary(entry.recordedBalance))} • closes ${escapeHtml(formatCasinoSeasonDateTime(getCasinoSeasonEndMs(entry.seasonWeekStartMs)))}</div></div><button onclick="adminLoadSeasonRepairSeason(${seasonNumber})" style="padding:0.35rem 0.65rem; background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Load</button></div>`;
+  }).join('') || '<div class="submission-empty">No saved season winners yet.</div>';
+} catch (err) {
+  container.textContent = 'Failed to load season repair data.';
+}
+}
+
+function adminLoadSeasonRepairSeason(seasonNumber) {
+const seasonInput = document.getElementById('admin-season-repair-number');
+if (seasonInput) seasonInput.value = String(Math.max(1, Math.floor(Number(seasonNumber) || 1)));
+loadAdminCasinoSeasonRepair(seasonNumber);
+}
+
+function adminSeasonRepairUseSelectedUser() {
+const username = getSelectedAdminUser();
+const input = document.getElementById('admin-season-repair-username');
+if (input) input.value = username;
+}
+
+async function adminSaveCasinoSeasonRepair() {
+if (!canUseAdminPermission('manageSeasonRepair')) return;
+const seasonNumber = Math.max(1, Math.floor(Number(document.getElementById('admin-season-repair-number')?.value) || 0));
+const username = normalizeUsername(resolveAdminTargetUsername('admin-season-repair-username'));
+const balance = Math.max(0, Math.floor(Number(document.getElementById('admin-season-repair-balance')?.value) || 0));
+if (!seasonNumber || !username) {
+  setAdminToolStatus('admin-season-repair-status', 'Enter a season number and username first.', 'error');
+  return;
+}
+try {
+  const [wall, state] = await Promise.all([loadChudWall(true), loadCasinoSeasonState(true)]);
+  const displayName = await resolveChudWallDisplayName(username);
+  const seasonWeekStartMs = getCasinoSeasonStartMsFromNumber(seasonNumber, wall.entries || [], state);
+  await appendChudWallEntry({
+    username,
+    displayName: displayName || username,
+    recordedBalance: balance,
+    source: 'weekly-winner',
+    seasonWeekStartMs
+  });
+  await syncCasinoWinnerStateFromChudWall();
+  await loadAdminCasinoSeasonRepair(seasonNumber);
+  setAdminToolStatus('admin-season-repair-status', `${formatCasinoSeasonLabel(seasonWeekStartMs)} now shows ${displayName || username} with ${formatCasinoBalanceSummary(balance)}.`, 'success');
+  await writeAuditLog('repair_casino_season', username, `${formatCasinoSeasonLabel(seasonWeekStartMs)} -> ${balance}`);
+} catch (err) {
+  setAdminToolStatus('admin-season-repair-status', err && err.message ? err.message : 'Failed to repair that season.', 'error');
+}
+}
+
+async function adminSyncCasinoWinnerFromWall() {
+if (!canUseAdminPermission('manageSeasonRepair')) return;
+try {
+  const latest = await syncCasinoWinnerStateFromChudWall();
+  await loadAdminCasinoSeasonRepair();
+  setAdminToolStatus('admin-season-repair-status', latest ? `Synced winner state to ${latest.displayName || latest.username}.` : 'Cleared winner state because no season winners exist yet.', latest ? 'success' : 'neutral');
+  await writeAuditLog('sync_casino_winner_state', latest ? latest.username : '', latest ? `Synced to ${formatCasinoSeasonLabel(latest.seasonWeekStartMs)}` : 'Cleared state');
+} catch (err) {
+  setAdminToolStatus('admin-season-repair-status', 'Failed to sync the winner state.', 'error');
+}
+}
+
+async function loadAdminProfileCleanupManager(targetUsername = '') {
+const container = document.getElementById('admin-profile-cleanup-manager');
+if (!container) return;
+if (!canUseAdminPermission('manageProfileCleanup')) {
+  container.textContent = 'Insufficient permissions.';
+  return;
+}
+const username = normalizeUsername(targetUsername || resolveAdminTargetUsername('admin-profile-cleanup-username'));
+const input = document.getElementById('admin-profile-cleanup-username');
+if (input && username) input.value = username;
+if (!username) {
+  container.innerHTML = '<div class="submission-empty">Select a user to inspect profile cleanup options.</div>';
+  return;
+}
+try {
+  const [profileDoc, flagsDoc] = await Promise.all([
+    getAdminDb().collection(USER_PROFILES_COLLECTION).doc(username).get(),
+    getAdminDb().collection(USER_FLAGS_COLLECTION).doc(username).get()
+  ]);
+  const profile = buildProfileCacheEntry(username, profileDoc.exists ? (profileDoc.data() || {}) : {});
+  const tag = sanitizeProfileTag(flagsDoc.exists ? (flagsDoc.data() || {}).tag : '');
+  const rows = [
+    ['Avatar', profile.avatarData ? 'Set' : 'None'],
+    ['Banner', profile.bannerData ? 'Set' : 'None'],
+    ['Showcased badges', Array.isArray(profile.showcasedBadgeLabels) && profile.showcasedBadgeLabels.length ? `${profile.showcasedBadgeLabels.length} saved` : 'None'],
+    ['Title', profile.profileTitle || 'None'],
+    ['Accent', profile.profileAccentId || 'None'],
+    ['Username effect', profile.usernameEffectId || 'None'],
+    ['Profile tag', tag || 'None']
+  ];
+  container.innerHTML = `<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:0.45rem;">${rows.map(([label, value]) => `<div style="padding:0.5rem; background:#151515; border:1px solid #2f2f2f; border-radius:0.4rem;"><div style="color:#90a4ae; font-size:0.72rem;">${escapeHtml(label)}</div><div style="margin-top:0.18rem; color:#fff; font-weight:700;">${escapeHtml(String(value))}</div></div>`).join('')}</div>`;
+} catch (err) {
+  container.innerHTML = '<div class="submission-empty">Failed to load the profile cleanup summary.</div>';
+}
+}
+
+function adminProfileCleanupUseSelectedUser() {
+const username = getSelectedAdminUser();
+const input = document.getElementById('admin-profile-cleanup-username');
+if (input) input.value = username;
+if (username) loadAdminProfileCleanupManager(username);
+}
+
+async function adminRunProfileCleanup(mode) {
+if (!canUseAdminPermission('manageProfileCleanup')) return;
+const username = normalizeUsername(resolveAdminTargetUsername('admin-profile-cleanup-username'));
+if (!username) {
+  setAdminToolStatus('admin-profile-cleanup-status', 'Choose a user first.', 'error');
+  return;
+}
+const profilePatch = {};
+let clearTag = false;
+let auditDetail = '';
+if (mode === 'media') {
+  profilePatch.avatarData = '';
+  profilePatch.bannerData = '';
+  auditDetail = 'Cleared avatar and banner';
+} else if (mode === 'identity') {
+  profilePatch.profileTitle = '';
+  profilePatch.profileAccentId = '';
+  profilePatch.showcasedBadgeLabels = [];
+  auditDetail = 'Cleared title, accent, and showcased badges';
+} else if (mode === 'effect') {
+  profilePatch.usernameEffectId = '';
+  profilePatch.usernameEffectPrimaryColor = '';
+  profilePatch.usernameEffectSecondaryColor = '';
+  profilePatch.usernameEffectAssignedBy = '';
+  auditDetail = 'Cleared username effect';
+} else if (mode === 'tag') {
+  clearTag = true;
+  auditDetail = 'Cleared assigned profile tag';
+} else if (mode === 'all') {
+  profilePatch.avatarData = '';
+  profilePatch.bannerData = '';
+  profilePatch.profileTitle = '';
+  profilePatch.profileAccentId = '';
+  profilePatch.showcasedBadgeLabels = [];
+  profilePatch.usernameEffectId = '';
+  profilePatch.usernameEffectPrimaryColor = '';
+  profilePatch.usernameEffectSecondaryColor = '';
+  profilePatch.usernameEffectAssignedBy = '';
+  clearTag = true;
+  auditDetail = 'Cleared profile media, identity, tag, and username effect';
+}
+if (!Object.keys(profilePatch).length && !clearTag && mode !== 'all') return;
+try {
+  if (clearTag) {
+    await getAdminDb().collection(USER_FLAGS_COLLECTION).doc(username).set({ tag: '' }, { merge: true });
+  }
+  await getAdminDb().collection(USER_PROFILES_COLLECTION).doc(username).set(profilePatch, { merge: true });
+  await writeAuditLog(mode === 'tag' ? 'profile_cleanup_tag' : 'profile_cleanup', username, auditDetail || mode);
+  setAdminToolStatus('admin-profile-cleanup-status', mode === 'tag' ? `Cleared the profile tag for ${username}.` : `Updated ${username}'s profile cleanup state.`, 'success');
+  await loadAdminProfileCleanupManager(username);
+  if (currentProfileViewUser && normalizeUsername(currentProfileViewUser) === username) {
+    await loadProfileDetails(username).catch(() => {});
+    renderProfileModal(username);
+  }
+} catch (err) {
+  setAdminToolStatus('admin-profile-cleanup-status', 'Failed to update that profile.', 'error');
+}
+}
+
 async function adminRebuildSelectedUserStats() {
 if (!canUseAdminPermission('viewUserHistory')) return;
 const username = normalizeUsername(resolveAdminTargetUsername('admin-history-username'));
@@ -17164,7 +19749,7 @@ const protectedRoom = isProtectedRoomId(room.id);
 const ownerLabel = sanitizeNullableText(room.createdBy, protectedRoom ? 'system' : 'unknown');
 const audienceLabel = getRoomAudienceLabel(room);
 summary.textContent = `${room.name} (${room.id}) • ${room.isPublic ? 'Public' : 'Private'} • Owner: ${ownerLabel}`;
-meta.innerHTML = `<div class="admin-chip-row"><span class="admin-info-chip">${escapeHtml(room.isPublic ? 'Public room' : 'Private room')}</span><span class="admin-info-chip">${escapeHtml(audienceLabel)}</span>${room.description ? `<span class="admin-info-chip">${escapeHtml(room.description)}</span>` : ''}${room.icon ? `<span class="admin-info-chip">${escapeHtml(room.icon)} icon</span>` : ''}</div>${protectedRoom ? '<div class="admin-note-text">Protected rooms cannot change privacy or member lists, but you can still open them and clear their room messages.</div>' : ''}`;
+meta.innerHTML = `<div class="admin-chip-row"><span class="admin-info-chip">${escapeHtml(room.isPublic ? 'Public room' : 'Private room')}</span><span class="admin-info-chip">${escapeHtml(audienceLabel)}</span>${room.readOnly ? '<span class="admin-info-chip">Room frozen</span>' : ''}${room.mediaBlocked ? '<span class="admin-info-chip">Media locked</span>' : ''}${room.description ? `<span class="admin-info-chip">${escapeHtml(room.description)}</span>` : ''}${room.icon ? `<span class="admin-info-chip">${escapeHtml(room.icon)} icon</span>` : ''}</div>${protectedRoom ? '<div class="admin-note-text">Protected rooms cannot change privacy or member lists, but you can still open them and clear their room messages.</div>' : ''}`;
 privacyBtn.disabled = protectedRoom;
 privacyBtn.textContent = room.isPublic ? 'Make Private' : 'Make Public';
 addInput.disabled = protectedRoom;
@@ -17280,15 +19865,21 @@ const status = document.getElementById('room-moderation-status');
 if (!room || isProtectedRoomId(room.id)) return;
 try {
   const nextMembers = Array.from(new Set([normalizeUsername(room.createdBy || currentChatUser), ...room.members].filter(Boolean)));
+  const nextIsPublic = !room.isPublic;
   await getAdminDb().collection(CHAT_ROOMS_COLLECTION).doc(room.id).set({
-    isPublic: !room.isPublic,
+    isPublic: nextIsPublic,
     members: nextMembers,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   }, { merge: true });
-  if (status) status.textContent = `${room.name} is now ${!room.isPublic ? 'public' : 'private'}.`;
-  await writeAuditLog('toggle_room_privacy', room.id, `Set room to ${!room.isPublic ? 'public' : 'private'}`);
+  chatRoomsCache = {
+    ...chatRoomsCache,
+    [room.id]: buildChatRoomConfig(room.id, { ...room, isPublic: nextIsPublic, members: nextMembers })
+  };
+  if (status) status.textContent = `${room.name} is now ${nextIsPublic ? 'public' : 'private'}.`;
+  await writeAuditLog('toggle_room_privacy', room.id, `Set room to ${nextIsPublic ? 'public' : 'private'}`);
   loadAdminRoomManager();
   renderRoomModerationModal();
+  renderChatRoomSummary();
 } catch (err) {
   if (status) status.textContent = 'Failed to update room privacy.';
 }
@@ -17366,6 +19957,7 @@ try {
     await batch.commit();
     if (snapshot.size < 250) break;
   }
+  clearRoomActivityNotifications(room.id);
   if (status) status.textContent = deletedCount ? `Deleted ${deletedCount} message${deletedCount === 1 ? '' : 's'} from ${room.name}.` : `No room-tagged messages found in ${room.name}.`;
   await writeAuditLog('clear_room_messages', room.id, `${deletedCount} messages removed`);
   loadAdminRoomManager();
@@ -17394,14 +19986,24 @@ const reportedUserText = sanitizeNullableText(d.reportedUser, '?');
 const reportedByText = sanitizeNullableText(d.reportedBy, '?');
 const messageText = sanitizeNullableText(d.messageText, '');
 const reasonText = sanitizeNullableText(d.reason, '');
-return `<div style="padding:0.4rem 0; border-bottom:1px solid #2a2a2a;">
+const statusText = sanitizeNullableText(d.status, 'pending') || 'pending';
+const resolvedByText = sanitizeNullableText(d.resolvedBy, '');
+const resolutionText = sanitizeNullableText(d.resolution, '');
+const resolvedTime = d.resolvedAt && d.resolvedAt.toDate ? d.resolvedAt.toDate().toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+const adminNotes = sanitizeNullableText(d.adminNotes, '').slice(0, 300);
+return `<div style="padding:0.4rem 0; border-bottom:1px solid #2a2a2a; display:grid; gap:0.35rem;">
 <div><strong style="color:#ef9a9a;">${escapeHtml(reportedUserText)}</strong>: <span style="color:#eee;">${escapeHtml(messageText.slice(0, 100))}</span></div>
 <div style="font-size:0.75rem; color:#999;">by ${escapeHtml(reportedByText)} · ${escapeHtml(reasonText)} · ${escapeHtml(getChatRoomConfig(d.room || 'general').name)} · ${time}</div>
+<div style="display:flex; gap:0.45rem; flex-wrap:wrap; align-items:center; font-size:0.74rem;"><span class="admin-status-chip admin-status-chip--${escapeHtml(statusText)}">${escapeHtml(statusText)}</span>${resolvedByText ? `<span style="color:#9fb0c2;">${escapeHtml(resolvedByText)}${resolvedTime ? ` · ${escapeHtml(resolvedTime)}` : ''}</span>` : ''}${resolutionText ? `<span style="color:#ffcc80;">${escapeHtml(resolutionText)}</span>` : ''}</div>
 ${Array.isArray(d.evidenceContext) && d.evidenceContext.length ? `<div style="margin-top:0.35rem; padding:0.4rem; background:#151515; border:1px solid #2f2f2f; border-radius:0.3rem; font-size:0.74rem; color:#bbb;">${d.evidenceContext.map((entry) => {
 const entryUserText = sanitizeNullableText(entry.user, '?');
 const entryMessageText = sanitizeNullableText(entry.message, '');
 return `<div style="margin-bottom:0.2rem;"><span style="color:#90caf9;">${escapeHtml(entryUserText)}</span> <span style="color:#607d8b;">#${escapeHtml(getChatRoomConfig(entry.room || 'general').name)}</span>: ${escapeHtml(entryMessageText.slice(0, 140) || '(media message)')}</div>`;
 }).join('')}</div>` : ''}
+<div style="display:grid; gap:0.3rem;">
+<textarea id="report-note-${safeId}" placeholder="Admin notes" maxlength="300" style="width:100%; min-height:3.8rem; box-sizing:border-box;">${escapeHtml(adminNotes)}</textarea>
+<div style="display:flex; gap:0.4rem; flex-wrap:wrap;"><button onclick="saveReportAdminNotes('${safeId}')" style="padding:0.2rem 0.5rem; background:#37474f; color:#fff; border:none; border-radius:0.2rem; font-size:0.75rem; cursor:pointer;">Save Notes</button></div>
+</div>
 <div style="margin-top:0.25rem; display:flex; gap:0.4rem;">
 <button onclick="openAdminUserHistoryFor('${encodeURIComponent(normalizeUsername(reportedUserText))}')" style="padding:0.2rem 0.5rem; background:#37474f; color:#fff; border:none; border-radius:0.2rem; font-size:0.75rem; cursor:pointer;">User</button>
 <button onclick="dismissReport('${safeId}')" style="padding:0.2rem 0.5rem; background:#455a64; color:#fff; border:none; border-radius:0.2rem; font-size:0.75rem; cursor:pointer;">Dismiss</button>
@@ -17413,6 +20015,22 @@ return `<div style="margin-bottom:0.2rem;"><span style="color:#90caf9;">${escape
 }).join('');
 } catch (err) {
 container.textContent = 'Failed to load reports.';
+}
+}
+
+async function saveReportAdminNotes(reportDocId) {
+try {
+const decodedId = decodeURIComponent(reportDocId || '');
+const input = document.getElementById(`report-note-${reportDocId}`);
+const adminNotes = sanitizeNullableText(input && input.value, '').slice(0, 300);
+await getAdminDb().collection(MESSAGE_REPORTS_COLLECTION).doc(decodedId).set({
+  adminNotes,
+  updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+await writeAuditLog('report_notes', decodedId, adminNotes ? 'Updated report notes' : 'Cleared report notes');
+loadMessageReports();
+} catch (err) {
+alert('Failed to save report notes.');
 }
 }
 
@@ -17432,6 +20050,7 @@ await ref.set({ count, history, updatedAt: firebase.firestore.FieldValue.serverT
 await db.collection(MESSAGE_REPORTS_COLLECTION).doc(decodeURIComponent(reportDocId)).set({
 status: 'resolved',
 resolvedBy: currentChatUser,
+resolvedAt: firebase.firestore.FieldValue.serverTimestamp(),
 resolution: `warning:${count}`
 }, { merge: true });
 await writeAuditLog('warn_from_report', username, reason);
@@ -17451,6 +20070,7 @@ const db = getAdminDb();
 await db.collection(MESSAGE_REPORTS_COLLECTION).doc(decodeURIComponent(reportDocId)).set({
 status: 'resolved',
 resolvedBy: currentChatUser,
+resolvedAt: firebase.firestore.FieldValue.serverTimestamp(),
 resolution: `strike:${result.count}`
 }, { merge: true });
 await writeAuditLog('strike_from_report', username, `${baseReason} (count ${result.count})`);
@@ -17468,7 +20088,7 @@ alert('Failed to add strike from report.');
 async function dismissReport(reportDocId) {
 try {
 const db = getAdminDb();
-await db.collection(MESSAGE_REPORTS_COLLECTION).doc(decodeURIComponent(reportDocId)).update({ status: 'dismissed', resolvedBy: currentChatUser });
+await db.collection(MESSAGE_REPORTS_COLLECTION).doc(decodeURIComponent(reportDocId)).update({ status: 'dismissed', resolvedBy: currentChatUser, resolvedAt: firebase.firestore.FieldValue.serverTimestamp(), resolution: 'dismissed' });
 loadMessageReports();
 } catch (err) { alert('Failed to dismiss.'); }
 }
@@ -17485,7 +20105,7 @@ await decrementUserStatsForDeletedMessage(messageData);
 }
 try {
 const db = getAdminDb();
-await db.collection(MESSAGE_REPORTS_COLLECTION).doc(decodeURIComponent(reportDocId)).update({ status: 'resolved', resolvedBy: currentChatUser });
+await db.collection(MESSAGE_REPORTS_COLLECTION).doc(decodeURIComponent(reportDocId)).update({ status: 'resolved', resolvedBy: currentChatUser, resolvedAt: firebase.firestore.FieldValue.serverTimestamp(), resolution: 'deleted-message' });
 await writeAuditLog('delete_reported_message', msgId, 'Deleted via report queue');
 loadMessageReports();
 } catch (err) { alert('Failed to resolve report.'); }
@@ -17543,6 +20163,8 @@ reportedMessageAt: data.timestamp || null,
 evidenceContext,
 reason,
 status: 'pending',
+adminNotes: '',
+resolvedBy: '',
 reportedAt: firebase.firestore.FieldValue.serverTimestamp()
 });
 closeReportModal();
@@ -17922,7 +20544,7 @@ dmConversationListenerUnsub = db.collection(DM_CONVERSATIONS_COLLECTION)
       }
       dmConversationDocs.set(summary.username, summary);
       if (!initialSnapshot && summary.unreadCount > Math.max(0, Number(previous && previous.unreadCount))) {
-        if (!isUserBlocked(summary.username) && activeDMUser !== summary.username) {
+        if (!isUserBlocked(summary.username) && !isDMMutedConversation(summary.username) && activeDMUser !== summary.username) {
           showDMNotification(`New DM from ${summary.username}`);
         }
       }
@@ -18176,6 +20798,7 @@ rebuildDMConversationSummaries();
 
 async function openDMModal(targetUsername) {
 if (!currentChatUser) { alert('You must be logged in to send DMs.'); return; }
+ensureDMInboxPrefsLoaded();
 const target = normalizeUsername(targetUsername);
 const friendsModal = document.getElementById('friends-modal');
 if (friendsModal && friendsModal.style.display === 'flex') {
@@ -18183,17 +20806,21 @@ closeFriendsModal();
 }
 openModalById('dm-modal');
 renderDMConversationLists();
+const messageSearchInput = document.getElementById('dm-message-search');
+dmMessageSearchText = '';
+if (messageSearchInput) messageSearchInput.value = '';
 if (!target) {
 activeDMUser = null;
+currentDmMessagesCache = [];
 document.getElementById('dm-modal-title').textContent = 'Select a conversation';
-document.getElementById('dm-messages').innerHTML = '<div class="dm-empty-state">Pick a conversation from the inbox to read or reply.</div>';
+renderActiveDMMessageList();
 return;
 }
 if (target === normalizeUsername(currentChatUser)) return;
 activeDMUser = target;
 document.getElementById('dm-modal-title').textContent = target;
 const input = document.getElementById('dm-input');
-if (input) input.value = '';
+if (input) input.value = getDMDraft(target);
 renderDMConversationLists();
 markConversationAsRead(target);
 loadDMConversation(target);
@@ -18203,6 +20830,8 @@ function closeDMModal() {
 closeModalById('dm-modal');
 if (dmSnapshotUnsub) { dmSnapshotUnsub(); dmSnapshotUnsub = null; }
 activeDMUser = null;
+currentDmMessagesCache = [];
+dmMessageSearchText = '';
 renderDMConversationLists();
 }
 
@@ -18214,6 +20843,7 @@ const convoId = getDMConversationId(me, target);
 const container = document.getElementById('dm-messages');
 if (!container) return;
 container.innerHTML = '<div style="color:#999; font-size:0.85rem; padding:0.5rem;">Loading...</div>';
+currentDmMessagesCache = [];
 try {
 const db = getAdminDb();
 dmSnapshotUnsub = db.collection(DM_MESSAGES_COLLECTION)
@@ -18222,7 +20852,8 @@ dmSnapshotUnsub = db.collection(DM_MESSAGES_COLLECTION)
 .onSnapshot(snapshot => {
 markConversationAsRead(target);
 if (snapshot.empty) {
-container.innerHTML = '<div style="color:#999; font-size:0.85rem; padding:0.5rem;">No messages yet. Say hi!</div>';
+currentDmMessagesCache = [];
+renderActiveDMMessageList();
 return;
 }
 const sortedDocs = snapshot.docs.slice().sort((a, b) => {
@@ -18230,21 +20861,101 @@ const aMs = a.data().timestamp && a.data().timestamp.toDate ? a.data().timestamp
 const bMs = b.data().timestamp && b.data().timestamp.toDate ? b.data().timestamp.toDate().getTime() : 0;
 return aMs - bMs;
 });
-container.innerHTML = sortedDocs.map(doc => {
-const d = doc.data() || {};
-const isOwn = d.from === me;
-const time = d.timestamp && d.timestamp.toDate ? d.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-const messageText = sanitizeNullableText(d.message, '');
-const fromText = sanitizeNullableText(d.from, '');
-return `<div style="display:flex; flex-direction:column; align-items:${isOwn ? 'flex-end' : 'flex-start'}; max-width:80%; align-self:${isOwn ? 'flex-end' : 'flex-start'};">
-<div style="background:${isOwn ? '#1565c0' : '#2a2a2a'}; padding:0.45rem 0.75rem; border-radius:0.6rem; color:#fff; font-size:0.9rem; word-break:break-word;">${escapeHtml(messageText)}</div>
-<div style="font-size:0.7rem; color:#666; margin-top:0.1rem;">${escapeHtml(fromText)} \u00b7 ${time}</div>
-</div>`;
-}).join('');
-container.scrollTop = container.scrollHeight;
+currentDmMessagesCache = sortedDocs.map((doc) => {
+  const d = doc.data() || {};
+  return {
+    from: sanitizeNullableText(d.from, ''),
+    to: sanitizeNullableText(d.to, ''),
+    message: sanitizeNullableText(d.message, ''),
+    readByRecipient: !!d.readByRecipient,
+    time: formatChatDateTime(getTimestampMs(d.timestamp) || Math.max(0, Number(d.timestampMs || 0)))
+  };
+});
+renderActiveDMMessageList();
 });
 } catch (e) {
 container.innerHTML = '<div style="color:#f88; font-size:0.85rem; padding:0.5rem;">Failed to load messages.</div>';
+}
+}
+
+async function clearDMConversation(targetUsername, options = {}) {
+const me = normalizeUsername(currentChatUser);
+const target = normalizeUsername(targetUsername);
+if (!me || !target) return;
+const conversationId = getDMConversationId(me, target);
+const db = getAdminDb();
+while (true) {
+  const snapshot = await db.collection(DM_MESSAGES_COLLECTION).where('conversationId', '==', conversationId).limit(200).get();
+  if (!snapshot || snapshot.empty) break;
+  const batch = db.batch();
+  snapshot.forEach((doc) => batch.delete(doc.ref));
+  await batch.commit();
+}
+await getDMConversationDocRef(me, target).delete().catch(() => {});
+dmConversationDocs.delete(target);
+dmInboxDocs.delete(target);
+if (normalizeUsername(activeDMUser) === target) {
+  currentDmMessagesCache = [];
+  renderActiveDMMessageList();
+}
+if (!options.suppressUiRefresh) {
+  rebuildDMConversationSummaries();
+}
+}
+
+function clearActiveDMConversation() {
+if (!normalizeUsername(activeDMUser)) return;
+openConfirmActionModal(
+  'Clear DM conversation',
+  `Delete every message between you and ${activeDMUser}? This clears it for both sides.`,
+  async () => {
+    await clearDMConversation(activeDMUser);
+    closeConfirmActionModal();
+  },
+  'Clear Chat'
+);
+}
+
+function clearAllDMs() {
+if (!dmConversationSummaries.length) return;
+openConfirmActionModal(
+  'Clear all DMs',
+  'Delete every DM conversation in your inbox? This clears them for both sides.',
+  async () => {
+    const items = dmConversationSummaries.slice();
+    for (let index = 0; index < items.length; index += 1) {
+      await clearDMConversation(items[index].username, { suppressUiRefresh: true });
+    }
+    activeDMUser = null;
+    currentDmMessagesCache = [];
+    rebuildDMConversationSummaries();
+    renderActiveDMMessageList();
+    closeConfirmActionModal();
+  },
+  'Clear All'
+);
+}
+
+function toggleActiveDMPin() {
+const target = normalizeUsername(activeDMUser);
+if (!target) return;
+setDMPinnedConversation(target, !isDMPinnedConversation(target));
+}
+
+function toggleActiveDMMute() {
+const target = normalizeUsername(activeDMUser);
+if (!target) return;
+setDMMutedConversation(target, !isDMMutedConversation(target));
+}
+
+function jumpToActiveDMFirstUnread() {
+const me = normalizeUsername(currentChatUser);
+const firstUnreadIndex = currentDmMessagesCache.findIndex((entry) => entry.to === me && !entry.readByRecipient);
+if (firstUnreadIndex < 0) return;
+const container = document.getElementById('dm-messages');
+const targetNode = container ? container.querySelector(`[data-dm-message-index="${firstUnreadIndex}"]`) : null;
+if (targetNode && typeof targetNode.scrollIntoView === 'function') {
+  targetNode.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 }
 
@@ -18297,10 +21008,12 @@ for (let index = 0; index < docs.length; index += 200) {
       allTimeBestGeneralShopDropRarity: 'mil-spec',
       allTimeBestGeneralShopDropValue: 0
     };
+    const { ownedGeneralShopCaseCounts, ...nextStatsWithoutCaseCounts } = nextStats;
     batch.set(doc.ref, {
       username,
       displayName: sanitizeNullableText(rawData.displayName, username) || username,
-      ...nextStats,
+      ...nextStatsWithoutCaseCounts,
+      ...buildOwnedGeneralShopCaseCountFieldPatch(currentStats.ownedGeneralShopCaseCounts, ownedGeneralShopCaseCounts),
       updatedAtMs: Date.now()
     }, { merge: true });
     updatedCount += 1;
@@ -18552,7 +21265,9 @@ unreadForB: isRecipientParticipantA ? 0 : firebase.firestore.FieldValue.incremen
 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
 }, { merge: true });
 await batch.commit();
+setDMDraft(target, '');
 if (input) input.value = '';
+rebuildDMConversationSummaries();
 } catch (err) {
 alert('Failed to send message.');
 }
@@ -18647,6 +21362,13 @@ try {
     title,
     body,
     accent: /^#[0-9a-fA-F]{6}$/.test(accent) ? accent : '#2f8d46',
+    themeMode: '',
+    payoutMultiplier: 1,
+    eventTagLabel: '',
+    eventTagBackground: '',
+    eventTagColor: '',
+    eventTagBorder: '',
+    limitedProfileBackground: '',
     endsAtMs: endsAt ? endsAt.getTime() : 0,
     endsAt: endsAt ? firebase.firestore.Timestamp.fromDate(endsAt) : null,
     updatedBy: currentChatUser,
@@ -18654,6 +21376,7 @@ try {
   }, { merge: true });
   await loadActiveSiteEvent();
   renderAnnouncementBanner();
+  renderActiveSiteEventBanner();
   pushNotification({ type: 'event', title: 'New site event', body: title, read: false, action: { kind: 'hub', tab: 'events' } });
   const statusDiv = document.getElementById('admin-ban-status');
   if (statusDiv) statusDiv.textContent = 'Site event updated.';
@@ -18668,6 +21391,9 @@ try {
   await getAdminDb().collection('chat_meta').doc(SITE_EVENT_DOC_ID).delete();
   activeSiteEventCache = null;
   renderAnnouncementBanner();
+  renderActiveSiteEventBanner();
+  syncAdminEventModeFormFromCache();
+  renderAdminEventModePreview();
   const statusDiv = document.getElementById('admin-ban-status');
   if (statusDiv) statusDiv.textContent = 'Site event cleared.';
 } catch (err) {
@@ -18968,6 +21694,7 @@ const entriesDiv = document.getElementById('leaderboard-entries');
 if (!entriesDiv) return;
 try {
 await loadCasinoSeasonState().catch(() => {});
+await loadChudWall(true).catch(() => {});
 const db = getPrimaryDb();
 const adminDb = getAdminDb();
 const bannedUsers = await getBannedUsernames();
@@ -19417,6 +22144,7 @@ currentChatColor = String(color || '#1565c0').toLowerCase();
 localStorage.setItem('chatColor', currentChatColor);
 updateColorButtonBorders();
 updateCustomColorInput(currentChatColor);
+renderOwnerGradientPreview();
 }
 
 function syncRoleNameEffectToggle() {
@@ -19426,6 +22154,7 @@ if (toggle) toggle.checked = !!roleNameEffectsEnabled;
 
 function refreshRoleNameEffectUi() {
 syncRoleNameEffectToggle();
+renderOwnerGradientPreview();
 if (typeof loadChatMessages === 'function') {
   loadChatMessages();
 }
@@ -19478,15 +22207,72 @@ if (input) input.value = normalized;
 updateCustomColorPreview(normalized);
 }
 
+function getStoredOwnerRoleGradientSecondaryColor() {
+return normalizeRoleNameEffectColor(localStorage.getItem(OWNER_ROLE_GRADIENT_SECONDARY_STORAGE_KEY) || ownerRoleGradientSecondaryColor || '#ffd54f', '#ffd54f');
+}
+
+function renderOwnerGradientPreview(primaryColor = currentChatColor, secondaryColor = ownerRoleGradientSecondaryColor) {
+const preview = document.getElementById('owner-gradient-preview');
+if (!preview) return;
+const diamondColors = getOwnerDiamondEffectColors();
+const primary = diamondColors.primary;
+const secondary = diamondColors.secondary;
+preview.innerHTML = `<span class="role-name-copy role-name-owner role-name-shine" style="--role-owner-primary:${primary};--role-owner-primary-soft:${adjustRoleNameEffectColor(primary, 44)};--role-owner-secondary:${secondary};--role-owner-secondary-soft:${adjustRoleNameEffectColor(secondary, 32)};">Owner Preview</span>`;
+}
+
+function updateOwnerGradientSecondaryPreview(color) {
+const normalized = normalizeRoleNameEffectColor(color || ownerRoleGradientSecondaryColor || '#ffd54f', '#ffd54f');
+const label = document.getElementById('owner-gradient-secondary-label');
+if (label) label.textContent = normalized;
+renderOwnerGradientPreview(currentChatColor, normalized);
+}
+
+function updateOwnerGradientSecondaryInput(color = ownerRoleGradientSecondaryColor) {
+const input = document.getElementById('owner-gradient-secondary-input');
+const normalized = normalizeRoleNameEffectColor(color || ownerRoleGradientSecondaryColor || '#ffd54f', '#ffd54f');
+if (input) input.value = normalized;
+updateOwnerGradientSecondaryPreview(normalized);
+}
+
+function syncOwnerGradientControlVisibility() {
+const container = document.getElementById('owner-gradient-controls');
+if (!container) return;
+const isOwner = normalizeUsername(getUserRole(currentChatUser)) === 'owner';
+container.style.display = isOwner ? 'grid' : 'none';
+updateOwnerGradientSecondaryInput(ownerRoleGradientSecondaryColor);
+}
+
+function selectOwnerGradientSecondaryColor(color) {
+ownerRoleGradientSecondaryColor = normalizeRoleNameEffectColor(color || '#ffd54f', '#ffd54f');
+localStorage.setItem(OWNER_ROLE_GRADIENT_SECONDARY_STORAGE_KEY, ownerRoleGradientSecondaryColor);
+updateOwnerGradientSecondaryInput(ownerRoleGradientSecondaryColor);
+saveColorToFirebase(currentChatColor);
+refreshRoleNameEffectUi();
+}
+
 async function saveColorToFirebase(color) {
 if (!chatInitialized || !currentChatUser) return;
 try {
 const db = getPrimaryDb();
-await db.collection('user_preferences').doc(currentChatUser).set({
-color: color,
+const normalizedColor = normalizeRoleNameEffectColor(color || '#1565c0', '#1565c0');
+const isOwner = normalizeUsername(getUserRole(currentChatUser)) === 'owner';
+const preferencePayload = {
+color: normalizedColor,
 roleNameEffectsEnabled: !!roleNameEffectsEnabled,
 updated: firebase.firestore.FieldValue.serverTimestamp()
-}, { merge: true });
+};
+if (isOwner) {
+  preferencePayload.ownerRoleGradientSecondaryColor = ownerRoleGradientSecondaryColor;
+}
+await db.collection('user_preferences').doc(currentChatUser).set(preferencePayload, { merge: true });
+if (isOwner) {
+  await getAdminDb().collection(USER_PROFILES_COLLECTION).doc(currentChatUser).set({
+    roleEffectPrimaryColor: normalizedColor,
+    roleEffectSecondaryColor: ownerRoleGradientSecondaryColor,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedAtMs: Date.now()
+  }, { merge: true });
+}
 } catch (err) {
 console.error('Error saving color to Firestore:', err);
 }
@@ -19497,6 +22283,7 @@ document.getElementById('color-picker-modal').style.display = 'flex';
 updateCustomColorInput(currentChatColor);
 updateColorButtonBorders();
 syncRoleNameEffectToggle();
+syncOwnerGradientControlVisibility();
 }
 
 function closeColorPicker() {
@@ -19513,24 +22300,34 @@ if (!chatInitialized || !currentChatUser) return;
 try {
 const db = getPrimaryDb();
 const doc = await db.collection('user_preferences').doc(currentChatUser).get();
-if (doc.exists && doc.data().color) {
-currentChatColor = String(doc.data().color || '#1565c0').toLowerCase();
+const data = doc.exists ? (doc.data() || {}) : {};
+if (doc.exists && data.color) {
+ currentChatColor = String(data.color || '#1565c0').toLowerCase();
 localStorage.setItem('chatColor', currentChatColor);
 } else {
 currentChatColor = getChatColor();
 }
-if (doc.exists && typeof doc.data().roleNameEffectsEnabled === 'boolean') {
-  roleNameEffectsEnabled = !!doc.data().roleNameEffectsEnabled;
+if (doc.exists && typeof data.roleNameEffectsEnabled === 'boolean') {
+  roleNameEffectsEnabled = !!data.roleNameEffectsEnabled;
   localStorage.setItem('roleNameEffectsEnabled', roleNameEffectsEnabled ? '1' : '0');
 } else {
   roleNameEffectsEnabled = localStorage.getItem('roleNameEffectsEnabled') !== '0';
+}
+if (doc.exists && data.ownerRoleGradientSecondaryColor) {
+  ownerRoleGradientSecondaryColor = normalizeRoleNameEffectColor(data.ownerRoleGradientSecondaryColor, '#ffd54f');
+  localStorage.setItem(OWNER_ROLE_GRADIENT_SECONDARY_STORAGE_KEY, ownerRoleGradientSecondaryColor);
+} else {
+  ownerRoleGradientSecondaryColor = getStoredOwnerRoleGradientSecondaryColor();
 }
 } catch (err) {
 console.error('Error loading color from Firestore:', err);
 currentChatColor = getChatColor();
 roleNameEffectsEnabled = localStorage.getItem('roleNameEffectsEnabled') !== '0';
+ownerRoleGradientSecondaryColor = getStoredOwnerRoleGradientSecondaryColor();
 }
 syncRoleNameEffectToggle();
+updateOwnerGradientSecondaryInput(ownerRoleGradientSecondaryColor);
+syncOwnerGradientControlVisibility();
 }
 
 function updateColorButtonBorders() {
@@ -19546,6 +22343,7 @@ btn.style.borderWidth = '3px';
 }
 });
 updateCustomColorInput(currentChatColor);
+renderOwnerGradientPreview();
 }
 
 function rgbToHex(rgb) {
@@ -19960,6 +22758,9 @@ try {
 async function sendGifMessage(gifUrl, caption = '') {
 if (!chatInitialized) { alert('Chat not initialized. Please refresh the page.'); return; }
 if (isReadOnlyForCurrentUser()) { alert('Chat is currently read-only.'); return; }
+const activeRoom = await getFreshChatRoomConfig(currentChatRoom);
+if (!canPostInRoom(activeRoom)) { alert('This room is read-only for your account.'); return; }
+if (!canShareMediaInRoom(activeRoom)) { alert('Media is locked in this room.'); return; }
 const timedBan = await getActiveTimedBan(currentChatUser);
 if (timedBan) { alert(`You are temporarily banned until ${timedBan.expiresAt.toLocaleString()}.`); return; }
 if (await isUserMuted(currentChatUser)) { alert('You are currently muted and cannot send messages.'); return; }
@@ -20066,6 +22867,7 @@ const messagesRef = db.collection('site_messages')
 
 let snapshotReady = false;
 let lastNewestMessageId = '';
+const listenerStartedAtMs = Date.now();
 
 chatMessagesUnsub = messagesRef.onSnapshot(snapshot => {
 const messagesDiv = document.getElementById('chat-messages');
@@ -20095,8 +22897,11 @@ accessibleDocsDesc.forEach((doc) => knownChatMessageIds.add(doc.id));
 snapshot.docChanges().forEach((change) => {
 if (change.type !== 'added') return;
 if (knownChatMessageIds.has(change.doc.id)) return;
+const changeData = change.doc.data() || {};
+const messageTimestampMs = getTimestampMs(changeData.timestamp) || Math.max(0, Number(changeData.timestampMs || 0));
 knownChatMessageIds.add(change.doc.id);
-notifyCrossRoomMessage(change.doc.data() || {});
+if (messageTimestampMs && messageTimestampMs < listenerStartedAtMs) return;
+notifyCrossRoomMessage(changeData);
 });
 }
 
@@ -20166,7 +22971,7 @@ const messageText = sanitizeNullableText(data.message, '');
 const safeCaption = messageText ? renderFormattedMessageHtml(messageText) : '';
 const linkPreviewHtml = renderLinkPreviewHtml(data.linkPreview || null);
 const messageColor = data.color || (isSystem ? '#2f2f2f' : (isOwn ? '#1565c0' : '#5f6368'));
-const timeStr = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleString([], {month:'short', day:'numeric', hour: '2-digit', minute:'2-digit'}) : '';
+const timeStr = formatChatDateTime(getTimestampMs(data.timestamp));
 const roomBadge = !isSystem ? `<span class="chat-room-badge">${escapeHtml(getChatRoomConfig(data.room || 'general').name)}</span>` : '';
 const displayUser = sanitizeNullableText(data.displayUser || data.user, 'unknown');
 const profileUser = normalizeUsername(data.profileUser || data.user || 'unknown');
@@ -20275,6 +23080,7 @@ async function sendMessage() {
 const input = document.getElementById('chat-message-input');
 const status = document.getElementById('chat-timeout-status');
 const message = input.value.trim();
+const activeRoom = await getFreshChatRoomConfig(currentChatRoom);
 
 if (!message) return;
 if (!chatInitialized) {
@@ -20284,7 +23090,7 @@ return;
 
 if (status) status.textContent = '';
 
-if (!canPostInRoom(getChatRoomConfig(currentChatRoom))) {
+if (!canPostInRoom(activeRoom)) {
 if (status) status.textContent = 'This room is read-only for your account.';
 return;
 }
@@ -20334,6 +23140,10 @@ color: currentChatColor,
 room: currentChatRoom,
 timestamp: firebase.firestore.FieldValue.serverTimestamp()
 });
+if ((resolvedMediaUrl || resolvedVideoUrl) && !canShareMediaInRoom(activeRoom)) {
+  if (status) status.textContent = 'Media is locked in this room.';
+  return;
+}
 if (resolvedMediaUrl) {
 msgData.imageData = resolvedMediaUrl;
 }
@@ -20379,6 +23189,7 @@ const file = event.target.files && event.target.files[0];
 const captionInput = document.getElementById('chat-message-input');
 const status = document.getElementById('chat-timeout-status');
 const caption = captionInput.value.trim();
+const activeRoom = await getFreshChatRoomConfig(currentChatRoom);
 
 if (!file) {
 return;
@@ -20396,8 +23207,13 @@ return;
 
 if (status) status.textContent = '';
 
-if (!canPostInRoom(getChatRoomConfig(currentChatRoom))) {
+if (!canPostInRoom(activeRoom)) {
 if (status) status.textContent = 'This room is read-only for your account.';
+return;
+}
+
+if (!canShareMediaInRoom(activeRoom)) {
+if (status) status.textContent = 'Media is locked in this room.';
 return;
 }
 
@@ -20472,6 +23288,7 @@ const file = event.target.files && event.target.files[0];
 const captionInput = document.getElementById('chat-message-input');
 const status = document.getElementById('chat-timeout-status');
 const caption = captionInput.value.trim();
+const activeRoom = await getFreshChatRoomConfig(currentChatRoom);
 
 if (!file) {
 setMediaUploadStatus('');
@@ -20493,9 +23310,15 @@ return;
 if (status) status.textContent = '';
 setMediaUploadStatus('Preparing video upload...', 'progress');
 
-if (!canPostInRoom(getChatRoomConfig(currentChatRoom))) {
+if (!canPostInRoom(activeRoom)) {
 if (status) status.textContent = 'This room is read-only for your account.';
 setMediaUploadStatus('This room is read-only for your account.', 'error');
+return;
+}
+
+if (!canShareMediaInRoom(activeRoom)) {
+if (status) status.textContent = 'Media is locked in this room.';
+setMediaUploadStatus('Media is locked in this room.', 'error');
 return;
 }
 

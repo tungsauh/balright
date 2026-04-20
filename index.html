@@ -4,15 +4,159 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>chud games</title>
+<link rel="stylesheet" href="style.css">
+<style>
+body {
+margin: 0;
+min-height: 100vh;
+background: #05070c;
+color: #f5f7fb;
+font-family: 'Bahnschrift', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#admin-menu {
+display: none;
+}
+
+.site-login-card {
+width: min(22rem, calc(100vw - 2rem));
+padding: 1.75rem 1.55rem 1.35rem;
+border-radius: 1.15rem;
+background: #000;
+border: 1px solid rgba(55, 97, 255, 0.72);
+box-shadow: 0 0 0 1px rgba(29, 51, 126, 0.35), 0 18px 60px rgba(0, 0, 0, 0.52);
+text-align: center;
+color: #fff;
+box-sizing: border-box;
+}
+
+.site-login-brand {
+font-size: 2rem;
+font-weight: 800;
+letter-spacing: -0.04em;
+line-height: 1;
+}
+
+.site-login-brand-accent {
+color: #4d7dff;
+}
+
+.site-login-subtitle {
+margin-top: 0.45rem;
+color: #71809b;
+font-size: 0.8rem;
+}
+
+.site-login-warning {
+margin-top: 1.15rem;
+padding: 0.7rem 0.85rem;
+border-radius: 0.55rem;
+border: 1px solid rgba(141, 43, 43, 0.7);
+background: rgba(63, 15, 15, 0.45);
+color: #e35f5f;
+font-size: 0.76rem;
+min-height: 1rem;
+}
+
+.site-login-stack {
+display: grid;
+gap: 0.7rem;
+margin-top: 0.7rem;
+}
+
+.site-login-field {
+width: 100%;
+padding: 0.82rem 0.9rem;
+border-radius: 0.65rem;
+border: 1px solid rgba(39, 48, 68, 0.98);
+background: rgba(3, 5, 10, 0.92);
+color: #f5f7fb;
+font-size: 0.9rem;
+box-sizing: border-box;
+outline: none;
+}
+
+.site-login-field::placeholder {
+color: #566174;
+}
+
+.site-login-primary {
+width: 100%;
+margin-top: 0.8rem;
+padding: 0.82rem 1rem;
+border-radius: 0.72rem;
+background: linear-gradient(180deg, #4f83ff 0%, #3c68ea 100%);
+border: 1px solid rgba(100, 141, 255, 0.95);
+color: #fff;
+font-size: 0.92rem;
+font-weight: 700;
+box-shadow: 0 10px 24px rgba(49, 91, 223, 0.28);
+cursor: pointer;
+}
+
+.site-login-footer {
+margin-top: 0.8rem;
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 0.25rem;
+flex-wrap: wrap;
+font-size: 0.74rem;
+color: #66748b;
+}
+
+.site-login-link {
+padding: 0;
+background: transparent;
+border: none;
+color: #3f7cff;
+font-size: 0.74rem;
+font-weight: 700;
+cursor: pointer;
+}
+</style>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
-<link rel="stylesheet" href="style.css">
+<script>
+(function() {
+  function queueUntilReady(globalName, loadingMessage) {
+    const bootstrapHandler = function() {
+      const args = arguments;
+      const errorNode = document.getElementById('site-login-error');
+      if (errorNode && loadingMessage) {
+        errorNode.textContent = loadingMessage;
+      }
+      let attempts = 0;
+      const maxAttempts = 120;
+      const timer = window.setInterval(function() {
+        attempts += 1;
+        if (typeof window[globalName] === 'function' && window[globalName] !== bootstrapHandler) {
+          window.clearInterval(timer);
+          window[globalName].apply(window, args);
+          return;
+        }
+        if (attempts >= maxAttempts) {
+          window.clearInterval(timer);
+          if (errorNode) {
+            errorNode.textContent = 'The page is still loading. Try again in a moment.';
+          }
+        }
+      }, 50);
+    };
+    return bootstrapHandler;
+  }
+
+  if (typeof window.siteLoginSubmit !== 'function') {
+    window.siteLoginSubmit = queueUntilReady('siteLoginSubmit', 'Loading sign-in...');
+  }
+})();
+</script>
 </head>
 <body>
 <!-- Admin Menu -->
-<div id="admin-menu" class="admin-menu-root">
+<div id="admin-menu" class="admin-menu-root" style="display:none;">
 <div class="admin-menu-panel">
 <div class="admin-toolbar">
 <div class="admin-toolbar-copy">
@@ -107,6 +251,54 @@
 <button onclick="adminAssignRole()" class="admin-btn admin-btn--blue">Set Role</button>
 </div>
 
+<div class="admin-section-card" data-admin-scope="owner" data-admin-permission="assignRoles" data-admin-default-collapsed="false">
+<div class="admin-section-title">User Effects</div>
+<select id="admin-user-effect-user" onchange="renderAdminUserEffectManager()">
+<option value="">-- Select a user --</option>
+</select>
+<select id="admin-user-effect-select" onchange="renderAdminUserEffectPreview()"></select>
+<div id="admin-user-effect-custom-colors" class="admin-button-row" style="display:none; grid-template-columns:repeat(2, minmax(0, 1fr)); align-items:end;">
+<label style="display:grid; gap:0.3rem; color:#dce7f5; font-size:0.78rem; text-align:left;">
+<span>Primary</span>
+<input type="color" id="admin-user-effect-primary" value="#8fe3ff" oninput="renderAdminUserEffectPreview()" style="width:100%; height:2.25rem; border:none; background:transparent; padding:0; cursor:pointer;" />
+</label>
+<label style="display:grid; gap:0.3rem; color:#dce7f5; font-size:0.78rem; text-align:left;">
+<span>Secondary</span>
+<input type="color" id="admin-user-effect-secondary" value="#4f78ff" oninput="renderAdminUserEffectPreview()" style="width:100%; height:2.25rem; border:none; background:transparent; padding:0; cursor:pointer;" />
+</label>
+</div>
+<div class="admin-preview-card">
+<div class="admin-preview-label">Live effect preview</div>
+<div id="admin-user-effect-preview"><span style="color:#dfe7f2; font-weight:700;">preview</span></div>
+</div>
+<div class="admin-button-row">
+<button onclick="adminSaveUserEffect()" class="admin-btn admin-btn--teal">Apply Effect</button>
+<button onclick="adminClearUserEffect()" class="admin-btn admin-btn--maroon">Clear Effect</button>
+</div>
+<div class="admin-helper-text">Assigned effects override the normal username shine until you clear them.</div>
+<div id="admin-user-effect-status" class="admin-helper-text admin-helper-text--flush"></div>
+<div id="admin-user-effect-list" class="admin-scroll-panel admin-scroll-panel--tight"></div>
+</div>
+
+<div class="admin-section-card" data-admin-scope="owner" data-admin-permission="assignRoles">
+<div class="admin-section-title">Custom Titles</div>
+<select id="admin-custom-title-user" onchange="renderAdminCustomTitleManager()">
+<option value="">-- Select a user --</option>
+</select>
+<input type="text" id="admin-custom-title-input" maxlength="40" placeholder="Custom title (example: Event Champion)" oninput="renderAdminCustomTitlePreview()" />
+<div class="admin-preview-card">
+<div class="admin-preview-label">Live title preview</div>
+<div id="admin-custom-title-preview"><span style="color:#dfe7f2; font-weight:700;">@preview</span><span style="color:#9fb0c2;"> • Event Champion</span></div>
+</div>
+<div class="admin-button-row">
+<button onclick="adminSaveCustomTitle()" class="admin-btn admin-btn--teal">Apply Title</button>
+<button onclick="adminClearCustomTitle()" class="admin-btn admin-btn--maroon">Clear Title</button>
+</div>
+<div class="admin-helper-text">Owner titles override unlocked reward titles until you clear them.</div>
+<div id="admin-custom-title-status" class="admin-helper-text admin-helper-text--flush"></div>
+<div id="admin-custom-title-list" class="admin-scroll-panel admin-scroll-panel--tight"></div>
+</div>
+
 <div class="admin-section-card" data-admin-scope="owner" data-admin-permission="manageCustomTags">
 <div class="admin-section-title">Custom Tags</div>
 <input type="text" id="admin-custom-tag-id" placeholder="Tag id (example: og-grinder)" oninput="renderAdminCustomTagPreview()" />
@@ -136,12 +328,83 @@
 <button onclick="adminClearAnnouncement()" class="admin-btn admin-btn--gray">Clear Announcement</button>
 <button onclick="adminSetSiteEvent()" class="admin-btn admin-btn--purple">Set Event</button>
 <button onclick="adminClearSiteEvent()" class="admin-btn admin-btn--brown">Clear Event</button>
-<button onclick="adminSendAlertPopup()" class="admin-btn admin-btn--blue">Send Alert Popup</button>
+<div class="admin-inline-input-row" style="margin-top:0.55rem;">
+<label class="admin-labeled-input" for="admin-global-alert-text">
+<span>Alert Text</span>
+<input type="text" id="admin-global-alert-text" placeholder="Write the popup message" maxlength="220" />
+</label>
+<label class="admin-labeled-input" for="admin-global-alert-duration">
+<span>Popup Seconds</span>
+<input type="number" id="admin-global-alert-duration" min="2" max="30" value="10" placeholder="10" />
+</label>
+</div>
+<div class="admin-inline-input-row" style="margin-top:0.45rem;">
+<label class="admin-labeled-input" for="admin-global-alert-active-minutes">
+<span>Keep Alert Live (Minutes)</span>
+<input type="number" id="admin-global-alert-active-minutes" min="1" max="1440" value="30" placeholder="30" />
+</label>
+<label class="admin-labeled-input" for="admin-global-alert-delay-minutes">
+<span>Start Delay in Minutes</span>
+<input type="number" id="admin-global-alert-delay-minutes" min="0" max="10080" value="0" placeholder="0" />
+</label>
+</div>
+<div class="admin-button-row admin-alert-action-row" style="margin-top:0.45rem;">
+<button onclick="adminPreviewAlertPopup()" class="admin-btn admin-btn--slate">Preview Alert</button>
+<button onclick="adminSendAlertPopup()" class="admin-btn admin-btn--blue">Save / Send Alert</button>
+<button onclick="adminClearAlertPopup()" class="admin-btn admin-btn--maroon">Clear Alert</button>
+</div>
 <button onclick="adminEditUpdateNotes()" class="admin-btn admin-btn--blue">Edit Update Notes</button>
 <div class="admin-inline-row">
 <input type="number" id="admin-slowmode-seconds" class="admin-input-inline" min="0" max="60" value="3" placeholder="Slow mode seconds" />
 <button onclick="adminSetSlowMode()" class="admin-btn admin-btn--slate">Set Slow Mode</button>
 </div>
+</div>
+
+<div class="admin-section-card" data-admin-scope="owner" data-admin-permission="manageSettings">
+<div class="admin-section-title">Event Mode</div>
+<select id="admin-event-mode-preset" onchange="applyAdminEventModePreset(this.value)">
+<option value="">Load preset</option>
+<option value="casino-weekend">Casino Weekend</option>
+<option value="glow-week">Glow Week</option>
+<option value="limited-background-week">Limited Background Week</option>
+<option value="owner-tag-night">Owner Tag Night</option>
+</select>
+<select id="admin-event-mode-theme" onchange="renderAdminEventModePreview()">
+<option value="">No event theme</option>
+<option value="double-payouts">Double Casino Payouts</option>
+<option value="glow-week">Special Glow Week</option>
+<option value="owner-tag">Owner-Picked Tag</option>
+<option value="limited-background">Limited Profile Background</option>
+</select>
+<input type="text" id="admin-event-mode-title" maxlength="80" placeholder="Event title" oninput="renderAdminEventModePreview()" />
+<textarea id="admin-event-mode-body" maxlength="240" placeholder="Short event description" oninput="renderAdminEventModePreview()" style="min-height:4.4rem;"></textarea>
+<div class="admin-button-row" style="grid-template-columns:repeat(2, minmax(0, 1fr)); align-items:end;">
+<label style="display:grid; gap:0.3rem; color:#dce7f5; font-size:0.78rem; text-align:left;">
+<span>Accent</span>
+<input type="color" id="admin-event-mode-accent" value="#2f8d46" oninput="renderAdminEventModePreview()" style="width:100%; height:2.25rem; border:none; background:transparent; padding:0; cursor:pointer;" />
+</label>
+<label style="display:grid; gap:0.3rem; color:#dce7f5; font-size:0.78rem; text-align:left;">
+<span>Duration (hours)</span>
+<input type="number" id="admin-event-mode-hours" min="1" max="336" value="24" oninput="renderAdminEventModePreview()" />
+</label>
+</div>
+<input type="text" id="admin-event-mode-tag-label" maxlength="24" placeholder="Event tag label" oninput="renderAdminEventModePreview()" />
+<div class="admin-button-row" style="grid-template-columns:repeat(3, minmax(0, 1fr)); align-items:end;">
+<input type="text" id="admin-event-mode-tag-bg" placeholder="Tag bg (#3d2612)" oninput="renderAdminEventModePreview()" />
+<input type="text" id="admin-event-mode-tag-text" placeholder="Tag text (#fff6d6)" oninput="renderAdminEventModePreview()" />
+<input type="text" id="admin-event-mode-tag-border" placeholder="Tag border (#f0c15a)" oninput="renderAdminEventModePreview()" />
+</div>
+<input type="text" id="admin-event-mode-background" maxlength="240" placeholder="Profile background CSS or image URL" oninput="renderAdminEventModePreview()" />
+<div class="admin-preview-card">
+<div class="admin-preview-label">Live event preview</div>
+<div id="admin-event-mode-preview"></div>
+</div>
+<div class="admin-button-row">
+<button onclick="adminSaveEventMode()" class="admin-btn admin-btn--teal">Apply Event Mode</button>
+<button onclick="adminClearEventMode()" class="admin-btn admin-btn--maroon">Clear Event Mode</button>
+</div>
+<div class="admin-helper-text">Use one theme at a time. Tag and background settings are only used by their matching theme.</div>
+<div id="admin-event-mode-status" class="admin-helper-text admin-helper-text--flush"></div>
 </div>
 
 <div class="admin-section-card" data-admin-scope="owner" data-admin-permission="manageRolePermissions">
@@ -175,6 +438,45 @@
 <button onclick="copySelectedUserToHistory()" class="admin-btn admin-btn--neutral">Use Selected User</button>
 </div>
 <div id="admin-user-history" class="admin-scroll-panel" style="max-height:280px;"></div>
+</div>
+
+<div class="admin-section-card" data-admin-scope="admin" data-admin-permission="viewUserTimeline">
+<div class="admin-section-title">User Timeline</div>
+<input type="text" id="admin-timeline-username" placeholder="Username for timeline" />
+<div class="admin-button-row">
+<button onclick="loadAdminUserTimeline()" class="admin-btn admin-btn--slate">Build Timeline</button>
+<button onclick="adminTimelineUseSelectedUser()" class="admin-btn admin-btn--neutral">Use Selected User</button>
+</div>
+<div id="admin-user-timeline" class="admin-scroll-panel" style="max-height:300px;"></div>
+</div>
+
+<div class="admin-section-card" data-admin-scope="owner" data-admin-permission="manageProfileCleanup">
+<div class="admin-section-title">Profile Cleanup</div>
+<input type="text" id="admin-profile-cleanup-username" placeholder="Username to clean up" />
+<div class="admin-button-row">
+<button onclick="loadAdminProfileCleanupManager()" class="admin-btn admin-btn--slate">Load Profile</button>
+<button onclick="adminProfileCleanupUseSelectedUser()" class="admin-btn admin-btn--neutral">Use Selected User</button>
+</div>
+<div class="admin-button-row">
+<button onclick="adminRunProfileCleanup('media')" class="admin-btn admin-btn--brown">Clear Avatar + Banner</button>
+<button onclick="adminRunProfileCleanup('identity')" class="admin-btn admin-btn--purple">Clear Title + Badges</button>
+<button onclick="adminRunProfileCleanup('effect')" class="admin-btn admin-btn--blue">Clear Effect</button>
+<button onclick="adminRunProfileCleanup('tag')" class="admin-btn admin-btn--gray">Clear Tag</button>
+</div>
+<div class="admin-button-row admin-button-row--single">
+<button onclick="adminRunProfileCleanup('all')" class="admin-btn admin-btn--maroon">Full Profile Cleanup</button>
+</div>
+<div id="admin-profile-cleanup-status" class="admin-helper-text admin-helper-text--flush"></div>
+<div id="admin-profile-cleanup-manager" class="admin-scroll-panel" style="max-height:220px;"></div>
+</div>
+
+<div class="admin-section-card" data-admin-scope="admin" data-admin-permission="viewImpersonation">
+<div class="admin-section-title">Impersonation Visibility</div>
+<div class="admin-helper-text admin-helper-text--flush">Shows recent send-as activity so owner-granted aliases are visible to staff.</div>
+<div class="admin-button-row admin-button-row--single">
+<button onclick="loadAdminImpersonationVisibility()" class="admin-btn admin-btn--slate">Refresh Impersonation Feed</button>
+</div>
+<div id="admin-impersonation-visibility" class="admin-scroll-panel" style="max-height:300px;"></div>
 </div>
 
 <div class="admin-section-card" data-admin-scope="admin" data-admin-permission="viewArchives" data-admin-section-id="chat-archives">
@@ -296,6 +598,56 @@
 <div id="admin-casino-manager" class="admin-scroll-panel" style="max-height:220px; margin-top:0.55rem;"></div>
 </div>
 
+<div class="admin-section-card" data-admin-scope="owner" data-admin-permission="manageSeasonRepair">
+<div class="admin-section-title">Season Repair</div>
+<div class="admin-helper-text admin-helper-text--flush">Repair a weekly winner by season number without touching the rest of the wall.</div>
+<div class="admin-inline-input-row" style="margin-top:0.55rem;">
+<input type="number" id="admin-season-repair-number" min="1" placeholder="Season #" />
+<input type="text" id="admin-season-repair-username" placeholder="Winner username" />
+<button onclick="adminSeasonRepairUseSelectedUser()" style="background:#37474f; color:#fff; border:none; border-radius:0.25rem;">Use Selected User</button>
+</div>
+<div class="admin-inline-input-row">
+<input type="number" id="admin-season-repair-balance" min="0" placeholder="Recorded balance" />
+<button onclick="adminSaveCasinoSeasonRepair()" style="background:#1565c0; color:#fff; border:none; border-radius:0.25rem;">Save Winner</button>
+<button onclick="adminSyncCasinoWinnerFromWall()" style="background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Sync Winner State</button>
+</div>
+<div id="admin-season-repair-status" class="admin-note-text"></div>
+<div id="admin-casino-season-repair" class="admin-scroll-panel" style="max-height:240px;"></div>
+</div>
+
+<div class="admin-section-card" data-admin-scope="owner" data-admin-permission="manageCasinoRollback">
+<div class="admin-section-title">Casino Rollback</div>
+<div class="admin-helper-text admin-helper-text--flush">Reset one player's casino inventory or progress without nuking the full casino.</div>
+<div class="admin-inline-input-row" style="margin-top:0.55rem;">
+<input type="text" id="admin-casino-rollback-username" placeholder="Casino username" />
+<button onclick="loadAdminCasinoRollbackTool()" style="background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Load</button>
+<button onclick="adminCasinoRollbackUseSelectedUser()" style="background:#37474f; color:#fff; border:none; border-radius:0.25rem;">Use Selected User</button>
+</div>
+<div class="admin-button-row">
+<button onclick="adminRollbackCasinoInventory()" class="admin-btn admin-btn--maroon">Clear Inventory</button>
+<button onclick="adminRollbackCasinoProgress()" class="admin-btn admin-btn--purple">Reset Stats + Cooldowns</button>
+</div>
+<div id="admin-casino-rollback-status" class="admin-note-text"></div>
+<div id="admin-casino-rollback-manager" class="admin-scroll-panel" style="max-height:220px;"></div>
+</div>
+
+<div class="admin-section-card" data-admin-scope="owner" data-admin-permission="manageRewardGrants">
+<div class="admin-section-title">Inventory Reward Grants</div>
+<div class="admin-helper-text admin-helper-text--flush">Grant cases, shop items, or drops directly into a player's casino inventory.</div>
+<div class="admin-inline-input-row" style="margin-top:0.55rem;">
+<input type="text" id="admin-reward-grant-username" placeholder="Reward target username" />
+<button onclick="loadAdminRewardGrantTool()" style="background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Load</button>
+<button onclick="adminRewardGrantUseSelectedUser()" style="background:#37474f; color:#fff; border:none; border-radius:0.25rem;">Use Selected User</button>
+</div>
+<div class="admin-inline-input-row">
+<select id="admin-reward-grant-item" style="flex:1 1 14rem; min-width:12rem;"></select>
+<input type="number" id="admin-reward-grant-quantity" min="1" max="50" value="1" placeholder="Qty" />
+<button onclick="adminGrantSelectedReward()" style="background:#1565c0; color:#fff; border:none; border-radius:0.25rem;">Grant Reward</button>
+</div>
+<div id="admin-reward-grant-status" class="admin-note-text"></div>
+<div id="admin-reward-grant-manager" class="admin-scroll-panel" style="max-height:200px;"></div>
+</div>
+
 <div class="admin-section-card" data-admin-scope="owner" data-admin-permission="manageProfileBackgrounds" data-admin-section-id="profile-background-shop">
 <div class="admin-section-heading">
 <div class="admin-section-title">Profile Background Shop</div>
@@ -401,6 +753,18 @@
 
 <div class="admin-section-card" data-admin-scope="admin" data-admin-permission="viewAuditLog">
 <div class="admin-section-title">Audit Log</div>
+<div class="admin-inline-input-row" style="margin-top:0.45rem; margin-bottom:0.45rem;">
+<select id="admin-audit-filter" onchange="loadAuditLogs()">
+<option value="">All actions</option>
+<option value="set_event_mode">Event changes</option>
+<option value="clear_event_mode">Event clears</option>
+<option value="warn_from_report">Warnings</option>
+<option value="strike_from_report">Strikes</option>
+<option value="report_notes">Report notes</option>
+<option value="open_owner_tool">Owner tool</option>
+</select>
+<input type="text" id="admin-audit-search" placeholder="Search target or details" oninput="scheduleAuditLogReload()" />
+</div>
 <button onclick="loadAuditLogs()" style="padding:0.45rem 0.8rem; background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Refresh Log</button>
 <div id="admin-audit-log" class="admin-scroll-panel"></div>
 </div>
@@ -479,6 +843,24 @@
 <button onclick="loadAdminRoomManager()" style="padding:0.45rem 0.8rem; background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Refresh Rooms</button>
 <div id="admin-room-manager" class="admin-scroll-panel" style="max-height:280px;"></div>
 </div>
+
+<div class="admin-section-card" data-admin-scope="owner" data-admin-permission="manageLiveRooms">
+<div class="admin-section-title">Live Room Controls</div>
+<div class="admin-helper-text admin-helper-text--flush">Freeze a room, lock media, switch it between public and private, or clear room messages quickly.</div>
+<div class="admin-inline-input-row" style="margin-top:0.55rem;">
+<input type="text" id="admin-live-room-id" placeholder="Room id" />
+<button onclick="loadAdminLiveRoomControls()" style="background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Load Room</button>
+<button onclick="adminUseCurrentRoomForLiveControls()" style="background:#37474f; color:#fff; border:none; border-radius:0.25rem;">Use Current Room</button>
+</div>
+<div class="admin-button-row">
+<button onclick="adminToggleLiveRoomFlag('readOnly')" class="admin-btn admin-btn--maroon">Toggle Freeze</button>
+<button onclick="adminToggleLiveRoomFlag('mediaBlocked')" class="admin-btn admin-btn--purple">Toggle Media Lock</button>
+<button onclick="adminToggleLiveRoomPrivacy()" class="admin-btn admin-btn--blue">Toggle Public/Private</button>
+<button onclick="adminClearLiveRoomMessages()" class="admin-btn admin-btn--brown">Clear Messages</button>
+</div>
+<div id="admin-live-room-status" class="admin-note-text"></div>
+<div id="admin-live-room-controls" class="admin-scroll-panel" style="max-height:240px;"></div>
+</div>
 </div>
 
 <div class="admin-footer">
@@ -556,7 +938,9 @@
 <button onclick="openGeneralShopInventoryModal()">Inventory</button>
 <button onclick="openCasinoModal()">Casino</button>
 <button onclick="openCasinoLeaderboardModal()">Casino Leaderboard</button>
+<button onclick="openLeaderboardModal()">Leaderboard</button>
 <button onclick="openChudWallModal()">Chud Wall</button>
+<button onclick="openSchoolScheduleInIframe()">School Schedule</button>
 <button onclick="openCustomUrlModal()">Open URL</button>
 <button class="store-hero-button-secondary" onclick="openCreditsModal()">Credits</button>
 </div>
@@ -596,8 +980,6 @@
 <option value="compact">Compact</option>
 <option value="large">Large</option>
 </select>
-<label for="site-accent-input">Accent</label>
-<input id="site-accent-input" type="color" value="#4f83ff" onchange="updateSiteAccent(this.value)" />
 <button id="store-favorites-toggle" class="store-toggle-btn" onclick="toggleFavoritesOnly()">Favorites Only</button>
 </div>
 </div>
@@ -659,9 +1041,11 @@
 
 
 <div id="iframe-container" class="iframe-container">
-<iframe id="game-iframe" class="game-iframe" src=""></iframe>
+<iframe id="game-iframe" class="game-iframe" src="" allow="autoplay; fullscreen; gamepad; clipboard-read; clipboard-write; picture-in-picture; screen-wake-lock" allowfullscreen webkitallowfullscreen mozallowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
 <div class="iframe-controls">
 <button class="refresh-btn" id="refresh-btn" style="display:none;">Refresh</button>
+<button class="refresh-btn" id="iframe-hard-refresh-btn" style="display:none;">Hard Refresh</button>
+<button class="refresh-btn" id="iframe-open-tab-btn" style="display:none;">Open Tab</button>
 <button class="refresh-btn" id="iframe-site-btn" onclick="openIframeSiteInfo()" style="display:none;">The Site</button>
 <button class="close-btn" id="close-btn" style="display:none;">Close Game</button>
 </div>
@@ -674,7 +1058,6 @@
 <div id="chat-header" onmousedown="startChatDrag(event)" ontouchstart="startChatDrag(event)">
 <h3>Chat</h3>
 <div id="chat-header-actions">
-<button id="chat-leaderboard-btn" onclick="openLeaderboardModal(event)">🏆</button>
 <button id="chat-friends-btn" onclick="openFriendsModal()" title="Friends">👥<span id="dm-unread-badge"></span></button>
 <button id="chat-player-hub-btn" onclick="openPlayerHubModal()" title="Player Hub">🔔<span id="notification-badge" style="display:none;"></span></button>
 <button id="chat-profile-btn" onclick="openProfileModal(event)">Profile</button>
@@ -760,11 +1143,20 @@ oninput="onChatInput()"
 <input type="color" id="custom-chat-color-input" value="#1565c0" oninput="updateCustomColorPreview(this.value)" onchange="selectCustomColor(this.value)" style="width:56px; height:40px; border:none; border-radius:0.45rem; background:transparent; cursor:pointer; padding:0;" />
 <span id="custom-chat-color-label" style="font-size:0.78rem; color:#d7e6f7; min-width:72px; text-align:left;">#1565c0</span>
 </div>
+<div id="owner-gradient-controls" style="display:none; margin-top:0.95rem; gap:0.65rem;">
+<div style="display:flex; align-items:center; justify-content:center; gap:0.65rem; flex-wrap:wrap;">
+<span style="font-size:0.8rem; color:#b0bec5;">Owner second color</span>
+<input type="color" id="owner-gradient-secondary-input" value="#ffd54f" oninput="updateOwnerGradientSecondaryPreview(this.value)" onchange="selectOwnerGradientSecondaryColor(this.value)" style="width:56px; height:40px; border:none; border-radius:0.45rem; background:transparent; cursor:pointer; padding:0;" />
+<span id="owner-gradient-secondary-label" style="font-size:0.78rem; color:#d7e6f7; min-width:72px; text-align:left;">#ffd54f</span>
+</div>
+<div style="font-size:0.74rem; color:#97aabf; line-height:1.45;">Your owner shine blends the selected name color with this second gradient color.</div>
+<div id="owner-gradient-preview" style="display:flex; justify-content:center; align-items:center; min-height:1.6rem;"></div>
+</div>
 <label style="display:flex; align-items:center; justify-content:center; gap:0.55rem; margin-top:0.95rem; color:#d7e6f7; font-size:0.82rem;">
 <input id="role-name-effects-toggle" type="checkbox" onchange="toggleRoleNameEffects(this.checked)" />
 <span>Enable role username effects</span>
 </label>
-<div style="margin-top:0.45rem; font-size:0.74rem; color:#97aabf; max-width:20rem; line-height:1.45; margin-left:auto; margin-right:auto;">Admins use silver, real moderators use bronze, and owners use a shiny gradient that follows the selected color.</div>
+<div style="margin-top:0.45rem; font-size:0.74rem; color:#97aabf; max-width:20rem; line-height:1.45; margin-left:auto; margin-right:auto;">Admins use silver, real moderators use bronze, and owners use a shiny two-color gradient tied to the chosen colors.</div>
 <button onclick="closeColorPicker()" style="margin-top:1rem; padding:0.5rem 1rem; background:#444; color:#fff; border:none; border-radius:4px; cursor:pointer;">Close</button>
 </div>
 </div>
@@ -1014,7 +1406,7 @@ oninput="onChatInput()"
 <div id="room-moderation-audit" class="admin-scroll-panel" style="max-height:180px;"></div>
 </div>
 <div class="submission-actions">
-<button id="room-moderation-privacy-btn" type="button" onclick="toggleRoomModerationPrivacy()" style="background:#455a64; color:#fff; border:none; border-radius:0.35rem;">Toggle Privacy</button>
+<button id="room-moderation-privacy-btn" type="button" onclick="toggleRoomModerationPrivacy()" style="background:#455a64; color:#fff; border:none; border-radius:0.35rem;">Toggle Public/Private</button>
 <button id="room-moderation-open-btn" type="button" onclick="openCurrentModeratedRoom()" style="background:#263238; color:#fff; border:none; border-radius:0.35rem;">Open Room</button>
 <button id="room-moderation-clear-btn" type="button" onclick="clearRoomModerationMessages()" style="background:#8e0000; color:#fff; border:none; border-radius:0.35rem;">Clear Room Messages</button>
 </div>
@@ -1048,16 +1440,34 @@ oninput="onChatInput()"
 <div class="dm-sidebar-title">Inbox</div>
 <div class="dm-sidebar-subtitle">Recent conversations and unread counts</div>
 </div>
+<div class="dm-sidebar-controls">
+<input id="dm-conversation-search" class="dm-control-input" type="text" placeholder="Search conversations" oninput="onDMConversationSearchInput()" />
+<div class="dm-filter-row">
+<button id="dm-filter-all-btn" type="button" class="dm-filter-btn" onclick="setDMUnreadFilter(false)">All</button>
+<button id="dm-filter-unread-btn" type="button" class="dm-filter-btn" onclick="setDMUnreadFilter(true)">Unread</button>
+<button type="button" class="dm-filter-btn dm-filter-btn--danger" onclick="clearAllDMs()">Clear All</button>
+</div>
+</div>
 <div id="dm-conversation-list" class="dm-conversation-list"></div>
 </div>
 <div class="dm-pane">
 <div style="display:flex; justify-content:space-between; align-items:center; padding:1rem 1.5rem; border-bottom:1px solid #333; gap:1rem;">
 <h2 style="margin:0; font-size:1.1rem;">💬 DM: <span id="dm-modal-title">Select a conversation</span></h2>
+<div class="dm-header-actions">
+<button id="dm-pin-btn" type="button" onclick="toggleActiveDMPin()" style="padding:0.35rem 0.7rem;">Pin</button>
+<button id="dm-mute-btn" type="button" onclick="toggleActiveDMMute()" style="padding:0.35rem 0.7rem;">Mute</button>
+<button id="dm-jump-unread-btn" type="button" onclick="jumpToActiveDMFirstUnread()" style="padding:0.35rem 0.7rem;">Jump Unread</button>
+<button id="dm-clear-btn" type="button" onclick="clearActiveDMConversation()" style="padding:0.35rem 0.7rem;">Clear Chat</button>
 <button onclick="closeDMModal()" style="padding:0.35rem 0.7rem;">Close</button>
+</div>
+</div>
+<div class="dm-thread-toolbar">
+<input id="dm-message-search" class="dm-control-input" type="text" placeholder="Search this conversation" oninput="onDMMessageSearchInput()" />
+<div id="dm-search-meta" class="dm-search-meta">No conversation selected.</div>
 </div>
 <div id="dm-messages" style="flex:1; overflow-y:auto; padding:0.8rem 1rem; min-height:200px; max-height:380px; display:flex; flex-direction:column; gap:0.4rem;"><div class="dm-empty-state">Pick a conversation from the inbox to read or reply.</div></div>
 <div style="padding:0.7rem 1rem; border-top:1px solid #333; display:flex; gap:0.5rem;">
-<input id="dm-input" type="text" placeholder="Type a message..." maxlength="500" style="flex:1; background:#1d1d1d; color:#fff; border:1px solid #444; border-radius:0.35rem; padding:0.45rem 0.7rem;" onkeydown="if(event.key==='Enter')sendDMMessage()" />
+<input id="dm-input" type="text" placeholder="Type a message..." maxlength="500" style="flex:1; background:#1d1d1d; color:#fff; border:1px solid #444; border-radius:0.35rem; padding:0.45rem 0.7rem;" oninput="onDMInputChanged()" onkeydown="if(event.key==='Enter')sendDMMessage()" />
 <button onclick="sendDMMessage()" style="padding:0.45rem 1rem; background:#1565c0; color:#fff; border:none; border-radius:0.35rem; cursor:pointer;">Send</button>
 </div>
 </div>
