@@ -3946,7 +3946,7 @@ color: #fff;
 
 .leaderboard-entry {
 display: grid;
-grid-template-columns: 0.35fr 1.2fr 0.6fr 0.8fr;
+grid-template-columns: minmax(2.8rem, auto) minmax(0, 1fr) auto auto;
 gap: 0.65rem;
 align-items: center;
 padding: 0.58rem 0.7rem;
@@ -3992,9 +3992,9 @@ display: flex;
 align-items: center;
 gap: 0.5rem;
 color: #ddd;
-overflow: hidden;
-text-overflow: ellipsis;
-white-space: nowrap;
+min-width: 0;
+overflow: visible;
+white-space: normal;
 cursor: pointer;
 }
 
@@ -4007,7 +4007,26 @@ display: flex;
 align-items: center;
 gap: 0.45rem;
 min-width: 0;
-overflow: hidden;
+overflow: visible;
+flex: 1 1 auto;
+max-width: 100%;
+flex-wrap: nowrap;
+}
+
+.leaderboard-identity-copy {
+display: flex;
+flex-direction: column;
+gap: 0.22rem;
+min-width: 0;
+flex: 1 1 auto;
+}
+
+.leaderboard-badge-row {
+display: flex;
+align-items: center;
+gap: 0.35rem;
+flex-wrap: wrap;
+min-width: 0;
 }
 
 .leaderboard-name-copy {
@@ -4015,6 +4034,7 @@ min-width: 0;
 overflow: hidden;
 text-overflow: ellipsis;
 white-space: nowrap;
+max-width: 100%;
 }
 
 .leaderboard-chud-season-summary {
@@ -4204,16 +4224,19 @@ text-align: center;
 font-weight: bold;
 color: #fff;
 font-size: 0.8rem;
+min-width: 0;
 }
 
 .leaderboard-points {
 color: #bbb;
 text-align: right;
 font-size: 0.84rem;
+min-width: 0;
+word-break: break-word;
 }
 
 .leaderboard-entry.leaderboard-entry-chud-wall {
-grid-template-columns: 0.34fr 1.7fr 0.62fr 0.84fr;
+grid-template-columns: minmax(2.8rem, auto) minmax(0, 1.55fr) auto auto;
 padding: 0.82rem 0.92rem;
 border-radius: 0.7rem;
 min-height: 5.45rem;
@@ -4238,8 +4261,11 @@ overflow: visible;
 .leaderboard-entry.leaderboard-entry-chud-wall .leaderboard-identity {
 align-items: flex-start;
 row-gap: 0.32rem;
-flex-wrap: wrap;
 overflow: visible;
+}
+
+.leaderboard-entry.leaderboard-entry-chud-wall .leaderboard-identity-copy {
+gap: 0.32rem;
 }
 
 .leaderboard-entry.leaderboard-entry-chud-wall .leaderboard-name-copy {
@@ -4254,7 +4280,7 @@ font-size: 0.65rem;
 font-weight: bold;
 padding: 0.15rem 0.4rem;
 border-radius: 0.25rem;
-margin-left: 0.4rem;
+margin-left: 0;
 text-transform: uppercase;
 letter-spacing: 0.5px;
 }
@@ -4266,9 +4292,42 @@ font-size: 0.65rem;
 font-weight: bold;
 padding: 0.15rem 0.4rem;
 border-radius: 0.25rem;
-margin-left: 0.4rem;
+margin-left: 0;
 text-transform: uppercase;
 letter-spacing: 0.5px;
+}
+
+@media (max-width: 760px) {
+.leaderboard-entry,
+.leaderboard-entry.leaderboard-entry-chud-wall {
+grid-template-columns: minmax(2.5rem, auto) minmax(0, 1fr);
+grid-template-areas:
+  'rank user'
+  'rank level'
+  'rank points';
+align-items: start;
+}
+
+.leaderboard-rank {
+grid-area: rank;
+padding-top: 0.25rem;
+}
+
+.leaderboard-username {
+grid-area: user;
+}
+
+.leaderboard-level {
+grid-area: level;
+justify-self: start;
+margin-top: 0.15rem;
+}
+
+.leaderboard-points {
+grid-area: points;
+text-align: left;
+margin-top: 0.1rem;
+}
 }
 
 .custom-tag.tag-dont-give-admin {

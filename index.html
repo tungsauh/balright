@@ -549,7 +549,7 @@ cursor: pointer;
 <button onclick="adminClearCasinoCoinFlips()" style="background:#5d4037; color:#fff; border:none; border-radius:0.25rem;">Clear Coin Flips</button>
 </div>
 <div class="admin-note-text" style="margin-top:0.7rem;">Game chance tuning</div>
-<div style="font-size:0.76rem; color:#9fb0c2; margin-bottom:0.35rem;">Blackjack uses the dealer stand value. Slots use per-symbol weights on each reel, and you can add a separate no-match chance for forced misses.</div>
+<div style="font-size:0.76rem; color:#9fb0c2; margin-bottom:0.35rem;">Blackjack uses the dealer stand value. Slots use per-symbol reel weights, not fixed absolute symbol percentages, and no-match is the separate forced-miss chance.</div>
 <div class="admin-inline-input-row" style="margin-bottom:0.2rem;">
 <button onclick="adminApplyCasinoGameSettingsPreset('player-favored')" style="background:#2e7d32; color:#fff; border:none; border-radius:0.25rem;">Player Favored</button>
 <button onclick="adminApplyCasinoGameSettingsPreset('fair')" style="background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Fair</button>
@@ -571,25 +571,25 @@ cursor: pointer;
 </div>
 <div class="admin-inline-input-row">
 <div style="display:grid; gap:0.2rem; flex:1 1 120px; min-width:0;">
-<label for="admin-casino-slot-weight-7" style="font-size:0.72rem; color:#9fb0c2; font-weight:600; display:flex; justify-content:space-between; gap:0.4rem;"><span>7 chance</span><span id="admin-casino-slot-weight-7-value">7.7%</span></label>
+<label for="admin-casino-slot-weight-7" style="font-size:0.72rem; color:#9fb0c2; font-weight:600; display:flex; justify-content:space-between; gap:0.4rem;"><span>7 weight</span><span id="admin-casino-slot-weight-7-value">1 wt</span></label>
 <input type="range" id="admin-casino-slot-weight-7" min="1" max="50" value="1" oninput="syncAdminCasinoSlotWeightLabels()" />
 </div>
 <div style="display:grid; gap:0.2rem; flex:1 1 120px; min-width:0;">
-<label for="admin-casino-slot-weight-bar" style="font-size:0.72rem; color:#9fb0c2; font-weight:600; display:flex; justify-content:space-between; gap:0.4rem;"><span>BAR chance</span><span id="admin-casino-slot-weight-bar-value">15.4%</span></label>
+<label for="admin-casino-slot-weight-bar" style="font-size:0.72rem; color:#9fb0c2; font-weight:600; display:flex; justify-content:space-between; gap:0.4rem;"><span>BAR weight</span><span id="admin-casino-slot-weight-bar-value">2 wt</span></label>
 <input type="range" id="admin-casino-slot-weight-bar" min="1" max="50" value="2" oninput="syncAdminCasinoSlotWeightLabels()" />
 </div>
 <div style="display:grid; gap:0.2rem; flex:1 1 120px; min-width:0;">
-<label for="admin-casino-slot-weight-cherry" style="font-size:0.72rem; color:#9fb0c2; font-weight:600; display:flex; justify-content:space-between; gap:0.4rem;"><span>CHERRY chance</span><span id="admin-casino-slot-weight-cherry-value">30.8%</span></label>
+<label for="admin-casino-slot-weight-cherry" style="font-size:0.72rem; color:#9fb0c2; font-weight:600; display:flex; justify-content:space-between; gap:0.4rem;"><span>CHERRY weight</span><span id="admin-casino-slot-weight-cherry-value">4 wt</span></label>
 <input type="range" id="admin-casino-slot-weight-cherry" min="1" max="50" value="4" oninput="syncAdminCasinoSlotWeightLabels()" />
 </div>
 </div>
 <div class="admin-inline-input-row">
 <div style="display:grid; gap:0.2rem; flex:1 1 120px; min-width:0;">
-<label for="admin-casino-slot-weight-star" style="font-size:0.72rem; color:#9fb0c2; font-weight:600; display:flex; justify-content:space-between; gap:0.4rem;"><span>STAR chance</span><span id="admin-casino-slot-weight-star-value">23.1%</span></label>
+<label for="admin-casino-slot-weight-star" style="font-size:0.72rem; color:#9fb0c2; font-weight:600; display:flex; justify-content:space-between; gap:0.4rem;"><span>STAR weight</span><span id="admin-casino-slot-weight-star-value">3 wt</span></label>
 <input type="range" id="admin-casino-slot-weight-star" min="1" max="50" value="3" oninput="syncAdminCasinoSlotWeightLabels()" />
 </div>
 <div style="display:grid; gap:0.2rem; flex:1 1 120px; min-width:0;">
-<label for="admin-casino-slot-weight-bell" style="font-size:0.72rem; color:#9fb0c2; font-weight:600; display:flex; justify-content:space-between; gap:0.4rem;"><span>BELL chance</span><span id="admin-casino-slot-weight-bell-value">23.1%</span></label>
+<label for="admin-casino-slot-weight-bell" style="font-size:0.72rem; color:#9fb0c2; font-weight:600; display:flex; justify-content:space-between; gap:0.4rem;"><span>BELL weight</span><span id="admin-casino-slot-weight-bell-value">3 wt</span></label>
 <input type="range" id="admin-casino-slot-weight-bell" min="1" max="50" value="3" oninput="syncAdminCasinoSlotWeightLabels()" />
 </div>
 <button onclick="adminSaveCasinoGameSettings()" style="background:#00695c; color:#fff; border:none; border-radius:0.25rem;">Save Chances</button>
@@ -1687,7 +1687,7 @@ oninput="onChatInput()"
 <h3>Inventory</h3>
 <button onclick="closeGeneralShopInventoryModal()" style="padding:0.35rem 0.7rem;">Close</button>
 </div>
-<div class="overlay-subtle">Open cases from your inventory here. The rarity ladder matches CS2-style cases, but the odds are tuned slightly more generously.</div>
+<div class="overlay-subtle">Open cases from your inventory here. The rarity ladder is tighter now, so reds and golds stay rare.</div>
 <div id="general-shop-inventory-status" class="overlay-status"></div>
 <div id="general-shop-inventory-content"></div>
 </div>
