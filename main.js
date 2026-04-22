@@ -881,15 +881,26 @@ function getCasinoSeasonSchedule(referenceMs = Date.now()) {
 }
 
 function isCasinoCurrentlyOpen(referenceMs = Date.now()) {
+  const settings = getCachedCasinoGameSettings();
+  if (settings.forceClosed) return false;
   return getCasinoSeasonSchedule(referenceMs).isOpen;
 }
 
 function getCasinoClosedMessage(referenceMs = Date.now()) {
+  const settings = getCachedCasinoGameSettings();
+  if (settings.forceClosed) {
+    const reason = sanitizeNullableText(settings.forceClosedReason, 'Casino is temporarily closed by the owner.');
+    return reason;
+  }
   const schedule = getCasinoSeasonSchedule(referenceMs);
   return `Casino is closed for the weekend. It reopens ${formatCasinoSeasonDateTime(schedule.nextOpenAtMs)}.`;
 }
 
 function assertCasinoOpen(referenceMs = Date.now()) {
+  const settings = getCachedCasinoGameSettings();
+  if (settings.forceClosed) {
+    throw new Error(getCasinoClosedMessage(referenceMs));
+  }
   const schedule = getCasinoSeasonSchedule(referenceMs);
   if (schedule.isOpen) return schedule;
   throw new Error(getCasinoClosedMessage(referenceMs));
@@ -1093,7 +1104,9 @@ function getDefaultCasinoGameSettings() {
     blackjackDealerStandValue: 17,
     rouletteSelectedBoostPct: 0,
     slotsNoMatchChancePct: 0,
-    slotsSymbolWeights: { ...SLOT_SYMBOL_DEFAULT_WEIGHTS }
+    slotsSymbolWeights: { ...SLOT_SYMBOL_DEFAULT_WEIGHTS },
+    forceClosed: false,
+    forceClosedReason: ''
   };
 }
 
@@ -1109,7 +1122,9 @@ function normalizeCasinoGameSettingsData(data = {}) {
     blackjackDealerStandValue: Math.max(15, Math.min(19, Math.floor(Number(data.blackjackDealerStandValue ?? defaults.blackjackDealerStandValue) || defaults.blackjackDealerStandValue))),
     rouletteSelectedBoostPct: Math.max(-80, Math.min(300, Math.floor(Number(data.rouletteSelectedBoostPct ?? defaults.rouletteSelectedBoostPct) || 0))),
     slotsNoMatchChancePct: Math.max(0, Math.min(100, Math.floor(Number(data.slotsNoMatchChancePct ?? defaults.slotsNoMatchChancePct) || 0))),
-    slotsSymbolWeights: normalizedWeights
+    slotsSymbolWeights: normalizedWeights,
+    forceClosed: data.forceClosed === true,
+    forceClosedReason: sanitizeNullableText(data.forceClosedReason, '').slice(0, 220)
   };
 }
 
@@ -3121,10 +3136,9 @@ async function refreshCasinoProfileUiForUser(username) {
 function renderCasinoRecoveryAction(stats) {
   const actionNode = document.getElementById('casino-recovery-action');
   if (!actionNode) return;
-  const seasonSchedule = getCasinoSeasonSchedule();
   const resolvedStats = typeof stats === 'object' && stats ? stats : getDefaultCasinoProfileStats(getCasinoPlayerKey());
-  if (!seasonSchedule.isOpen) {
-    actionNode.innerHTML = `<div style="margin-top:0.85rem; display:grid; gap:0.45rem; justify-items:center;"><div style="font-size:0.82rem; color:#f3d27a; text-align:center;">Daily bonus and bailout claims are paused for the weekend.</div><div style="font-size:0.78rem; color:#9fb0c2; text-align:center;">Reopens ${escapeHtml(formatCasinoSeasonDateTime(seasonSchedule.nextOpenAtMs))}.</div></div>`;
+  if (!isCasinoCurrentlyOpen()) {
+    actionNode.innerHTML = `<div style="margin-top:0.85rem; display:grid; gap:0.45rem; justify-items:center;"><div style="font-size:0.82rem; color:#f3d27a; text-align:center;">Daily bonus and bailout claims are paused.</div><div style="font-size:0.78rem; color:#9fb0c2; text-align:center;">${escapeHtml(getCasinoClosedMessage())}</div></div>`;
     return;
   }
   const dailyBonusRemainingMs = getCasinoDailyBonusRemainingMs(resolvedStats);
@@ -5028,17 +5042,18 @@ function renderCasinoGame() {
   const area = document.getElementById('casino-game-area');
   if (!area) return;
   const seasonSchedule = getCasinoSeasonSchedule();
-  if (!seasonSchedule.isOpen) {
+  const forcedClosed = getCachedCasinoGameSettings().forceClosed === true;
+  if (!isCasinoCurrentlyOpen()) {
     area.innerHTML = `
       <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap:1rem; align-items:start;">
         <div style="display:grid; gap:0.9rem; min-width:0;">
           <div style="padding:1rem; border-radius:0.95rem; background:radial-gradient(circle at top, rgba(82,57,24,0.34) 0%, rgba(18,15,9,0.96) 76%); border:1px solid #5a4428; display:grid; gap:0.6rem;">
-            <div style="font-size:1rem; font-weight:700; color:#fff;">Casino closed for the weekend</div>
-            <div style="font-size:0.84rem; color:#d7c5a7; line-height:1.55;">The casino season reopens ${escapeHtml(formatCasinoSeasonDateTime(seasonSchedule.nextOpenAtMs))}. The next season ends ${escapeHtml(formatCasinoSeasonDateTime(seasonSchedule.nextResetAtMs))}.</div>
+            <div style="font-size:1rem; font-weight:700; color:#fff;">${forcedClosed ? 'Casino temporarily closed' : 'Casino closed for the weekend'}</div>
+            <div style="font-size:0.84rem; color:#d7c5a7; line-height:1.55;">${escapeHtml(getCasinoClosedMessage())}${forcedClosed ? '' : ` The next season ends ${escapeHtml(formatCasinoSeasonDateTime(seasonSchedule.nextResetAtMs))}.`}</div>
             <div id="casino-game-status" style="margin-top:0.2rem;color:#f3d27a;min-height:1.2rem;">${escapeHtml(getCasinoClosedMessage())}</div>
             <div id="casino-recovery-action"></div>
             <div id="casino-game-panel" style="margin-top:0.2rem;">
-              <div style="padding:0.95rem; border-radius:0.85rem; background:rgba(8, 15, 23, 0.72); border:1px solid #2b3442; color:#c9d6e3;">Blackjack, Coin Flip, Roulette, Slots, Poker, transfers, and claims are paused until the next Monday reset.</div>
+              <div style="padding:0.95rem; border-radius:0.85rem; background:rgba(8, 15, 23, 0.72); border:1px solid #2b3442; color:#c9d6e3;">Blackjack, Coin Flip, Roulette, Slots, Poker, transfers, and claims are paused ${forcedClosed ? 'until the owner reopens the casino.' : 'until the next Monday reset.'}</div>
             </div>
           </div>
         </div>
@@ -5878,8 +5893,8 @@ reviewSubmissions: false
 };
 const EXTRA_ROLE_PERMISSION_DEFAULTS = {
 owner: { viewReports: true, viewUserHistory: true, viewArchives: true, manageAccounts: true, manageCasino: true, manageProfileBackgrounds: true, manageGeneralShop: true, manageGameBios: true, manageLeaderboard: true, useOwnerTool: true, viewAppeals: true, viewAuditLog: true, viewAnalytics: true, manageRooms: true, manageLoginRequests: true, manageCustomTags: true, manageSeasonRepair: true, viewUserTimeline: true, manageLiveRooms: true, manageProfileCleanup: true, manageCasinoRollback: true, viewImpersonation: true, manageRewardGrants: true },
-hivise: { viewReports: true, viewUserHistory: true, viewArchives: true, manageAccounts: true, manageCasino: true, manageProfileBackgrounds: true, manageGeneralShop: true, manageGameBios: true, manageLeaderboard: true, useOwnerTool: true, viewAppeals: true, viewAuditLog: true, viewAnalytics: true, manageRooms: true, manageLoginRequests: true, manageCustomTags: true, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: false, manageRewardGrants: false },
-admin: { viewReports: true, viewUserHistory: true, viewArchives: true, manageAccounts: true, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: true, viewAuditLog: true, viewAnalytics: true, manageRooms: true, manageLoginRequests: false, manageCustomTags: false, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: false, manageRewardGrants: false },
+hivise: { viewReports: true, viewUserHistory: true, viewArchives: true, manageAccounts: true, manageCasino: true, manageProfileBackgrounds: true, manageGeneralShop: true, manageGameBios: true, manageLeaderboard: true, useOwnerTool: true, viewAppeals: true, viewAuditLog: true, viewAnalytics: true, manageRooms: true, manageLoginRequests: true, manageCustomTags: true, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: true, manageRewardGrants: false },
+admin: { viewReports: true, viewUserHistory: true, viewArchives: true, manageAccounts: true, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: true, viewAuditLog: true, viewAnalytics: true, manageRooms: true, manageLoginRequests: false, manageCustomTags: false, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: true, manageRewardGrants: false },
 reviewer: { viewReports: false, viewUserHistory: false, viewArchives: false, manageAccounts: false, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: false, viewAuditLog: false, viewAnalytics: false, manageRooms: false, manageLoginRequests: false, manageCustomTags: false, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: false, manageRewardGrants: false },
 trialmod: { viewReports: true, viewUserHistory: true, viewArchives: false, manageAccounts: false, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: false, viewAuditLog: false, viewAnalytics: false, manageRooms: false, manageLoginRequests: false, manageCustomTags: false, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: false, manageRewardGrants: false },
 moderator: { viewReports: true, viewUserHistory: true, viewArchives: false, manageAccounts: false, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: false, viewAuditLog: false, viewAnalytics: false, manageRooms: false, manageLoginRequests: false, manageCustomTags: false, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: false, manageRewardGrants: false },
@@ -6345,6 +6360,24 @@ return canUseAdminPermission('assignRoles', username);
 
 function canModerate(username = currentChatUser) {
 return roleHasAnyPermission(getUserRole(username), ['ban', 'mute', 'kick', 'warn', 'tempBan', 'deleteMessage', 'manageSettings']);
+}
+
+function canUseChatImpersonation(username = currentChatUser) {
+const role = normalizeUsername(getUserRole(username));
+if (role === 'owner' || role === 'hivise') return true;
+return canUseAdminPermission('viewImpersonation', username);
+}
+
+function canAccessAllRooms(username = currentChatUser) {
+const role = normalizeUsername(getUserRole(username));
+if (role === 'owner' || role === 'hivise') return true;
+return canUseAdminPermission('manageRooms', username);
+}
+
+function canAccessAdminRoom(username = currentChatUser) {
+const role = normalizeUsername(getUserRole(username));
+if (role === 'owner' || role === 'hivise') return true;
+return canModerate(username) || canUseAdminPermission('manageRooms', username);
 }
 
 function canAdminSettings(username = currentChatUser) {
@@ -7610,6 +7643,9 @@ const GENERAL_SHOP_RARITY_CONFIG = [
 const GENERAL_SHOP_CASE_ODDS_BOOST_ITEM_ID = 'crimson-fortune-charm';
 const GENERAL_SHOP_CASE_ODDS_BOOST_COVERT_MULTIPLIER = 1.25;
 const GENERAL_SHOP_CASE_ODDS_BOOST_SPECIAL_MULTIPLIER = 1.4;
+const CSGO_API_SKINS_SOURCE_URL = 'https://raw.githubusercontent.com/ByMykel/CSGO-API/main/public/api/en/skins.json';
+const CSGO_API_CRATES_SOURCE_URL = 'https://raw.githubusercontent.com/ByMykel/CSGO-API/main/public/api/en/crates.json';
+const CSGO_IMPORT_CREDIT_NOTE = 'CS metadata/images by Valve via CSGO-API.';
 const PROFILE_REWARD_COSMETICS = [
 { id: 'glacier', label: 'Glacier Glass', accent: '#6ec6ff', soft: 'rgba(110, 198, 255, 0.24)', glow: 'rgba(40, 122, 196, 0.22)', swatch: 'linear-gradient(135deg, rgba(16, 51, 77, 0.98), rgba(78, 164, 221, 0.88), rgba(206, 241, 255, 0.92))', description: 'Cold blue glass trim for chat cards and profile panels.' },
 { id: 'ember', label: 'Ember Signal', accent: '#ff8a65', soft: 'rgba(255, 138, 101, 0.22)', glow: 'rgba(176, 82, 39, 0.22)', swatch: 'linear-gradient(135deg, rgba(64, 17, 12, 0.98), rgba(189, 74, 34, 0.9), rgba(255, 174, 107, 0.92))', description: 'Burnt orange trim unlocked from heavy chat activity.' },
@@ -7712,6 +7748,9 @@ let chudWallUnsub = null;
 let generalShopCache = [];
 let generalShopUnsub = null;
 let generalShopStatus = { message: '', tone: 'neutral' };
+let generalShopCsImportStatus = { message: 'CS import idle.', tone: 'neutral' };
+let generalShopAutoImportAttempted = false;
+let generalShopAutoImportRunning = false;
 let generalShopInventoryStatus = { message: '', tone: 'neutral' };
 let generalShopInventoryItemSort = 'owned';
 let activeGeneralShopEditId = '';
@@ -8437,6 +8476,17 @@ function normalizeGeneralShopItemType(value) {
 function normalizeGeneralShopRarity(value) {
   const raw = normalizeRoomId(value || 'mil-spec');
   return GENERAL_SHOP_RARITY_CONFIG.some((entry) => entry.id === raw) ? raw : 'mil-spec';
+}
+
+function mapCsgoRarityToGeneralShop(rawRarity) {
+  const rarityId = sanitizeNullableText(rawRarity && rawRarity.id, '').toLowerCase();
+  const rarityName = sanitizeNullableText(rawRarity && rawRarity.name, '').toLowerCase();
+  const joined = `${rarityId} ${rarityName}`;
+  if (joined.includes('extraordinary') || joined.includes('ancient') || joined.includes('contraband')) return 'special';
+  if (joined.includes('covert') || joined.includes('legendary')) return 'covert';
+  if (joined.includes('classified')) return 'classified';
+  if (joined.includes('restricted')) return 'restricted';
+  return 'mil-spec';
 }
 
 function normalizeOptionalGeneralShopRarity(value) {
@@ -11556,7 +11606,7 @@ return modApplicationsCache.filter((item) => normalizeReviewStatus(item && item.
 }
 
 function canReviewModApplications(username = currentChatUser) {
-return canUseAdminPermission('manageAccounts', username);
+return normalizeUsername(getUserRole(username)) === 'owner';
 }
 
 function getPendingCaseSuggestionCount() {
@@ -12627,6 +12677,16 @@ async function loadAdminCasinoGameSettings() {
 if (!canUseAdminPermission('manageCasino')) return;
 const settings = await loadCasinoGameSettings().catch(() => getCachedCasinoGameSettings());
 populateAdminCasinoGameSettingsForm(settings);
+const ownerControls = document.getElementById('admin-casino-owner-shutdown-controls');
+if (ownerControls) {
+  ownerControls.style.display = canUseOwnerCasinoShutdownControls(currentChatUser) ? 'flex' : 'none';
+}
+const statusDiv = document.getElementById('admin-casino-status');
+if (statusDiv) {
+  statusDiv.textContent = settings.forceClosed
+    ? `Casino is CLOSED by owner. Reason: ${sanitizeNullableText(settings.forceClosedReason, 'No reason provided.')}`
+    : 'Casino is OPEN (normal schedule still applies).';
+}
 }
 
 function getAdminCasinoGameSettingsDraft() {
@@ -12792,7 +12852,11 @@ const labelMap = {
   'casino-favored': 'Casino favored'
 };
 try {
-  const nextSettings = getCasinoGameSettingsPreset(presetKey);
+  const currentSettings = await loadCasinoGameSettings().catch(() => getCachedCasinoGameSettings());
+  const nextSettings = normalizeCasinoGameSettingsData({
+    ...currentSettings,
+    ...getCasinoGameSettingsPreset(presetKey)
+  });
   await saveCasinoGameSettings(nextSettings);
   populateAdminCasinoGameSettingsForm(nextSettings);
   await writeAuditLog('casino_update_preset', 'casino_settings', `${labelMap[presetKey] || 'Custom'} preset applied`);
@@ -12810,7 +12874,9 @@ async function adminSaveCasinoGameSettings() {
 if (!canUseAdminPermission('manageCasino')) return;
 const statusDiv = document.getElementById('admin-casino-status');
 try {
+  const currentSettings = await loadCasinoGameSettings().catch(() => getCachedCasinoGameSettings());
   const nextSettings = normalizeCasinoGameSettingsData({
+    ...currentSettings,
     blackjackDealerStandValue: Number(document.getElementById('admin-casino-blackjack-stand')?.value),
     rouletteSelectedBoostPct: Number(document.getElementById('admin-casino-roulette-boost')?.value),
     slotsNoMatchChancePct: Number(document.getElementById('admin-casino-slot-no-match')?.value),
@@ -13489,6 +13555,18 @@ node.style.color = tone === 'error'
     : '#9fb0c2';
 }
 
+function setAdminGeneralShopCsImportStatus(message = '', tone = 'neutral') {
+generalShopCsImportStatus = { message: message || 'CS import idle.', tone };
+const node = document.getElementById('admin-general-shop-cs-import-status');
+if (!node) return;
+node.textContent = generalShopCsImportStatus.message;
+node.style.color = tone === 'error'
+  ? '#ffb4a8'
+  : tone === 'success'
+    ? '#9fe3a5'
+    : '#9fb0c2';
+}
+
 function getAdminGeneralShopVisualValue() {
 const uploadedInput = document.getElementById('admin-general-shop-visual-uploaded');
 const valueInput = document.getElementById('admin-general-shop-visual');
@@ -13653,6 +13731,7 @@ setAdminGeneralShopStatus(`Editing ${item.title}.`, 'neutral');
 
 function renderAdminGeneralShopManager() {
 const container = document.getElementById('admin-general-shop-manager');
+setAdminGeneralShopCsImportStatus(generalShopCsImportStatus.message, generalShopCsImportStatus.tone);
 if (!container) return;
 if (!canUseAdminPermission('manageGeneralShop')) {
   container.textContent = 'Insufficient permissions.';
@@ -13730,6 +13809,42 @@ try {
 }
 }
 
+async function adminSetAllGeneralShopCasesActive(active) {
+if (!canUseAdminPermission('manageGeneralShop')) return;
+const nextActive = !!active;
+const cases = getAllGeneralShopItems().filter((item) => item && item.itemType === 'case');
+if (!cases.length) {
+  setAdminGeneralShopStatus('No cases found to update.', 'error');
+  return;
+}
+const actionLabel = nextActive ? 'show' : 'hide';
+if (!confirm(`This will ${actionLabel} ${cases.length} case${cases.length === 1 ? '' : 's'} in the live shop. Continue?`)) return;
+try {
+  const nowMs = Date.now();
+  const db = getCasinoDb();
+  const chunkSize = 400;
+  let changed = 0;
+  for (let i = 0; i < cases.length; i += chunkSize) {
+    const chunk = cases.slice(i, i + chunkSize);
+    const batch = db.batch();
+    chunk.forEach((item) => {
+      const ref = getGeneralShopCollection().doc(item.id);
+      batch.set(ref, {
+        active: nextActive,
+        updatedAtMs: nowMs,
+        updatedBy: currentChatUser || getUserName() || 'owner'
+      }, { merge: true });
+      changed += 1;
+    });
+    await batch.commit();
+  }
+  await writeAuditLog('general_shop_toggle_all_cases', 'all-cases', `${nextActive ? 'Activated' : 'Hid'} ${changed} cases`);
+  setAdminGeneralShopStatus(`${nextActive ? 'Showed' : 'Hid'} ${changed} case${changed === 1 ? '' : 's'}.`, 'success');
+} catch (_) {
+  setAdminGeneralShopStatus('Could not update all cases.', 'error');
+}
+}
+
 async function adminSaveGeneralShopItem() {
 if (!canUseAdminPermission('manageGeneralShop')) return;
 const titleInput = document.getElementById('admin-general-shop-title');
@@ -13788,6 +13903,210 @@ try {
   setAdminGeneralShopStatus(`${normalizedItem.title} saved.`, 'success');
 } catch (err) {
   setAdminGeneralShopStatus('Failed to save the shop item.', 'error');
+}
+}
+
+async function adminImportCsgoCatalog(options = {}) {
+const skipPermissionCheck = options && options.skipPermissionCheck === true;
+const skipConfirm = options && options.skipConfirm === true;
+const silent = options && options.silent === true;
+if (!skipPermissionCheck && !canUseAdminPermission('manageGeneralShop')) return;
+if (!skipConfirm && !confirm('Import CS metadata + images into the General Shop now? This will add case drops and cases and may take a bit.')) return;
+if (!silent) setAdminGeneralShopStatus('Downloading CS metadata and case data...', 'neutral');
+setAdminGeneralShopCsImportStatus('Preparing CS metadata import...', 'neutral');
+try {
+  const [skinsRes, cratesRes] = await Promise.all([
+    fetch(CSGO_API_SKINS_SOURCE_URL, { cache: 'no-store' }),
+    fetch(CSGO_API_CRATES_SOURCE_URL, { cache: 'no-store' })
+  ]);
+  if (!skinsRes.ok || !cratesRes.ok) {
+    throw new Error('Could not download CS metadata right now.');
+  }
+  const [skinsData, cratesData] = await Promise.all([skinsRes.json(), cratesRes.json()]);
+  const skins = Array.isArray(skinsData) ? skinsData : [];
+  const crates = Array.isArray(cratesData) ? cratesData : [];
+  if (!skins.length || !crates.length) {
+    throw new Error('CS metadata source returned no skins or cases.');
+  }
+  setAdminGeneralShopCsImportStatus(`Loaded ${skins.length} skins and ${crates.length} crates. Building catalog...`, 'neutral');
+
+  const nowMs = Date.now();
+  const dropsById = new Map();
+  const skinIdToDrop = new Map();
+
+  skins.forEach((skin, index) => {
+    const rawSkinId = sanitizeNullableText(skin && skin.id, '') || sanitizeNullableText(skin && skin.name, `skin-${index + 1}`);
+    const dropId = normalizeOptionalGeneralShopItemId(`cs2-drop-${normalizeRoomId(rawSkinId)}`) || `cs2-drop-${index + 1}`;
+    const rarity = mapCsgoRarityToGeneralShop(skin && skin.rarity);
+    const descriptionBase = sanitizeNullableText(skin && skin.description, '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+    const description = `${descriptionBase ? `${descriptionBase} ` : ''}${CSGO_IMPORT_CREDIT_NOTE}`;
+    const normalizedDrop = normalizeGeneralShopItem(dropId, {
+      title: sanitizeNullableText(skin && skin.name, `CS Skin ${index + 1}`),
+      description,
+      price: 0,
+      itemType: 'case-drop',
+      rarity,
+      visualData: sanitizeProfileBanner(skin && skin.image) || '',
+      active: false,
+      createdAtMs: nowMs,
+      updatedAtMs: nowMs
+    });
+    dropsById.set(normalizedDrop.id, normalizedDrop);
+    if (rawSkinId) {
+      skinIdToDrop.set(rawSkinId, {
+        itemId: normalizedDrop.id,
+        rarity: normalizedDrop.rarity
+      });
+    }
+  });
+
+  const importedCases = [];
+  crates.forEach((crate, crateIndex) => {
+    const contains = Array.isArray(crate && crate.contains) ? crate.contains : [];
+    const containsRare = Array.isArray(crate && crate.contains_rare) ? crate.contains_rare : [];
+    const rawRewards = contains.concat(containsRare);
+    if (!rawRewards.length) return;
+
+    const rewardMap = new Map();
+    rawRewards.forEach((entry, rewardIndex) => {
+      const rawSkinId = sanitizeNullableText(entry && entry.id, '');
+      let mapped = rawSkinId ? skinIdToDrop.get(rawSkinId) : null;
+      if (!mapped) {
+        const fallbackName = sanitizeNullableText(entry && entry.name, 'Unknown Skin');
+        const fallbackIdSeed = rawSkinId || `${fallbackName}-${crateIndex}-${rewardIndex}`;
+        const fallbackDropId = normalizeOptionalGeneralShopItemId(`cs2-drop-${normalizeRoomId(fallbackIdSeed)}`) || `cs2-drop-fallback-${crateIndex}-${rewardIndex}`;
+        const fallbackDrop = normalizeGeneralShopItem(fallbackDropId, {
+          title: fallbackName,
+          description: CSGO_IMPORT_CREDIT_NOTE,
+          price: 0,
+          itemType: 'case-drop',
+          rarity: mapCsgoRarityToGeneralShop(entry && entry.rarity),
+          visualData: sanitizeProfileBanner(entry && entry.image) || '',
+          active: false,
+          createdAtMs: nowMs,
+          updatedAtMs: nowMs
+        });
+        dropsById.set(fallbackDrop.id, fallbackDrop);
+        mapped = { itemId: fallbackDrop.id, rarity: fallbackDrop.rarity };
+      }
+      rewardMap.set(mapped.itemId, {
+        itemId: mapped.itemId,
+        rarity: mapped.rarity
+      });
+    });
+
+    const caseRewards = Array.from(rewardMap.values());
+    if (!caseRewards.length) return;
+    const rawCaseId = sanitizeNullableText(crate && crate.id, '') || sanitizeNullableText(crate && crate.name, `case-${crateIndex + 1}`);
+    const caseId = normalizeOptionalGeneralShopItemId(`cs2-case-${normalizeRoomId(rawCaseId)}`) || `cs2-case-${crateIndex + 1}`;
+    const baseDescription = sanitizeNullableText(crate && crate.description, '').replace(/\s+/g, ' ').trim();
+    const caseDescription = `${baseDescription ? `${baseDescription} ` : ''}${CSGO_IMPORT_CREDIT_NOTE}`;
+    importedCases.push(normalizeGeneralShopItem(caseId, {
+      title: sanitizeNullableText(crate && crate.name, `CS Case ${crateIndex + 1}`),
+      description: caseDescription,
+      price: 10000,
+      itemType: 'case',
+      rarity: mapCsgoRarityToGeneralShop(crate && crate.rarity),
+      caseRewards,
+      visualData: sanitizeProfileBanner(crate && crate.image) || '',
+      active: true,
+      createdAtMs: nowMs,
+      updatedAtMs: nowMs
+    }));
+  });
+
+  const docsToWrite = [...dropsById.values(), ...importedCases];
+  if (!docsToWrite.length) {
+    throw new Error('No case drops or cases were generated from CS metadata.');
+  }
+
+  const db = getCasinoDb();
+  const chunkSize = 400;
+  let committed = 0;
+  for (let i = 0; i < docsToWrite.length; i += chunkSize) {
+    const chunk = docsToWrite.slice(i, i + chunkSize);
+    const batch = db.batch();
+    chunk.forEach((docData) => {
+      const docRef = getGeneralShopCollection().doc(docData.id);
+      batch.set(docRef, {
+        ...docData,
+        source: 'csgo-api',
+        sourceCredit: 'Counter-Strike assets and metadata are credited to Valve.',
+        importedBy: currentChatUser || getUserName() || 'owner',
+        importedAtMs: nowMs,
+        updatedAtMs: nowMs,
+        updatedBy: currentChatUser || getUserName() || 'owner'
+      }, { merge: true });
+    });
+    await batch.commit();
+    committed += chunk.length;
+    if (!silent) setAdminGeneralShopStatus(`Importing CS catalog... ${committed}/${docsToWrite.length}`, 'neutral');
+    setAdminGeneralShopCsImportStatus(`Importing CS catalog... ${committed}/${docsToWrite.length}`, 'neutral');
+  }
+
+  await writeAuditLog('general_shop_cs_import', 'cs2-catalog', `Imported ${importedCases.length} cases and ${dropsById.size} case drops from CS metadata.`);
+  if (!silent) setAdminGeneralShopStatus(`CS import complete: ${importedCases.length} cases and ${dropsById.size} case drops added. Credit to Counter-Strike/Valve included.`, 'success');
+  setAdminGeneralShopCsImportStatus(`CS import complete: ${importedCases.length} cases and ${dropsById.size} drops.`, 'success');
+  renderAdminGeneralShopCaseReference();
+  renderAdminGeneralShopManager();
+  return { importedCases: importedCases.length, importedDrops: dropsById.size };
+} catch (err) {
+  const message = sanitizeNullableText(err && err.message, 'Failed to import CS metadata.');
+  if (!silent) setAdminGeneralShopStatus(message, 'error');
+  setAdminGeneralShopCsImportStatus(message, 'error');
+  throw err;
+}
+}
+
+async function ensureGeneralShopCsCatalogAutoCreated() {
+if (generalShopAutoImportAttempted || generalShopAutoImportRunning) return;
+if (!canUseAdminPermission('manageGeneralShop')) return;
+generalShopAutoImportAttempted = true;
+generalShopAutoImportRunning = true;
+try {
+  const existing = await getGeneralShopCollection().where('source', '==', 'csgo-api').limit(1).get();
+  if (!existing.empty) {
+    setAdminGeneralShopCsImportStatus('CS catalog already exists.', 'success');
+    return;
+  }
+  setAdminGeneralShopCsImportStatus('Auto-importing CS catalog for first-time setup...', 'neutral');
+  await adminImportCsgoCatalog({ skipPermissionCheck: true, skipConfirm: true, silent: true });
+  setAdminGeneralShopStatus('Auto-created CS cases/skins catalog.', 'success');
+} catch (_) {
+  generalShopAutoImportAttempted = false;
+} finally {
+  generalShopAutoImportRunning = false;
+}
+}
+
+function canUseOwnerCasinoShutdownControls(username = currentChatUser) {
+  return normalizeUsername(getUserRole(username)) === 'owner';
+}
+
+async function adminSetCasinoForceClosed(shouldClose) {
+if (!canUseOwnerCasinoShutdownControls(currentChatUser)) return;
+const statusDiv = document.getElementById('admin-casino-status');
+try {
+  const current = await loadCasinoGameSettings().catch(() => getCachedCasinoGameSettings());
+  let reason = '';
+  if (shouldClose) {
+    reason = sanitizeNullableText(prompt('Reason shown while casino is closed:', 'Casino is temporarily closed by the owner.') || '', 'Casino is temporarily closed by the owner.').slice(0, 220);
+    if (!reason) reason = 'Casino is temporarily closed by the owner.';
+  }
+  const nextSettings = normalizeCasinoGameSettingsData({
+    ...current,
+    forceClosed: !!shouldClose,
+    forceClosedReason: shouldClose ? reason : ''
+  });
+  await saveCasinoGameSettings(nextSettings);
+  await writeAuditLog('casino_force_closed', 'casino_settings', shouldClose ? `Owner closed casino: ${reason}` : 'Owner reopened casino');
+  if (statusDiv) statusDiv.textContent = shouldClose ? 'Casino has been closed by owner.' : 'Casino has been reopened.';
+  if (document.getElementById('casino-modal')?.style.display === 'flex') {
+    renderCasinoGame();
+    renderActiveCasinoGamePanel();
+  }
+} catch (_) {
+  if (statusDiv) statusDiv.textContent = 'Could not update casino open/closed state.';
 }
 }
 
@@ -16966,9 +17285,9 @@ function canAccessRoom(room, username = currentChatUser) {
 const targetRoom = buildChatRoomConfig(room && room.id ? room.id : 'general', room || {});
 const me = normalizeUsername(username);
 if (targetRoom.id === 'general') return true;
-if (targetRoom.id === 'admin-room') return canModerate(me);
+if (targetRoom.id === 'admin-room') return canAccessAdminRoom(me);
 if (!doesChatRoomExist(targetRoom.id)) return false;
-if (canUseAdminPermission('manageRooms', me)) return true;
+if (canAccessAllRooms(me)) return true;
 if (targetRoom.isPublic) return true;
 if (!me) return false;
 return targetRoom.createdBy === me || targetRoom.members.includes(me);
@@ -17070,10 +17389,18 @@ const input = document.getElementById('chat-send-as-input');
 if (!row || !input) return;
 const activeName = sanitizeNullableText(currentChatUser || getUserName() || '', '');
 row.style.display = activeName ? 'flex' : 'none';
-input.value = activeName;
-input.readOnly = true;
-input.placeholder = activeName || 'Username';
-input.title = activeName ? `Posting as ${activeName}` : 'No username set';
+const canImpersonate = canUseChatImpersonation();
+if (!canImpersonate) {
+  input.value = activeName;
+  input.readOnly = true;
+  input.placeholder = activeName || 'Username';
+  input.title = activeName ? `Posting as ${activeName}` : 'No username set';
+} else {
+  if (!normalizeUsername(input.value || '')) input.value = activeName;
+  input.readOnly = false;
+  input.placeholder = 'Username';
+  input.title = 'Send as another username. Authorship is still logged.';
+}
 applyReadOnlyUiState();
 }
 
@@ -17380,6 +17707,80 @@ function closeCreateRoomModal() {
 activeRoomEditorId = '';
 pendingCreateRoomIconData = '';
 closeModalById('create-room-modal');
+}
+
+function updateCreateRoomMembersVisibility() {
+const privacyEl = document.getElementById('create-room-privacy');
+const membersWrap = document.getElementById('create-room-members-wrap');
+const inviteWrap = document.getElementById('create-room-invite-wrap');
+const isPrivate = !!privacyEl && privacyEl.value === 'private';
+if (membersWrap) membersWrap.style.display = isPrivate ? 'block' : 'none';
+if (inviteWrap) inviteWrap.style.display = activeRoomEditorId ? 'block' : 'none';
+if (isPrivate) renderCreateRoomMemberSearch();
+}
+
+function openCreateRoomModal() {
+activeRoomEditorId = '';
+pendingCreateRoomIconData = '';
+createRoomMemberSelection = [];
+const titleEl = document.getElementById('create-room-modal-title');
+const subtleEl = document.getElementById('create-room-modal-subtle');
+const submitBtn = document.getElementById('create-room-submit-btn');
+const nameEl = document.getElementById('create-room-name');
+const iconEl = document.getElementById('create-room-icon');
+const descriptionEl = document.getElementById('create-room-description');
+const privacyEl = document.getElementById('create-room-privacy');
+const inviteEl = document.getElementById('create-room-invite-code');
+const statusEl = document.getElementById('create-room-status');
+if (titleEl) titleEl.textContent = 'Create Room';
+if (subtleEl) subtleEl.textContent = 'General stays public for everyone. Create a new room and either open it to everyone or only specific usernames.';
+if (submitBtn) submitBtn.textContent = 'Create Room';
+if (nameEl) nameEl.value = '';
+if (iconEl) iconEl.value = '';
+if (descriptionEl) descriptionEl.value = '';
+if (privacyEl) privacyEl.value = 'public';
+if (inviteEl) inviteEl.value = '';
+if (statusEl) statusEl.textContent = '';
+syncCreateRoomMembersField();
+updateCreateRoomIconPreview();
+updateCreateRoomMembersVisibility();
+openModalById('create-room-modal');
+}
+
+function openEditRoomModal(encodedRoomId = '') {
+const requestedRoomId = normalizeUsername(decodeURIComponent(encodedRoomId || ''));
+const room = getChatRoomConfig(requestedRoomId || currentChatRoom);
+const me = normalizeUsername(currentChatUser);
+const statusEl = document.getElementById('create-room-status');
+if (!canManageRoom(room, me)) {
+  if (statusEl) statusEl.textContent = 'You cannot edit this room.';
+  return;
+}
+activeRoomEditorId = room.id;
+pendingCreateRoomIconData = normalizeRoomIcon(room.icon || '');
+createRoomMemberSelection = Array.from(new Set((room.members || []).map(normalizeUsername).filter(Boolean)));
+const titleEl = document.getElementById('create-room-modal-title');
+const subtleEl = document.getElementById('create-room-modal-subtle');
+const submitBtn = document.getElementById('create-room-submit-btn');
+const nameEl = document.getElementById('create-room-name');
+const iconEl = document.getElementById('create-room-icon');
+const descriptionEl = document.getElementById('create-room-description');
+const privacyEl = document.getElementById('create-room-privacy');
+const inviteEl = document.getElementById('create-room-invite-code');
+if (titleEl) titleEl.textContent = 'Edit Room';
+if (subtleEl) subtleEl.textContent = 'Update room settings, members, and icon.';
+if (submitBtn) submitBtn.textContent = 'Save Room';
+if (nameEl) nameEl.value = room.name || '';
+if (iconEl) iconEl.value = pendingCreateRoomIconData && !pendingCreateRoomIconData.startsWith('data:image/') ? pendingCreateRoomIconData : '';
+if (descriptionEl) descriptionEl.value = room.description || '';
+if (privacyEl) privacyEl.value = room.isPublic ? 'public' : 'private';
+if (inviteEl) inviteEl.value = room.inviteCode || '';
+if (statusEl) statusEl.textContent = '';
+syncCreateRoomMembersField();
+renderCreateRoomMemberSearch();
+updateCreateRoomIconPreview();
+updateCreateRoomMembersVisibility();
+openModalById('create-room-modal');
 }
 
 async function loadChatRooms() {
@@ -18959,6 +19360,7 @@ const btn = document.getElementById('admin-menu-btn');
 if (!btn) return;
 btn.style.display = (siteLoginPassed && canOpenAdminMenuForUser(currentChatUser)) ? 'block' : 'none';
 updateReviewQueueBadges();
+ensureGeneralShopCsCatalogAutoCreated();
 }
 
 async function loadRoleCache() {
@@ -19051,12 +19453,11 @@ function listenForGeneralShop() {
 try {
   if (generalShopUnsub) generalShopUnsub();
   generalShopUnsub = getGeneralShopCollection()
-    .limit(160)
     .onSnapshot((snapshot) => {
       const next = [];
       snapshot.forEach((doc) => {
         const item = normalizeGeneralShopItem(doc.id, doc.data() || {});
-        if (item.id && item.visualData) next.push(item);
+        if (item && item.id) next.push(item);
       });
       generalShopCache = next;
       renderAdminGeneralShopManager();
@@ -19067,6 +19468,7 @@ try {
       if (document.getElementById('general-shop-inventory-modal')?.style.display === 'flex') {
         renderGeneralShopInventoryModal();
       }
+      ensureGeneralShopCsCatalogAutoCreated();
     });
 } catch (err) {
   generalShopCache = [];
@@ -23831,18 +24233,20 @@ try {
 
 function applyChatIdentityToMessageData(data = {}) {
 const actor = normalizeUsername(currentChatUser || getUserName() || sanitizeNullableText(data.user, 'guest')) || 'guest';
-const visibleName = sanitizeNullableText(data.displayUser || data.user, actor);
-const profileUser = normalizeUsername(data.profileUser || actor) || actor;
+const sendAsInput = document.getElementById('chat-send-as-input');
+const requestedAlias = normalizeUsername(data.impersonatedUser || (sendAsInput ? sendAsInput.value : ''));
+const effectiveAlias = canUseChatImpersonation(actor) && requestedAlias ? requestedAlias : '';
+const visibleName = sanitizeNullableText(data.displayUser || effectiveAlias || data.user, effectiveAlias || actor);
+const profileUser = normalizeUsername(data.profileUser || effectiveAlias || actor) || actor;
 const payload = {
   ...data,
-  user: actor,
+  user: effectiveAlias || actor,
   authoredBy: normalizeUsername(data.authoredBy || actor) || actor,
   profileUser,
   displayUser: visibleName
 };
-const impersonatedUser = normalizeUsername(data.impersonatedUser || '');
-if (impersonatedUser && impersonatedUser !== payload.authoredBy) {
-  payload.impersonatedUser = impersonatedUser;
+if (effectiveAlias && effectiveAlias !== payload.authoredBy) {
+  payload.impersonatedUser = effectiveAlias;
 }
 return payload;
 }
