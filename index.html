@@ -244,6 +244,7 @@ cursor: pointer;
 <option value="member">Member</option>
 <option value="helper">Helper</option>
 <option value="reviewer">Reviewer</option>
+<option value="trialmod">Trial Mod</option>
 <option value="mod">Mod</option>
 <option value="moderator">Moderator</option>
 <option value="admin">Admin</option>
@@ -549,7 +550,7 @@ cursor: pointer;
 <button onclick="adminClearCasinoCoinFlips()" style="background:#5d4037; color:#fff; border:none; border-radius:0.25rem;">Clear Coin Flips</button>
 </div>
 <div class="admin-note-text" style="margin-top:0.7rem;">Game chance tuning</div>
-<div style="font-size:0.76rem; color:#9fb0c2; margin-bottom:0.35rem;">Blackjack uses the dealer stand value. Slots use per-symbol reel weights, not fixed absolute symbol percentages, and no-match is the separate forced-miss chance.</div>
+<div style="font-size:0.76rem; color:#9fb0c2; margin-bottom:0.35rem;">Blackjack uses the dealer stand value. Slots use relative reel weights, not fixed absolute symbol percentages. The no-match slider is a separate forced-miss chance, and it does not affect case reds or golds.</div>
 <div class="admin-inline-input-row" style="margin-bottom:0.2rem;">
 <button onclick="adminApplyCasinoGameSettingsPreset('player-favored')" style="background:#2e7d32; color:#fff; border:none; border-radius:0.25rem;">Player Favored</button>
 <button onclick="adminApplyCasinoGameSettingsPreset('fair')" style="background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Fair</button>
@@ -594,6 +595,8 @@ cursor: pointer;
 </div>
 <button onclick="adminSaveCasinoGameSettings()" style="background:#00695c; color:#fff; border:none; border-radius:0.25rem;">Save Chances</button>
 </div>
+<div id="admin-casino-slot-breakdown" class="admin-note-text" style="margin-top:0.55rem;"></div>
+<div id="admin-casino-case-odds-breakdown" class="admin-note-text" style="margin-top:0.55rem;"></div>
 <div id="admin-casino-status" class="admin-note-text" style="margin-top:0.5rem;"></div>
 <div id="admin-casino-manager" class="admin-scroll-panel" style="max-height:220px; margin-top:0.55rem;"></div>
 </div>
@@ -838,6 +841,28 @@ cursor: pointer;
 </div>
 </div>
 
+<div class="admin-section-card" data-admin-scope="admin" data-admin-permission="manageAccounts" data-admin-section-id="mod-applications">
+<div class="admin-section-heading">
+<div class="admin-section-title">Mod Applications <span id="admin-mod-applications-pending-count" class="admin-pill-badge" style="display:none;">0</span></div>
+<button class="admin-section-toggle" type="button" onclick="toggleAdminSectionCard('mod-applications')">Minimize</button>
+</div>
+<div class="admin-section-body">
+<div class="admin-note-text">Review moderator applications here. Approval automatically assigns the Trial Mod role with limited tools.</div>
+<button onclick="loadModApplicationsOnce(true)" style="padding:0.45rem 0.8rem; background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Refresh Queue</button>
+<div class="admin-filter-bar">
+<input type="text" id="admin-mod-applications-search" placeholder="Search usernames or answers" oninput="updateReviewQueueFilter('modapps', 'search', this.value)" />
+<select id="admin-mod-applications-status" onchange="updateReviewQueueFilter('modapps', 'status', this.value)">
+<option value="all">All statuses</option>
+<option value="pending">Pending only</option>
+<option value="approved">Approved only</option>
+<option value="rejected">Rejected only</option>
+</select>
+<button onclick="resetReviewQueueFilters('modapps')" style="padding:0.45rem 0.8rem; background:#37474f; color:#fff; border:none; border-radius:0.25rem;">Clear</button>
+</div>
+<div id="admin-mod-applications" class="admin-compact-list"></div>
+</div>
+</div>
+
 <div class="admin-section-card" data-admin-scope="admin" data-admin-permission="manageRooms">
 <div class="admin-section-title">Rooms</div>
 <button onclick="loadAdminRoomManager()" style="padding:0.45rem 0.8rem; background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Refresh Rooms</button>
@@ -934,6 +959,7 @@ cursor: pointer;
 <div class="store-hero-actions">
 <button onclick="openGameSubmissionModal()">Suggest a Game</button>
 <button onclick="openCaseSuggestionModal()">Suggest a Case</button>
+<button onclick="openModApplicationModal()">Apply for Mod</button>
 <button onclick="openGeneralShopModal()">Shop</button>
 <button onclick="openGeneralShopInventoryModal()">Inventory</button>
 <button onclick="openCasinoModal()">Casino</button>
@@ -943,6 +969,17 @@ cursor: pointer;
 <button onclick="openSchoolScheduleInIframe()">School Schedule</button>
 <button onclick="openCustomUrlModal()">Open URL</button>
 <button class="store-hero-button-secondary" onclick="openCreditsModal()">Credits</button>
+</div>
+</div>
+<div class="release-countdown-banner">
+<div class="release-countdown-copy">
+<div class="release-countdown-eyebrow">5-Day Release Countdown</div>
+<div class="release-countdown-title">Shitty Tyrone Souls and/or Tyrone vs Cops</div>
+<div class="release-countdown-note">Planned for this release window</div>
+</div>
+<div class="release-countdown-clock">
+<div id="tyrone-release-countdown" class="release-countdown-value" aria-live="polite">5d 00h 00m 00s</div>
+<div id="tyrone-release-countdown-status" class="release-countdown-status">Target window: April 26, 2026</div>
 </div>
 </div>
 </div>
@@ -1041,7 +1078,7 @@ cursor: pointer;
 
 
 <div id="iframe-container" class="iframe-container">
-<iframe id="game-iframe" class="game-iframe" src="" allow="autoplay; fullscreen; gamepad; clipboard-read; clipboard-write; picture-in-picture; screen-wake-lock" allowfullscreen webkitallowfullscreen mozallowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+<iframe id="game-iframe" class="game-iframe" src="" allow="autoplay; fullscreen; gamepad; clipboard-read; clipboard-write; picture-in-picture; screen-wake-lock" referrerpolicy="strict-origin-when-cross-origin"></iframe>
 <div class="iframe-controls">
 <button class="refresh-btn" id="refresh-btn" style="display:none;">Refresh</button>
 <button class="refresh-btn" id="iframe-hard-refresh-btn" style="display:none;">Hard Refresh</button>
@@ -1294,6 +1331,7 @@ oninput="onChatInput()"
 <button onclick="closeCreditsModal()" style="padding:0.45rem 0.8rem;">Close</button>
 </div>
 <div style="margin-top:0.95rem; color:#ddd; line-height:1.65; font-size:0.98rem;">
+<div style="margin-top:0.25rem;">Started this site on <strong>Feb 26, 2026</strong>.</div>
 <div><strong>kaiden - owner</strong></div>
 <div style="margin-top:0.45rem;"><strong>jeremy_wade/kyler - contributed</strong> the profile improvements, UI rework, game suggestions/login to server (makes it easier to approve and add logins/games), and the casino idea.</div>
 </div>
@@ -1566,6 +1604,31 @@ oninput="onChatInput()"
 <div class="site-login-footer site-request-footer">
 <span>Already have an account?</span>
 <button type="button" class="site-login-link" onclick="closeLoginRequestModal()">Sign In</button>
+</div>
+</div>
+</div>
+
+<div id="mod-application-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:7200; align-items:center; justify-content:center;">
+<div class="site-login-card site-request-card">
+<button type="button" class="chud-corner-close" onclick="closeModApplicationModal()">Close</button>
+<div class="site-login-brand">Apply for <span class="site-login-brand-accent">Mod</span></div>
+<div class="site-login-subtitle">Answer the questions below so staff can review you properly.</div>
+<div class="site-login-stack" style="margin-top:1.05rem; text-align:left;">
+<input id="mod-application-username" class="site-login-field" type="text" maxlength="32" placeholder="Your Username" autocomplete="username" />
+<div style="font-size:0.76rem; color:#90a4ae;">Why do you want to be a mod?</div>
+<textarea id="mod-application-motivation" class="site-login-field" maxlength="400" placeholder="Why do you want the role, and what would you help with?"></textarea>
+<div style="font-size:0.76rem; color:#90a4ae;">How would you handle spam, harassment, or people starting fights?</div>
+<textarea id="mod-application-conflicts" class="site-login-field" maxlength="400" placeholder="Explain how you would respond without abusing mod powers."></textarea>
+<div style="font-size:0.76rem; color:#90a4ae;">Why should staff trust you with mod powers?</div>
+<textarea id="mod-application-trust" class="site-login-field" maxlength="320" placeholder="What makes you trustworthy, calm, and fair?"></textarea>
+<div style="font-size:0.76rem; color:#90a4ae;">Anything else? Optional.</div>
+<textarea id="mod-application-notes" class="site-login-field" maxlength="220" placeholder="Extra notes for the review."></textarea>
+</div>
+<button type="button" class="site-login-primary" onclick="submitModApplication()">Send Mod Application</button>
+<div id="mod-application-status" class="site-request-status"></div>
+<div class="site-login-footer site-request-footer">
+<span>Need to change something?</span>
+<button type="button" class="site-login-link" onclick="closeModApplicationModal()">Close</button>
 </div>
 </div>
 </div>

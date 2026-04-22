@@ -143,6 +143,7 @@ color: #78a2ff !important;
 #friends-modal,
 #game-submission-modal,
 #login-request-modal,
+#mod-application-modal,
 #dm-modal,
 .overlay-modal,
 #media-modal {
@@ -168,6 +169,7 @@ font: inherit;
 #friends-modal > div,
 #game-submission-modal > div,
 #login-request-modal > div,
+#mod-application-modal > div,
 #dm-modal > div,
 .overlay-panel,
 .media-modal-box {
@@ -246,6 +248,12 @@ padding: 1.8rem 1.55rem 1.25rem;
 
 .site-request-card .site-login-brand {
 margin-top: 0.2rem;
+}
+
+.site-request-card textarea.site-login-field {
+min-height: 5rem;
+resize: vertical;
+font: inherit;
 }
 
 .site-request-status {
@@ -328,6 +336,69 @@ display: flex;
 flex-direction: column;
 gap: 0.25rem;
 min-width: 0;
+}
+
+.release-countdown-banner {
+display: grid;
+grid-template-columns: minmax(0, 1fr) auto;
+gap: 1rem;
+align-items: center;
+margin-top: 0.9rem;
+padding: 0.9rem 1rem;
+border-radius: 0.95rem;
+background:
+linear-gradient(135deg, rgba(55, 17, 17, 0.92) 0%, rgba(25, 8, 8, 0.98) 100%),
+radial-gradient(circle at top right, rgba(255, 123, 91, 0.18), transparent 42%);
+border: 1px solid rgba(201, 91, 60, 0.48);
+box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 18px 38px rgba(0, 0, 0, 0.28);
+}
+
+.release-countdown-copy {
+display: grid;
+gap: 0.28rem;
+min-width: 0;
+}
+
+.release-countdown-eyebrow {
+font-size: 0.66rem;
+letter-spacing: 0.16em;
+text-transform: uppercase;
+font-weight: 800;
+color: #ffb19b;
+}
+
+.release-countdown-title {
+font-size: clamp(0.98rem, 1.9vw, 1.18rem);
+font-weight: 800;
+color: #fff2ec;
+line-height: 1.15;
+}
+
+.release-countdown-note {
+font-size: 0.8rem;
+line-height: 1.45;
+color: #f0cfc6;
+max-width: 42rem;
+}
+
+.release-countdown-clock {
+display: grid;
+gap: 0.28rem;
+justify-items: end;
+text-align: right;
+}
+
+.release-countdown-value {
+font-size: clamp(1rem, 2.1vw, 1.5rem);
+font-weight: 900;
+letter-spacing: 0.08em;
+color: #fff7f1;
+white-space: nowrap;
+}
+
+.release-countdown-status {
+font-size: 0.76rem;
+color: #e6b8ab;
 }
 
 .store-hero-panel h1 {
@@ -2306,6 +2377,15 @@ font-size: 0.78rem;
 .store-hero-panel {
 flex-direction: column;
 align-items: flex-start;
+}
+
+.release-countdown-banner {
+grid-template-columns: 1fr;
+}
+
+.release-countdown-clock {
+justify-items: start;
+text-align: left;
 }
 
 .store-hero-actions {

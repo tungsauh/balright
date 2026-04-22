@@ -46,10 +46,54 @@ let chatInitialized = false;
 let currentChatUser = '';
 let currentChatColor = '#1565c0';
 let chatRoomToolbarOpen = localStorage.getItem('chatRoomToolbarOpen') !== '0';
+const TYRONE_RELEASE_COUNTDOWN_TARGET_MS = new Date('2026-04-26T00:00:00').getTime();
+let tyroneReleaseCountdownInterval = null;
 
 window.getActiveTimedBan = window.getActiveTimedBan || async function() {
   return null;
 };
+
+function formatReleaseCountdownParts(totalMs) {
+  const safeMs = Math.max(0, Number(totalMs) || 0);
+  const totalSeconds = Math.floor(safeMs / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return {
+    days,
+    hours,
+    minutes,
+    seconds
+  };
+}
+
+function updateTyroneReleaseCountdown() {
+  const countdownNode = document.getElementById('tyrone-release-countdown');
+  const statusNode = document.getElementById('tyrone-release-countdown-status');
+  if (!countdownNode || !statusNode) return;
+  const remainingMs = Math.max(0, TYRONE_RELEASE_COUNTDOWN_TARGET_MS - Date.now());
+  const parts = formatReleaseCountdownParts(remainingMs);
+  countdownNode.textContent = `${parts.days}d ${String(parts.hours).padStart(2, '0')}h ${String(parts.minutes).padStart(2, '0')}m ${String(parts.seconds).padStart(2, '0')}s`;
+  if (remainingMs <= 0) {
+    countdownNode.textContent = 'Release window is here';
+    statusNode.textContent = 'Shitty Tyrone Souls and/or Tyrone vs. Cops still are not guaranteed because this might be impossible.';
+    if (tyroneReleaseCountdownInterval) {
+      clearInterval(tyroneReleaseCountdownInterval);
+      tyroneReleaseCountdownInterval = null;
+    }
+    return;
+  }
+  statusNode.textContent = 'Target window: April 26, 2026. Not guaranteed because this might be impossible.';
+}
+
+function initializeTyroneReleaseCountdown() {
+  updateTyroneReleaseCountdown();
+  if (tyroneReleaseCountdownInterval) {
+    clearInterval(tyroneReleaseCountdownInterval);
+  }
+  tyroneReleaseCountdownInterval = setInterval(updateTyroneReleaseCountdown, 1000);
+}
 
 function setDocumentScrollLock(isLocked) {
   document.body.style.overflow = isLocked ? 'hidden' : 'auto';
@@ -247,6 +291,7 @@ window.openLoginRequestModal = window.openLoginRequestModal || function() {
 
 document.addEventListener('DOMContentLoaded', function() {
   var userList = document.getElementById('admin-user-list');
+  initializeTyroneReleaseCountdown();
   if (typeof bootHighValueFeatureState === 'function') bootHighValueFeatureState();
   if (typeof renderGameStorefront === 'function') renderGameStorefront();
   if (typeof initializeAdminSectionCards === 'function') initializeAdminSectionCards();
@@ -2396,6 +2441,125 @@ function renderCasinoLeaderboardEntry({ username, displayName, rank, levelMarkup
 </div>`;
 }
 
+function invalidateCasinoDirectorySnapshotCache() {
+casinoDirectorySnapshotCache = null;
+}
+
+function invalidateDynamicLeaderboardSourceCaches() {
+dynamicLeaderboardStatsCache = null;
+dynamicLeaderboardBannedUsersCache = null;
+}
+
+function buildCasinoDirectorySnapshot(balancesSnapshot, approvedAccountsSnapshot, profilesSnapshot) {
+const balanceMap = {};
+const knownUsers = new Set();
+balancesSnapshot.forEach((doc) => {
+  const data = doc.data() || {};
+  const key = normalizeUsername(data.username || doc.id);
+  if (!key) return;
+  balanceMap[key] = {
+    balance: Math.max(0, Number(data.balance || 0)),
+    displayName: sanitizeNullableText(data.displayName || key, key),
+    stats: normalizeCasinoProfileStatsData(key, data)
+  };
+  knownUsers.add(key);
+});
+approvedAccountsSnapshot.forEach((doc) => {
+  const key = normalizeUsername(doc.id || ((doc.data() || {}).username));
+  if (key) knownUsers.add(key);
+});
+profilesSnapshot.forEach((doc) => {
+  const key = normalizeUsername(doc.id);
+  if (!key) return;
+  userProfileCache[key] = buildProfileCacheEntry(key, doc.data() || {});
+  knownUsers.add(key);
+});
+Object.keys(roleCache || {}).forEach((username) => knownUsers.add(normalizeUsername(username)));
+const currentUserKey = normalizeUsername(currentChatUser || (typeof getUserName === 'function' ? getUserName() : '') || '');
+if (currentUserKey) knownUsers.add(currentUserKey);
+return {
+  balanceMap,
+  knownUsers: Array.from(knownUsers).filter(Boolean),
+  loadedAtMs: Date.now()
+};
+}
+
+async function loadCasinoDirectorySnapshot(force = false) {
+const nowMs = Date.now();
+if (!force && casinoDirectorySnapshotCache && (nowMs - casinoDirectorySnapshotCache.loadedAtMs) < CASINO_DIRECTORY_CACHE_MS) {
+  return casinoDirectorySnapshotCache;
+}
+if (!force && casinoDirectorySnapshotLoadPromise) return casinoDirectorySnapshotLoadPromise;
+casinoDirectorySnapshotLoadPromise = (async () => {
+  try {
+    const adminDb = getAdminDb();
+    const [balancesSnapshot, approvedAccountsSnapshot, profilesSnapshot] = await Promise.all([
+      getCasinoBalanceCollection().get(),
+      adminDb.collection(LOGIN_REQUESTS_COLLECTION).where('status', '==', 'approved').get(),
+      adminDb.collection(USER_PROFILES_COLLECTION).get()
+    ]);
+    const snapshotData = buildCasinoDirectorySnapshot(balancesSnapshot, approvedAccountsSnapshot, profilesSnapshot);
+    casinoDirectorySnapshotCache = snapshotData;
+    return snapshotData;
+  } catch (err) {
+    if (casinoDirectorySnapshotCache) return casinoDirectorySnapshotCache;
+    throw err;
+  }
+})().finally(() => {
+  casinoDirectorySnapshotLoadPromise = null;
+});
+return casinoDirectorySnapshotLoadPromise;
+}
+
+async function loadDynamicLeaderboardStatsMap(force = false) {
+const nowMs = Date.now();
+if (!force && dynamicLeaderboardStatsCache && (nowMs - dynamicLeaderboardStatsCache.loadedAtMs) < DYNAMIC_LEADERBOARD_TAG_REFRESH_MIN_INTERVAL_MS) {
+  return dynamicLeaderboardStatsCache.map;
+}
+if (!force && dynamicLeaderboardStatsLoadPromise) return dynamicLeaderboardStatsLoadPromise;
+dynamicLeaderboardStatsLoadPromise = (async () => {
+  try {
+    const snapshot = await getPrimaryDb().collection(USER_STATS_COLLECTION).get();
+    const nextMap = {};
+    snapshot.forEach((doc) => {
+      nextMap[normalizeUsername(doc.id)] = doc.data() || {};
+    });
+    dynamicLeaderboardStatsCache = { map: nextMap, loadedAtMs: Date.now() };
+    return nextMap;
+  } catch (err) {
+    if (dynamicLeaderboardStatsCache) return dynamicLeaderboardStatsCache.map;
+    throw err;
+  }
+})().finally(() => {
+  dynamicLeaderboardStatsLoadPromise = null;
+});
+return dynamicLeaderboardStatsLoadPromise;
+}
+
+async function loadDynamicLeaderboardBannedUsers(force = false) {
+const nowMs = Date.now();
+if (!force && dynamicLeaderboardBannedUsersCache && (nowMs - dynamicLeaderboardBannedUsersCache.loadedAtMs) < DYNAMIC_LEADERBOARD_TAG_REFRESH_MIN_INTERVAL_MS) {
+  return dynamicLeaderboardBannedUsersCache.usernames;
+}
+if (!force && dynamicLeaderboardBannedUsersLoadPromise) return dynamicLeaderboardBannedUsersLoadPromise;
+dynamicLeaderboardBannedUsersLoadPromise = (async () => {
+  try {
+    const usernames = await getBannedUsernames().catch(() => []);
+    dynamicLeaderboardBannedUsersCache = {
+      usernames,
+      loadedAtMs: Date.now()
+    };
+    return usernames;
+  } catch (err) {
+    if (dynamicLeaderboardBannedUsersCache) return dynamicLeaderboardBannedUsersCache.usernames;
+    throw err;
+  }
+})().finally(() => {
+  dynamicLeaderboardBannedUsersLoadPromise = null;
+});
+return dynamicLeaderboardBannedUsersLoadPromise;
+}
+
 async function loadCasinoLeaderboard() {
   const list = document.getElementById('casino-leaderboard-list');
   if (!list) return;
@@ -2425,38 +2589,7 @@ async function loadCasinoLeaderboard() {
       return;
     }
     await loadCasinoSeasonState().catch(() => {});
-    const adminDb = getAdminDb();
-    const [balancesSnapshot, approvedAccountsSnapshot, profilesSnapshot] = await Promise.all([
-      getCasinoBalanceCollection().get(),
-      adminDb.collection(LOGIN_REQUESTS_COLLECTION).where('status', '==', 'approved').get(),
-      adminDb.collection(USER_PROFILES_COLLECTION).get()
-    ]);
-    const balanceMap = {};
-    balancesSnapshot.forEach((doc) => {
-      const data = doc.data() || {};
-      const key = normalizeUsername(data.username || doc.id);
-      if (!key) return;
-      balanceMap[key] = {
-        balance: Math.max(0, Number(data.balance || 0)),
-        displayName: sanitizeNullableText(data.displayName || key, key),
-        stats: normalizeCasinoProfileStatsData(key, data)
-      };
-    });
-    const knownUsers = new Set();
-    Object.keys(balanceMap).forEach((username) => knownUsers.add(normalizeUsername(username)));
-    approvedAccountsSnapshot.forEach((doc) => {
-      const key = normalizeUsername(doc.id || ((doc.data() || {}).username));
-      if (key) knownUsers.add(key);
-    });
-    profilesSnapshot.forEach((doc) => {
-      const key = normalizeUsername(doc.id);
-      if (!key) return;
-      userProfileCache[key] = buildProfileCacheEntry(key, doc.data() || {});
-      knownUsers.add(key);
-    });
-    Object.keys(roleCache || {}).forEach((username) => knownUsers.add(normalizeUsername(username)));
-    const currentUserKey = normalizeUsername(currentChatUser || (typeof getUserName === 'function' ? getUserName() : '') || '');
-    if (currentUserKey) knownUsers.add(currentUserKey);
+    const { balanceMap, knownUsers } = await loadCasinoDirectorySnapshot();
     const leaderboardData = Array.from(knownUsers)
       .filter(Boolean)
       .map((username) => {
@@ -4494,7 +4627,15 @@ async function drawPokerCardsForShowdown() {
 let activeCasinoGame = 'blackjack';
 let blackjackState = null;
 
+function isBlackjackHandActive() {
+  return !!(blackjackState && blackjackState.done !== true && Array.isArray(blackjackState.player) && blackjackState.player.length);
+}
+
 function setActiveCasinoGame(gameKey) {
+  if (isBlackjackHandActive() && activeCasinoGame === 'blackjack' && gameKey !== 'blackjack') {
+    setCasinoStatus('Finish your blackjack hand before switching games.', 'error');
+    return;
+  }
   activeCasinoGame = ['blackjack', 'coinflip', 'roulette', 'slots', 'poker'].includes(gameKey) ? gameKey : 'blackjack';
   blackjackState = null;
   rouletteVisualState = { selectedChoice: '', winningValue: null, activeValue: null, ballAngleDeg: -90, spinning: false };
@@ -4508,7 +4649,8 @@ function setActiveCasinoGame(gameKey) {
 
 function renderCasinoTabButton(gameKey, label) {
   const isActive = activeCasinoGame === gameKey;
-  return `<button onclick="setActiveCasinoGame('${gameKey}')" style="padding:0.55rem 0.85rem;border-radius:0.7rem;border:none;font-weight:700;background:${isActive ? 'linear-gradient(180deg, #4f83ff 0%, #3268f0 100%)' : '#242b38'};color:#fff;">${escapeHtml(label)}</button>`;
+  const isLocked = isBlackjackHandActive() && activeCasinoGame === 'blackjack' && gameKey !== 'blackjack';
+  return `<button onclick="setActiveCasinoGame('${gameKey}')"${isLocked ? ' disabled' : ''} style="padding:0.55rem 0.85rem;border-radius:0.7rem;border:none;font-weight:700;background:${isActive ? 'linear-gradient(180deg, #4f83ff 0%, #3268f0 100%)' : '#242b38'};color:#fff;${isLocked ? 'opacity:0.45;cursor:not-allowed;' : ''}">${escapeHtml(label)}</button>`;
 }
 
 function renderCoinFlipChallengeCard(match, currentUser) {
@@ -4761,12 +4903,16 @@ function renderActiveCasinoGamePanel() {
     <div style="display:grid; gap:0.75rem; justify-items:center;">
       <div style="font-size:0.88rem; color:#dce6f2;">Play Blackjack. Beat the dealer without going over 21. Dealer stands on ${gameSettings.blackjackDealerStandValue}.</div>
       <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center; align-items:center;">
-        <input id="casino-bet" type="number" min="1" max="10000" value="100" style="padding:0.4rem 0.7rem;border-radius:0.5rem;border:1px solid #333;background:#222;color:#fff;width:90px;">
-        <button onclick="startBlackjack()" style="padding:0.5rem 1.2rem;border-radius:0.6rem;background:#4f83ff;color:#fff;border:none;font-weight:700;">Bet & Deal</button>
+        <input id="casino-bet" type="number" min="1" max="10000" value="100"${isBlackjackHandActive() ? ' disabled' : ''} style="padding:0.4rem 0.7rem;border-radius:0.5rem;border:1px solid #333;background:#222;color:#fff;width:90px;${isBlackjackHandActive() ? 'opacity:0.55;cursor:not-allowed;' : ''}">
+        <button onclick="startBlackjack()"${isBlackjackHandActive() ? ' disabled' : ''} style="padding:0.5rem 1.2rem;border-radius:0.6rem;background:#4f83ff;color:#fff;border:none;font-weight:700;${isBlackjackHandActive() ? 'opacity:0.55;cursor:not-allowed;' : ''}">Bet & Deal</button>
       </div>
+      ${isBlackjackHandActive() ? '<div style="font-size:0.76rem; color:#ffcc80; text-align:center;">Blackjack hand in progress. Only Hit or Stand is available until the round ends.</div>' : ''}
       <div id="blackjack-area" style="margin-top:0.6rem;color:#fff;"></div>
     </div>
   `;
+  if (isBlackjackHandActive() || (blackjackState && blackjackState.done)) {
+    renderBlackjack();
+  }
 }
 
 async function validateCasinoBet(inputId) {
@@ -4811,6 +4957,11 @@ function handValue(hand) {
 
 async function startBlackjack() {
   try {
+    if (isBlackjackHandActive()) {
+      setCasinoStatus('Finish the current blackjack hand before dealing again.', 'error');
+      renderBlackjack();
+      return;
+    }
     await loadCasinoGameSettings();
     const { bet } = await validateCasinoBet('casino-bet');
     blackjackState = { bet, player: [], dealer: [], deck: shuffleDeck(), done: false };
@@ -5327,6 +5478,7 @@ const USER_STRIKES_COLLECTION = 'user_strikes';
 const AUDIT_LOG_COLLECTION = 'admin_audit_logs';
 const MESSAGE_REPORTS_COLLECTION = 'message_reports';
 const APPEALS_COLLECTION = 'ban_appeals';
+const MOD_APPLICATIONS_COLLECTION = 'mod_applications';
 const DM_EDIT_WINDOW_MS = 60000;
 const MUTE_STATUS_REFRESH_MS = 1000;
 const OWNER_TAG_USERNAME = 'kaiden';
@@ -5380,6 +5532,18 @@ assignRoles: false,
 manageRolePermissions: false,
 deleteMessage: false,
 reviewSubmissions: true
+},
+trialmod: {
+ban: false,
+mute: true,
+kick: false,
+warn: true,
+tempBan: false,
+manageSettings: false,
+assignRoles: false,
+manageRolePermissions: false,
+deleteMessage: true,
+reviewSubmissions: false
 },
 moderator: {
 ban: false,
@@ -5459,6 +5623,7 @@ owner: { viewReports: true, viewUserHistory: true, viewArchives: true, manageAcc
 hivise: { viewReports: true, viewUserHistory: true, viewArchives: true, manageAccounts: true, manageCasino: true, manageProfileBackgrounds: true, manageGeneralShop: true, manageGameBios: true, manageLeaderboard: true, useOwnerTool: true, viewAppeals: true, viewAuditLog: true, viewAnalytics: true, manageRooms: true, manageLoginRequests: true, manageCustomTags: true, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: false, manageRewardGrants: false },
 admin: { viewReports: true, viewUserHistory: true, viewArchives: true, manageAccounts: true, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: true, viewAuditLog: true, viewAnalytics: true, manageRooms: true, manageLoginRequests: false, manageCustomTags: false, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: false, manageRewardGrants: false },
 reviewer: { viewReports: false, viewUserHistory: false, viewArchives: false, manageAccounts: false, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: false, viewAuditLog: false, viewAnalytics: false, manageRooms: false, manageLoginRequests: false, manageCustomTags: false, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: false, manageRewardGrants: false },
+trialmod: { viewReports: true, viewUserHistory: true, viewArchives: false, manageAccounts: false, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: false, viewAuditLog: false, viewAnalytics: false, manageRooms: false, manageLoginRequests: false, manageCustomTags: false, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: false, manageRewardGrants: false },
 moderator: { viewReports: true, viewUserHistory: true, viewArchives: false, manageAccounts: false, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: false, viewAuditLog: false, viewAnalytics: false, manageRooms: false, manageLoginRequests: false, manageCustomTags: false, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: false, manageRewardGrants: false },
 mod: { viewReports: true, viewUserHistory: true, viewArchives: false, manageAccounts: false, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: false, viewAuditLog: false, viewAnalytics: false, manageRooms: false, manageLoginRequests: false, manageCustomTags: false, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: false, manageRewardGrants: false },
 helper: { viewReports: false, viewUserHistory: false, viewArchives: false, manageAccounts: false, manageCasino: false, manageProfileBackgrounds: false, manageGeneralShop: false, manageGameBios: false, manageLeaderboard: false, useOwnerTool: false, viewAppeals: false, viewAuditLog: false, viewAnalytics: false, manageRooms: false, manageLoginRequests: false, manageCustomTags: false, manageSeasonRepair: false, viewUserTimeline: false, manageLiveRooms: false, manageProfileCleanup: false, manageCasinoRollback: false, viewImpersonation: false, manageRewardGrants: false },
@@ -5636,8 +5801,14 @@ leastActive: '',
 hotHandUsers: [],
 coldTableUsers: []
 };
+const DYNAMIC_LEADERBOARD_TAG_REFRESH_MIN_INTERVAL_MS = 12000;
 let dynamicLeaderboardTagRefreshTimer = null;
 let dynamicLeaderboardTagRefreshPromise = null;
+let dynamicLeaderboardTagLastRefreshAtMs = 0;
+let dynamicLeaderboardStatsCache = null;
+let dynamicLeaderboardStatsLoadPromise = null;
+let dynamicLeaderboardBannedUsersCache = null;
+let dynamicLeaderboardBannedUsersLoadPromise = null;
 
 function getDynamicUserTagHtml(username) {
 const key = normalizeUsername(username);
@@ -5727,47 +5898,32 @@ loadCasinoLeaderboard();
 
 async function refreshDynamicLeaderboardTags(refreshUi = true) {
 if (dynamicLeaderboardTagRefreshPromise) return dynamicLeaderboardTagRefreshPromise;
+dynamicLeaderboardTagLastRefreshAtMs = Date.now();
 dynamicLeaderboardTagRefreshPromise = (async () => {
-  const db = getPrimaryDb();
-  const adminDb = getAdminDb();
   const nowMs = Date.now();
-  const bannedUsers = await getBannedUsernames().catch(() => []);
+  const bannedUsers = await loadDynamicLeaderboardBannedUsers().catch(() => []);
   const bannedSet = new Set((bannedUsers || []).map((username) => normalizeUsername(username)).filter(Boolean));
-  const [statsSnapshot, approvedAccountsSnapshot, profilesSnapshot, balancesSnapshot] = await Promise.all([
-    db.collection(USER_STATS_COLLECTION).get(),
-    adminDb.collection(LOGIN_REQUESTS_COLLECTION).where('status', '==', 'approved').get(),
-    adminDb.collection(USER_PROFILES_COLLECTION).get(),
-    getCasinoBalanceCollection().get()
+  const [allStats, directorySnapshot] = await Promise.all([
+    loadDynamicLeaderboardStatsMap().catch(() => ({})),
+    loadCasinoDirectorySnapshot().catch(() => ({ balanceMap: {}, knownUsers: [] }))
   ]);
-  const allStats = {};
-  statsSnapshot.forEach((doc) => {
-    allStats[normalizeUsername(doc.id)] = doc.data() || {};
-  });
   const localStats = getStatsStore();
-  const knownUsers = new Set();
+  const knownUsers = new Set(Array.isArray(directorySnapshot.knownUsers) ? directorySnapshot.knownUsers : []);
   Object.keys(allStats).forEach((username) => knownUsers.add(normalizeUsername(username)));
   Object.keys(localStats || {}).forEach((username) => knownUsers.add(normalizeUsername(username)));
-  approvedAccountsSnapshot.forEach((doc) => knownUsers.add(normalizeUsername(doc.id || ((doc.data() || {}).username))));
   Object.keys(roleCache || {}).forEach((username) => knownUsers.add(normalizeUsername(username)));
   Object.keys(userTagCache || {}).forEach((username) => knownUsers.add(normalizeUsername(username)));
   const currentUserKey = normalizeUsername(currentChatUser || (typeof getUserName === 'function' ? getUserName() : '') || '');
   if (currentUserKey) knownUsers.add(currentUserKey);
-  profilesSnapshot.forEach((doc) => {
-    const key = normalizeUsername(doc.id);
-    if (!key) return;
-    userProfileCache[key] = buildProfileCacheEntry(key, doc.data() || {});
-    knownUsers.add(key);
-  });
   const balanceMap = {};
   const hotHandUsers = [];
   const coldTableUsers = [];
   let nextHotHandExpiryMs = 0;
   let nextColdTableExpiryMs = 0;
-  balancesSnapshot.forEach((doc) => {
-    const data = doc.data() || {};
-    const key = normalizeUsername(data.username || doc.id);
+  Object.entries(directorySnapshot.balanceMap || {}).forEach(([rawKey, entry]) => {
+    const key = normalizeUsername(rawKey);
     if (!key) return;
-    const casinoStats = normalizeCasinoProfileStatsData(key, data);
+    const casinoStats = entry && entry.stats ? normalizeCasinoProfileStatsData(key, entry.stats) : getDefaultCasinoProfileStats(key);
     balanceMap[key] = casinoStats.balance;
     if (casinoStats.hotHandUntilMs > nowMs && !bannedSet.has(key)) {
       hotHandUsers.push(key);
@@ -5836,10 +5992,16 @@ function scheduleDynamicLeaderboardTagRefresh(delayMs = 450) {
 if (dynamicLeaderboardTagRefreshTimer) {
 clearTimeout(dynamicLeaderboardTagRefreshTimer);
 }
+invalidateCasinoDirectorySnapshotCache();
+invalidateDynamicLeaderboardSourceCaches();
+const nextDelayMs = Math.max(
+  Math.max(0, Number(delayMs) || 0),
+  Math.max(0, DYNAMIC_LEADERBOARD_TAG_REFRESH_MIN_INTERVAL_MS - (Date.now() - dynamicLeaderboardTagLastRefreshAtMs))
+);
 dynamicLeaderboardTagRefreshTimer = setTimeout(() => {
   dynamicLeaderboardTagRefreshTimer = null;
   refreshDynamicLeaderboardTags().catch(() => {});
-}, delayMs);
+}, nextDelayMs);
 }
 
 function getRoleRank(role) {
@@ -5848,6 +6010,7 @@ if (role === 'hivise') return 3;
 if (role === 'admin') return 3;
 if (role === 'mod') return 2;
 if (role === 'moderator') return 2;
+if (role === 'trialmod') return 1;
 if (role === 'reviewer') return 1;
 if (role === 'helper') return 1;
 return 0;
@@ -5857,6 +6020,7 @@ function getRoleDisplayName(role) {
 const normalizedRole = normalizeUsername(role);
 if (normalizedRole === 'mod') return 'Mod';
 if (normalizedRole === 'moderator') return 'Moderator';
+if (normalizedRole === 'trialmod') return 'Trial Mod';
 if (normalizedRole === 'hivise') return 'hivise';
 if (normalizedRole === 'admin') return 'Admin';
 if (normalizedRole === 'owner') return 'Owner';
@@ -6246,12 +6410,15 @@ renderAdminGameBioManager();
 listenForGameSubmissions();
 listenForCaseSuggestions();
 listenForLoginRequests();
+listenForModApplications();
 loadGameSubmissionsOnce();
 loadCaseSuggestionsOnce();
 loadLoginRequestsOnce();
+loadModApplicationsOnce();
 renderSubmissionQueue();
 renderCaseSuggestionQueue();
 renderLoginRequestQueue();
+renderModApplicationQueue();
 loadAdminCasinoManager();
 loadAdminCasinoSeasonRepair();
 loadAdminCasinoRollbackTool();
@@ -7240,10 +7407,15 @@ let loginRequestsCache = [];
 let loginRequestsUnsub = null;
 let loginRequestsLoaded = false;
 let loginRequestsLoading = false;
+let modApplicationsCache = [];
+let modApplicationsUnsub = null;
+let modApplicationsLoaded = false;
+let modApplicationsLoading = false;
 let reviewQueueFilters = {
 games: { search: '', status: 'all' },
 cases: { search: '', status: 'all' },
-logins: { search: '', status: 'all' }
+logins: { search: '', status: 'all' },
+modapps: { search: '', status: 'all' }
 };
 let adminAccountFilters = {
 search: '',
@@ -7266,6 +7438,9 @@ let casinoGameSettingsCache = null;
 let casinoTransferUsersCache = [];
 let casinoTransferUsersLoadPromise = null;
 let casinoTransferUsersLoaded = false;
+const CASINO_DIRECTORY_CACHE_MS = 12000;
+let casinoDirectorySnapshotCache = null;
+let casinoDirectorySnapshotLoadPromise = null;
 let casinoLeaderboardView = 'balance';
 let casinoLeaderboardModalMode = 'casino';
 let casinoSeasonStateCache = normalizeCasinoSeasonStateData({});
@@ -7384,6 +7559,7 @@ let activeGameId = '';
 let roomAuditPreviewCache = {};
 let selectedGameSubmissionIds = new Set();
 let selectedLoginRequestIds = new Set();
+let selectedModApplicationIds = new Set();
 
 function getKnownUsernames() {
 const usernames = new Set();
@@ -7393,6 +7569,7 @@ Object.keys(userProfileCache || {}).forEach((key) => usernames.add(normalizeUser
 Object.keys(localProfileCache || {}).forEach((key) => usernames.add(normalizeUsername(key)));
 Object.keys(getStatsStore() || {}).forEach((key) => usernames.add(normalizeUsername(key)));
 loginRequestsCache.forEach((entry) => usernames.add(normalizeUsername(entry && entry.username)));
+modApplicationsCache.forEach((entry) => usernames.add(normalizeUsername(entry && entry.username)));
 adminAccountManagerCache.forEach((entry) => usernames.add(normalizeUsername(entry && entry.username)));
 communityGameSubmissionsCache.forEach((entry) => usernames.add(normalizeUsername(entry && entry.submittedBy)));
 if (currentChatUser) usernames.add(normalizeUsername(currentChatUser));
@@ -7468,6 +7645,25 @@ roomReadMarkers[roomId] = Math.max(Number(roomReadMarkers[roomId] || 0), Number(
 chatPendingNewMessageCount = 0;
 saveRoomReadMarkers();
 updateOlderChatsButton(false);
+}
+
+function isChatNearBottom(container, thresholdPx = 56) {
+const node = container || document.getElementById('chat-messages');
+if (!node) return true;
+const scrollBottom = node.scrollTop + node.clientHeight;
+return (node.scrollHeight - scrollBottom) <= Math.max(0, Number(thresholdPx) || 0);
+}
+
+function updateOlderChatsButton(forceVisible = false) {
+const button = document.getElementById('chat-jump-latest-btn');
+const messagesDiv = document.getElementById('chat-messages');
+if (!button || !messagesDiv) return;
+const hasMessages = messagesDiv.scrollHeight > messagesDiv.clientHeight + 24;
+const shouldShow = !!forceVisible || (hasMessages && (!isChatNearBottom(messagesDiv) || chatPendingNewMessageCount > 0));
+button.style.display = shouldShow ? 'block' : 'none';
+button.textContent = chatPendingNewMessageCount > 0
+  ? `${chatPendingNewMessageCount} new message${chatPendingNewMessageCount === 1 ? '' : 's'} below`
+  : 'You are looking at older chats';
 }
 
 function loadGameRatings() {
@@ -7881,6 +8077,7 @@ return normalizeUsername(currentChatUser || getUserName() || '');
 }
 
 function getProfileDefaults(username) {
+const key = normalizeUsername(username);
 return {
 bio: '',
 statusQuote: '',
@@ -7899,10 +8096,10 @@ bannerData: '',
 showcasedBadgeLabels: [],
 favoriteGameId: '',
 favoriteGameName: '',
-joinLabel: new Date().toLocaleDateString(),
+joinLabel: OWNER_USERS.includes(key) ? 'Feb 26, 2026' : new Date().toLocaleDateString(),
 updatedAtMs: 0,
 createdAtMs: Date.now(),
-username: normalizeUsername(username)
+username: key
 };
 }
 
@@ -8806,7 +9003,7 @@ return {
   showcasedBadgeLabels: Array.from(new Set((Array.isArray(data.showcasedBadgeLabels) ? data.showcasedBadgeLabels : []).map((value) => sanitizeNullableText(value, '').slice(0, 40)).filter(Boolean))).slice(0, PROFILE_BADGE_SHOWCASE_LIMIT),
   favoriteGameId: sanitizeNullableText(data.favoriteGameId, '').slice(0, 120),
   favoriteGameName: sanitizeNullableText(data.favoriteGameName, '').slice(0, 80),
-  joinLabel: sanitizeNullableText(data.joinLabel, ''),
+  joinLabel: OWNER_USERS.includes(key) ? 'Feb 26, 2026' : sanitizeNullableText(data.joinLabel, ''),
   updatedAtMs: data.updatedAt && typeof data.updatedAt.toDate === 'function' ? data.updatedAt.toDate().getTime() : (data.updatedAtMs || 0),
   createdAtMs: data.createdAt && typeof data.createdAt.toDate === 'function' ? data.createdAt.toDate().getTime() : (data.createdAtMs || Date.now()),
   username: key
@@ -8824,7 +9021,11 @@ if (!key) return getProfileDefaults('');
 const localStore = localProfileCache || {};
 const localData = localStore[key] || {};
 const remoteData = userProfileCache[key] || {};
-return { ...getProfileDefaults(key), ...localData, ...remoteData, username: key };
+const merged = { ...getProfileDefaults(key), ...localData, ...remoteData, username: key };
+if (OWNER_USERS.includes(key)) {
+  merged.joinLabel = 'Feb 26, 2026';
+}
+return merged;
 }
 
 function renderInlineProfileAvatarHtml(username, extraClass = '') {
@@ -10533,6 +10734,34 @@ function closeLoginRequestModal() {
 closeModalById('login-request-modal');
 }
 
+function openModApplicationModal() {
+const usernameInput = document.getElementById('site-login-username');
+const modalUser = document.getElementById('mod-application-username');
+const motivation = document.getElementById('mod-application-motivation');
+const conflicts = document.getElementById('mod-application-conflicts');
+const trust = document.getElementById('mod-application-trust');
+const notes = document.getElementById('mod-application-notes');
+const status = document.getElementById('mod-application-status');
+const fallbackUsername = normalizeUsername(currentChatUser || getUserName() || (usernameInput ? usernameInput.value : ''));
+const existing = fallbackUsername
+  ? modApplicationsCache.find((item) => normalizeUsername(item && item.username) === fallbackUsername)
+  : null;
+if (modalUser) modalUser.value = fallbackUsername;
+if (motivation) motivation.value = sanitizeNullableText(existing && existing.motivation, '');
+if (conflicts) conflicts.value = sanitizeNullableText(existing && existing.conflictResponse, '');
+if (trust) trust.value = sanitizeNullableText(existing && existing.trustReason, '');
+if (notes) notes.value = sanitizeNullableText(existing && existing.additionalNotes, '');
+if (status) {
+  status.textContent = '';
+  status.classList.remove('has-error', 'has-success');
+}
+openModalById('mod-application-modal');
+}
+
+function closeModApplicationModal() {
+closeModalById('mod-application-modal');
+}
+
 function formatAdminElapsedTime(ms) {
 const safeMs = Math.max(0, Number(ms) || 0);
 const totalMinutes = Math.floor(safeMs / 60000);
@@ -10546,6 +10775,13 @@ const totalMonths = Math.floor(totalDays / 30);
 return `${Math.max(1, totalMonths)}mo ago`;
 }
 
+function getReviewQueueTypeKey(queueType) {
+if (queueType === 'logins') return 'logins';
+if (queueType === 'cases') return 'cases';
+if (queueType === 'modapps') return 'modapps';
+return 'games';
+}
+
 function syncReviewQueueFilterInputs() {
 const gameSearch = document.getElementById('admin-game-submissions-search');
 const gameStatus = document.getElementById('admin-game-submissions-status');
@@ -10553,16 +10789,20 @@ const caseSearch = document.getElementById('admin-case-suggestions-search');
 const caseStatus = document.getElementById('admin-case-suggestions-status');
 const loginSearch = document.getElementById('admin-login-requests-search');
 const loginStatus = document.getElementById('admin-login-requests-status');
+const modSearch = document.getElementById('admin-mod-applications-search');
+const modStatus = document.getElementById('admin-mod-applications-status');
 if (gameSearch) gameSearch.value = reviewQueueFilters.games.search;
 if (gameStatus) gameStatus.value = reviewQueueFilters.games.status;
 if (caseSearch) caseSearch.value = reviewQueueFilters.cases.search;
 if (caseStatus) caseStatus.value = reviewQueueFilters.cases.status;
 if (loginSearch) loginSearch.value = reviewQueueFilters.logins.search;
 if (loginStatus) loginStatus.value = reviewQueueFilters.logins.status;
+if (modSearch) modSearch.value = reviewQueueFilters.modapps.search;
+if (modStatus) modStatus.value = reviewQueueFilters.modapps.status;
 }
 
 function updateReviewQueueFilter(queueType, key, value) {
-const targetKey = queueType === 'logins' ? 'logins' : queueType === 'cases' ? 'cases' : 'games';
+const targetKey = getReviewQueueTypeKey(queueType);
 if (!reviewQueueFilters[targetKey]) return;
 reviewQueueFilters[targetKey][key] = key === 'status' ? String(value || 'all') : String(value || '').trim().toLowerCase();
 if (targetKey === 'games') {
@@ -10573,11 +10813,15 @@ if (targetKey === 'cases') {
   renderCaseSuggestionQueue();
   return;
 }
+if (targetKey === 'modapps') {
+  renderModApplicationQueue();
+  return;
+}
 renderLoginRequestQueue();
 }
 
 function resetReviewQueueFilters(queueType) {
-const targetKey = queueType === 'logins' ? 'logins' : queueType === 'cases' ? 'cases' : 'games';
+const targetKey = getReviewQueueTypeKey(queueType);
 reviewQueueFilters[targetKey] = { search: '', status: 'all' };
 if (targetKey === 'games') {
   renderSubmissionQueue();
@@ -10587,11 +10831,15 @@ if (targetKey === 'cases') {
   renderCaseSuggestionQueue();
   return;
 }
+if (targetKey === 'modapps') {
+  renderModApplicationQueue();
+  return;
+}
 renderLoginRequestQueue();
 }
 
 function filterReviewQueueItems(queueType, items) {
-const targetKey = queueType === 'logins' ? 'logins' : queueType === 'cases' ? 'cases' : 'games';
+const targetKey = getReviewQueueTypeKey(queueType);
 const filters = reviewQueueFilters[targetKey] || { search: '', status: 'all' };
 const query = String(filters.search || '').trim().toLowerCase();
 const status = filters.status || 'all';
@@ -10624,6 +10872,17 @@ return (items || []).filter((item) => {
     ].map((part) => sanitizeNullableText(part, '').toLowerCase()).join(' ');
     return haystack.includes(query);
   }
+  if (targetKey === 'modapps') {
+    const haystack = [
+      item.username,
+      item.motivation,
+      item.conflictResponse,
+      item.trustReason,
+      item.additionalNotes,
+      item.reviewedBy
+    ].map((part) => sanitizeNullableText(part, '').toLowerCase()).join(' ');
+    return haystack.includes(query);
+  }
   const haystack = [
     item.username,
     item.notes,
@@ -10634,27 +10893,47 @@ return (items || []).filter((item) => {
 }
 
 function toggleReviewQueueSelection(queueType, encodedId, checked) {
-const targetKey = queueType === 'logins' ? 'logins' : 'games';
-const id = targetKey === 'logins' ? normalizeUsername(decodeURIComponent(encodedId || '')) : decodeURIComponent(encodedId || '');
+const targetKey = getReviewQueueTypeKey(queueType);
+const id = targetKey === 'logins' || targetKey === 'modapps'
+  ? normalizeUsername(decodeURIComponent(encodedId || ''))
+  : decodeURIComponent(encodedId || '');
 if (!id) return;
-const selection = targetKey === 'logins' ? selectedLoginRequestIds : selectedGameSubmissionIds;
+const selection = targetKey === 'logins'
+  ? selectedLoginRequestIds
+  : targetKey === 'modapps'
+    ? selectedModApplicationIds
+    : selectedGameSubmissionIds;
 if (checked) selection.add(id);
 else selection.delete(id);
-if (targetKey === 'logins') renderLoginRequestQueue();
-else renderSubmissionQueue();
+if (targetKey === 'logins') {
+  renderLoginRequestQueue();
+  return;
+}
+if (targetKey === 'modapps') {
+  renderModApplicationQueue();
+  return;
+}
+renderSubmissionQueue();
 }
 
 function setAllReviewQueueSelections(queueType, shouldSelect) {
-const targetKey = queueType === 'logins' ? 'logins' : 'games';
-const items = filterReviewQueueItems(targetKey, targetKey === 'logins' ? loginRequestsCache : communityGameSubmissionsCache);
-const selection = targetKey === 'logins' ? selectedLoginRequestIds : selectedGameSubmissionIds;
+const targetKey = getReviewQueueTypeKey(queueType);
+const items = filterReviewQueueItems(targetKey, targetKey === 'logins' ? loginRequestsCache : targetKey === 'modapps' ? modApplicationsCache : communityGameSubmissionsCache);
+const selection = targetKey === 'logins' ? selectedLoginRequestIds : targetKey === 'modapps' ? selectedModApplicationIds : selectedGameSubmissionIds;
 if (!shouldSelect) {
   selection.clear();
 } else {
-  items.forEach((item) => selection.add(targetKey === 'logins' ? normalizeUsername(item && item.username) : String(item && item.id || '')));
+  items.forEach((item) => selection.add(targetKey === 'logins' || targetKey === 'modapps' ? normalizeUsername(item && item.username) : String(item && item.id || '')));
 }
-if (targetKey === 'logins') renderLoginRequestQueue();
-else renderSubmissionQueue();
+if (targetKey === 'logins') {
+  renderLoginRequestQueue();
+  return;
+}
+if (targetKey === 'modapps') {
+  renderModApplicationQueue();
+  return;
+}
+renderSubmissionQueue();
 }
 
 function syncAdminAccountFilterInputs() {
@@ -10804,6 +11083,43 @@ return `<div class="admin-compact-card">
     <button onclick="reviewLoginRequest('${safeId}','reject')" style="padding:0.3rem 0.55rem; background:#8e0000; color:#fff; border:none; border-radius:0.25rem;">Reject</button>` : ''}
     ${allowDelete ? `<button onclick="deleteLoginRequest('${safeId}')" style="padding:0.3rem 0.55rem; background:#424242; color:#fff; border:none; border-radius:0.25rem;">Delete</button>` : ''}
   </div>` : ''}
+    </div>
+  </div>
+</div>`;
+}
+
+function renderModApplicationCard(item, showActions, allowDelete = false) {
+const safeId = encodeURIComponent(item.id || item.username || '');
+const status = normalizeReviewStatus(item.status);
+const reviewer = sanitizeNullableText(item.reviewedBy, '');
+const reviewMeta = reviewer ? `${status} by ${reviewer}` : status;
+const selected = selectedModApplicationIds.has(item.username || '');
+const submittedLabel = item.submittedAtMs ? formatAdminElapsedTime(Date.now() - item.submittedAtMs) : 'Unknown time';
+return `<div class="admin-compact-card">
+  <div style="display:flex; gap:0.55rem; align-items:flex-start;">
+    <input type="checkbox" ${selected ? 'checked' : ''} onchange="toggleReviewQueueSelection('modapps', '${safeId}', this.checked)" style="margin-top:0.2rem;" />
+    <div style="flex:1; min-width:0;">
+      <div style="display:flex; justify-content:space-between; gap:0.6rem; align-items:flex-start; flex-wrap:wrap;">
+        <div style="font-weight:bold; color:#ffca28;">${escapeHtml(item.username || 'unknown')}</div>
+        <div style="color:#78909c; font-size:0.74rem;">${escapeHtml(submittedLabel)}</div>
+      </div>
+      <div class="admin-chip-row" style="margin-top:0.35rem;">
+        <span class="admin-info-chip">${escapeHtml(reviewMeta)}</span>
+        ${item.submittedByName ? `<span class="admin-info-chip">Signed in as ${escapeHtml(item.submittedByName)}</span>` : ''}
+        ${status === 'approved' ? '<span class="admin-info-chip">Role assigned: Trial Mod</span>' : ''}
+      </div>
+      <div style="display:grid; gap:0.45rem; margin-top:0.55rem;">
+        <div><div style="color:#90a4ae; font-size:0.74rem;">Why do you want to be a mod?</div><div style="color:#dce6f3; font-size:0.82rem; white-space:pre-wrap;">${escapeHtml((item.motivation || '').slice(0, 400) || 'No answer.')}</div></div>
+        <div><div style="color:#90a4ae; font-size:0.74rem;">How would you handle spam, harassment, or fights?</div><div style="color:#dce6f3; font-size:0.82rem; white-space:pre-wrap;">${escapeHtml((item.conflictResponse || '').slice(0, 400) || 'No answer.')}</div></div>
+        <div><div style="color:#90a4ae; font-size:0.74rem;">Why should staff trust you with mod powers?</div><div style="color:#dce6f3; font-size:0.82rem; white-space:pre-wrap;">${escapeHtml((item.trustReason || '').slice(0, 320) || 'No answer.')}</div></div>
+        ${item.additionalNotes ? `<div><div style="color:#90a4ae; font-size:0.74rem;">Extra notes</div><div style="color:#dce6f3; font-size:0.82rem; white-space:pre-wrap;">${escapeHtml(item.additionalNotes.slice(0, 220))}</div></div>` : ''}
+      </div>
+      ${status === 'rejected' && item.reviewReason ? `<div style="color:#ffcc80; font-size:0.78rem; margin-top:0.45rem;">Reason: ${escapeHtml(item.reviewReason)}</div>` : ''}
+      ${(showActions || allowDelete) ? `<div class="admin-compact-actions">
+        ${showActions ? `<button onclick="reviewModApplication('${safeId}','approve')" style="padding:0.3rem 0.55rem; background:#2e7d32; color:#fff; border:none; border-radius:0.25rem;">Approve</button>
+        <button onclick="reviewModApplication('${safeId}','reject')" style="padding:0.3rem 0.55rem; background:#8e0000; color:#fff; border:none; border-radius:0.25rem;">Reject</button>` : ''}
+        ${allowDelete ? `<button onclick="deleteModApplication('${safeId}')" style="padding:0.3rem 0.55rem; background:#424242; color:#fff; border:none; border-radius:0.25rem;">Delete</button>` : ''}
+      </div>` : ''}
     </div>
   </div>
 </div>`;
@@ -10968,6 +11284,14 @@ function canManageLoginRequests(username = currentChatUser) {
 return canUseAdminPermission('manageLoginRequests', username);
 }
 
+function getPendingModApplicationCount() {
+return modApplicationsCache.filter((item) => normalizeReviewStatus(item && item.status) === 'pending').length;
+}
+
+function canReviewModApplications(username = currentChatUser) {
+return canUseAdminPermission('manageAccounts', username);
+}
+
 function getPendingCaseSuggestionCount() {
 return caseSuggestionsCache.filter((item) => normalizeReviewStatus(item && item.status) === 'pending').length;
 }
@@ -10976,10 +11300,14 @@ function updateReviewQueueBadges() {
 const pendingCount = getPendingGameSubmissionCount();
 const pendingCaseCount = getPendingCaseSuggestionCount();
 const pendingLoginCount = getPendingLoginRequestCount();
-const totalPending = (canReviewSubmissions(currentChatUser) ? (pendingCount + pendingCaseCount) : 0) + (canManageLoginRequests(currentChatUser) ? pendingLoginCount : 0);
+const pendingModCount = getPendingModApplicationCount();
+const totalPending = (canReviewSubmissions(currentChatUser) ? (pendingCount + pendingCaseCount) : 0)
+  + (canManageLoginRequests(currentChatUser) ? pendingLoginCount : 0)
+  + (canReviewModApplications(currentChatUser) ? pendingModCount : 0);
 const titleBadge = document.getElementById('admin-submissions-pending-count');
 const caseBadge = document.getElementById('admin-case-suggestions-pending-count');
 const loginBadge = document.getElementById('admin-login-requests-pending-count');
+const modBadge = document.getElementById('admin-mod-applications-pending-count');
 const menuBadge = document.getElementById('admin-menu-pending-badge');
 if (titleBadge) {
   titleBadge.textContent = String(pendingCount);
@@ -10993,9 +11321,13 @@ if (loginBadge) {
   loginBadge.textContent = String(pendingLoginCount);
   loginBadge.style.display = pendingLoginCount > 0 && canManageLoginRequests(currentChatUser) ? 'inline-flex' : 'none';
 }
+if (modBadge) {
+  modBadge.textContent = String(pendingModCount);
+  modBadge.style.display = pendingModCount > 0 && canReviewModApplications(currentChatUser) ? 'inline-flex' : 'none';
+}
 if (menuBadge) {
   menuBadge.textContent = String(totalPending);
-  menuBadge.style.display = totalPending > 0 && canReviewSubmissions(currentChatUser) ? 'inline-flex' : 'none';
+  menuBadge.style.display = totalPending > 0 && (canReviewSubmissions(currentChatUser) || canManageLoginRequests(currentChatUser) || canReviewModApplications(currentChatUser)) ? 'inline-flex' : 'none';
 }
 }
 
@@ -11261,6 +11593,116 @@ try {
 }
 }
 
+async function loadModApplicationsOnce(force = false) {
+const container = document.getElementById('admin-mod-applications');
+if (force) modApplicationsLoaded = false;
+if (modApplicationsLoading) return;
+modApplicationsLoading = true;
+if (container && canReviewModApplications(currentChatUser) && !modApplicationsLoaded) {
+  container.innerHTML = '<div class="submission-empty">Loading mod applications...</div>';
+}
+try {
+  const snapshot = await getAdminDb().collection(MOD_APPLICATIONS_COLLECTION)
+    .orderBy('submittedAt', 'desc')
+    .limit(80)
+    .get();
+  modApplicationsCache = snapshot.docs.map((doc) => {
+    const data = doc.data() || {};
+    return {
+      id: doc.id,
+      username: normalizeUsername(data.username || doc.id),
+      submittedByName: sanitizeNullableText(data.submittedByName, ''),
+      motivation: sanitizeNullableText(data.motivation, ''),
+      conflictResponse: sanitizeNullableText(data.conflictResponse, ''),
+      trustReason: sanitizeNullableText(data.trustReason, ''),
+      additionalNotes: sanitizeNullableText(data.additionalNotes, ''),
+      status: normalizeReviewStatus(data.status),
+      reviewReason: sanitizeNullableText(data.reviewReason, ''),
+      reviewedBy: sanitizeNullableText(data.reviewedBy, ''),
+      submittedAtMs: data.submittedAt && typeof data.submittedAt.toDate === 'function' ? data.submittedAt.toDate().getTime() : (data.submittedAtMs || 0)
+    };
+  });
+  modApplicationsLoaded = true;
+  updateReviewQueueBadges();
+  renderModApplicationQueue();
+} catch (err) {
+  updateReviewQueueBadges();
+  if (container && canReviewModApplications(currentChatUser)) {
+    container.innerHTML = '<div class="submission-empty">Could not load mod applications from Firestore.</div>';
+  }
+} finally {
+  modApplicationsLoading = false;
+}
+}
+
+function renderModApplicationQueue() {
+const container = document.getElementById('admin-mod-applications');
+if (!container) return;
+updateReviewQueueBadges();
+syncReviewQueueFilterInputs();
+if (!canReviewModApplications(currentChatUser)) {
+  container.textContent = 'Insufficient permissions.';
+  return;
+}
+if (modApplicationsLoading && !modApplicationsCache.length) {
+  container.innerHTML = '<div class="submission-empty">Loading mod applications...</div>';
+  return;
+}
+if (!modApplicationsCache.length) {
+  container.innerHTML = '<div class="submission-empty">No mod applications yet.</div>';
+  return;
+}
+const filteredItems = filterReviewQueueItems('modapps', modApplicationsCache);
+if (!filteredItems.length) {
+  container.innerHTML = '<div class="submission-empty">No mod applications match the current filters.</div>';
+  return;
+}
+const pendingItems = filteredItems.filter((item) => normalizeReviewStatus(item.status) === 'pending');
+const approvedItems = filteredItems.filter((item) => normalizeReviewStatus(item.status) === 'approved');
+const rejectedItems = filteredItems.filter((item) => normalizeReviewStatus(item.status) === 'rejected');
+const statusFilter = reviewQueueFilters.modapps.status || 'all';
+const groups = [];
+const summary = `<div class="queue-summary-grid"><div class="profile-detail-card"><div class="profile-detail-label">Pending</div><div class="profile-detail-value">${pendingItems.length}</div></div><div class="profile-detail-card"><div class="profile-detail-label">Approved</div><div class="profile-detail-value">${approvedItems.length}</div></div><div class="profile-detail-card"><div class="profile-detail-label">Rejected</div><div class="profile-detail-value">${rejectedItems.length}</div></div><div class="profile-detail-card"><div class="profile-detail-label">Selected</div><div class="profile-detail-value">${selectedModApplicationIds.size}</div></div></div>`;
+const bulkBar = `<div class="bulk-action-bar"><button onclick="setAllReviewQueueSelections('modapps', true)" style="padding:0.35rem 0.7rem; background:#37474f; color:#fff; border:none; border-radius:0.25rem;">Select Visible</button><button onclick="setAllReviewQueueSelections('modapps', false)" style="padding:0.35rem 0.7rem; background:#263238; color:#fff; border:none; border-radius:0.25rem;">Clear</button><button onclick="bulkReviewQueueAction('modapps', 'approve')" style="padding:0.35rem 0.7rem; background:#2e7d32; color:#fff; border:none; border-radius:0.25rem;">Approve Selected</button><button onclick="bulkReviewQueueAction('modapps', 'reject')" style="padding:0.35rem 0.7rem; background:#8e0000; color:#fff; border:none; border-radius:0.25rem;">Reject Selected</button><button onclick="bulkReviewQueueAction('modapps', 'delete')" style="padding:0.35rem 0.7rem; background:#424242; color:#fff; border:none; border-radius:0.25rem;">Delete Selected</button></div>`;
+if (statusFilter === 'all' || statusFilter === 'pending') groups.push(renderReviewGroup('Pending', pendingItems, 'No pending mod applications.', (item) => renderModApplicationCard(item, true)));
+if (statusFilter === 'all' || statusFilter === 'approved') groups.push(renderReviewGroup('Approved', approvedItems, 'No approved mod applications.', (item) => renderModApplicationCard(item, false, true)));
+if (statusFilter === 'all' || statusFilter === 'rejected') groups.push(renderReviewGroup('Rejected', rejectedItems, 'No rejected mod applications.', (item) => renderModApplicationCard(item, false, true)));
+container.innerHTML = `${summary}${bulkBar}${groups.join('')}`;
+}
+
+function listenForModApplications() {
+renderModApplicationQueue();
+try {
+  if (modApplicationsUnsub) modApplicationsUnsub();
+  modApplicationsUnsub = getAdminDb().collection(MOD_APPLICATIONS_COLLECTION)
+    .orderBy('submittedAt', 'desc')
+    .limit(80)
+    .onSnapshot((snapshot) => {
+      modApplicationsCache = snapshot.docs.map((doc) => {
+        const data = doc.data() || {};
+        return {
+          id: doc.id,
+          username: normalizeUsername(data.username || doc.id),
+          submittedByName: sanitizeNullableText(data.submittedByName, ''),
+          motivation: sanitizeNullableText(data.motivation, ''),
+          conflictResponse: sanitizeNullableText(data.conflictResponse, ''),
+          trustReason: sanitizeNullableText(data.trustReason, ''),
+          additionalNotes: sanitizeNullableText(data.additionalNotes, ''),
+          status: normalizeReviewStatus(data.status),
+          reviewReason: sanitizeNullableText(data.reviewReason, ''),
+          reviewedBy: sanitizeNullableText(data.reviewedBy, ''),
+          submittedAtMs: data.submittedAt && typeof data.submittedAt.toDate === 'function' ? data.submittedAt.toDate().getTime() : (data.submittedAtMs || 0)
+        };
+      });
+      modApplicationsLoaded = true;
+      updateReviewQueueBadges();
+      renderModApplicationQueue();
+    });
+} catch (_) {
+  loadModApplicationsOnce();
+}
+}
+
 async function submitLoginRequest() {
 const usernameEl = document.getElementById('login-request-username');
 const passwordEl = document.getElementById('login-request-password');
@@ -11313,6 +11755,69 @@ try {
 } catch (err) {
   if (statusEl) {
     statusEl.textContent = 'Failed to submit login request.';
+    statusEl.classList.add('has-error');
+  }
+}
+}
+
+async function submitModApplication() {
+const usernameEl = document.getElementById('mod-application-username');
+const motivationEl = document.getElementById('mod-application-motivation');
+const conflictsEl = document.getElementById('mod-application-conflicts');
+const trustEl = document.getElementById('mod-application-trust');
+const notesEl = document.getElementById('mod-application-notes');
+const statusEl = document.getElementById('mod-application-status');
+if (statusEl) statusEl.classList.remove('has-error', 'has-success');
+const username = normalizeUsername(usernameEl ? usernameEl.value : '');
+const motivation = sanitizeNullableText(motivationEl && motivationEl.value, '').slice(0, 400);
+const conflictResponse = sanitizeNullableText(conflictsEl && conflictsEl.value, '').slice(0, 400);
+const trustReason = sanitizeNullableText(trustEl && trustEl.value, '').slice(0, 320);
+const additionalNotes = sanitizeNullableText(notesEl && notesEl.value, '').slice(0, 220);
+if (!username || !motivation || !conflictResponse || !trustReason) {
+  if (statusEl) {
+    statusEl.textContent = 'Answer the required questions before submitting.';
+    statusEl.classList.add('has-error');
+  }
+  return;
+}
+try {
+  const ref = getAdminDb().collection(MOD_APPLICATIONS_COLLECTION).doc(username);
+  const existing = await ref.get();
+  const existingData = existing.exists ? (existing.data() || {}) : null;
+  if (existingData && normalizeReviewStatus(existingData.status) === 'approved') {
+    if (statusEl) {
+      statusEl.textContent = 'That account already has an approved mod application.';
+      statusEl.classList.add('has-error');
+    }
+    return;
+  }
+  await ref.set({
+    username,
+    submittedByName: currentChatUser || getUserName() || username,
+    motivation,
+    conflictResponse,
+    trustReason,
+    additionalNotes,
+    availability: '',
+    moderationExperience: '',
+    status: 'pending',
+    reviewReason: '',
+    reviewedBy: '',
+    submittedAtMs: Date.now(),
+    submittedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+  modApplicationsLoaded = true;
+  if (statusEl) {
+    statusEl.textContent = existingData ? 'Mod application updated and sent for review.' : 'Mod application sent for review.';
+    statusEl.classList.add('has-success');
+  }
+  [motivationEl, conflictsEl, trustEl, notesEl].forEach((el) => {
+    if (el) el.value = '';
+  });
+  loadModApplicationsOnce(true);
+} catch (err) {
+  if (statusEl) {
+    statusEl.textContent = 'Failed to submit mod application.';
     statusEl.classList.add('has-error');
   }
 }
@@ -11576,6 +12081,25 @@ return;
 openConfirmActionModal('Approve Login Request', `This approves the login request for ${id}.`, () => applyLoginRequestReview(id, 'approved', ''), 'Approve Request');
 }
 
+async function reviewModApplication(encodedId, action) {
+if (!canReviewModApplications(currentChatUser)) return;
+const id = normalizeUsername(decodeURIComponent(encodedId || ''));
+if (!id) return;
+if (action === 'reject') {
+openReviewActionModal({
+  title: 'Reject Mod Application',
+  subtitle: 'Add the reason staff should see on this application.',
+  submitLabel: 'Reject Application',
+  onSubmit: async (reason) => {
+    if (!reason) throw new Error('Add a rejection reason before saving.');
+    await applyModApplicationReview(id, 'rejected', reason);
+  }
+});
+return;
+}
+openConfirmActionModal('Approve Mod Application', `This marks ${id}'s application approved and assigns the Trial Mod role.`, () => applyModApplicationReview(id, 'approved', ''), 'Approve Application');
+}
+
 async function applyLoginRequestReview(id, status, reason = '') {
 try {
   await getAdminDb().collection(LOGIN_REQUESTS_COLLECTION).doc(id).set({
@@ -11592,6 +12116,31 @@ try {
 }
 }
 
+async function applyModApplicationReview(id, status, reason = '') {
+try {
+  if (status === 'approved') {
+    await getAdminDb().collection(USER_ROLES_COLLECTION).doc(id).set({
+      role: 'trialmod',
+      updatedBy: currentChatUser,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  }
+  await getAdminDb().collection(MOD_APPLICATIONS_COLLECTION).doc(id).set({
+    status,
+    reviewReason: reason,
+    reviewedBy: currentChatUser,
+    approvedRole: status === 'approved' ? 'trialmod' : '',
+    reviewedAtMs: Date.now(),
+    reviewedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+  selectedModApplicationIds.delete(id);
+  await writeAuditLog('review_mod_application', id, `${status}${reason ? ` • ${reason}` : ''}`);
+  loadModApplicationsOnce(true);
+} catch (err) {
+  throw new Error('Failed to review mod application.');
+}
+}
+
 async function deleteLoginRequest(encodedId) {
 if (!canManageLoginRequests(currentChatUser)) return;
 const id = normalizeUsername(decodeURIComponent(encodedId || ''));
@@ -11605,31 +12154,53 @@ openConfirmActionModal('Delete Login Request', `This permanently removes the ${n
 }, 'Delete Request');
 }
 
+async function deleteModApplication(encodedId) {
+if (!canReviewModApplications(currentChatUser)) return;
+const id = normalizeUsername(decodeURIComponent(encodedId || ''));
+if (!id) return;
+const item = modApplicationsCache.find((entry) => entry && entry.username === id);
+if (!item || normalizeReviewStatus(item.status) === 'pending') return;
+openConfirmActionModal('Delete Mod Application', `This permanently removes the ${normalizeReviewStatus(item.status)} mod application for ${item.username || 'unknown'}.`, async () => {
+  await getAdminDb().collection(MOD_APPLICATIONS_COLLECTION).doc(id).delete();
+  selectedModApplicationIds.delete(id);
+  await writeAuditLog('delete_mod_application', id, `Deleted ${normalizeReviewStatus(item.status)} application`);
+  loadModApplicationsOnce(true);
+}, 'Delete Application');
+}
+
 async function bulkReviewQueueAction(queueType, action) {
-const targetKey = queueType === 'logins' ? 'logins' : 'games';
+const targetKey = getReviewQueueTypeKey(queueType);
 if (targetKey === 'logins' && !canManageLoginRequests(currentChatUser)) return;
-const selection = targetKey === 'logins' ? Array.from(selectedLoginRequestIds) : Array.from(selectedGameSubmissionIds);
+if (targetKey === 'modapps' && !canReviewModApplications(currentChatUser)) return;
+const selection = targetKey === 'logins' ? Array.from(selectedLoginRequestIds) : targetKey === 'modapps' ? Array.from(selectedModApplicationIds) : Array.from(selectedGameSubmissionIds);
 if (!selection.length) return;
-if (targetKey === 'logins' && action === 'reject') {
+const queueLabel = targetKey === 'logins' ? 'Login Requests' : targetKey === 'modapps' ? 'Mod Applications' : 'Game Submissions';
+if ((targetKey === 'logins' || targetKey === 'modapps') && action === 'reject') {
   openReviewActionModal({
-    title: 'Reject Selected Login Requests',
-    subtitle: `A single reason will be applied to ${selection.length} login request${selection.length === 1 ? '' : 's'}.`,
+    title: `Reject Selected ${queueLabel}`,
+    subtitle: `A single reason will be applied to ${selection.length} ${targetKey === 'logins' ? 'login request' : 'mod application'}${selection.length === 1 ? '' : 's'}.`,
     submitLabel: 'Reject Selected',
     onSubmit: async (reason) => {
       if (!reason) throw new Error('Add a rejection reason before saving.');
-      for (const id of selection) await applyLoginRequestReview(id, 'rejected', reason);
+      for (const id of selection) {
+        if (targetKey === 'logins') await applyLoginRequestReview(id, 'rejected', reason);
+        else await applyModApplicationReview(id, 'rejected', reason);
+      }
     }
   });
   return;
 }
   openConfirmActionModal(
-    `${action.charAt(0).toUpperCase() + action.slice(1)} Selected ${targetKey === 'logins' ? 'Login Requests' : 'Game Submissions'}`,
+    `${action.charAt(0).toUpperCase() + action.slice(1)} Selected ${queueLabel}`,
     `This applies ${action} to ${selection.length} selected item${selection.length === 1 ? '' : 's'}.`,
     async () => {
       for (const id of selection) {
         if (targetKey === 'logins') {
           if (action === 'approve') await applyLoginRequestReview(id, 'approved', '');
           else if (action === 'delete') await getAdminDb().collection(LOGIN_REQUESTS_COLLECTION).doc(id).delete();
+        } else if (targetKey === 'modapps') {
+          if (action === 'approve') await applyModApplicationReview(id, 'approved', '');
+          else if (action === 'delete') await getAdminDb().collection(MOD_APPLICATIONS_COLLECTION).doc(id).delete();
         } else {
           if (action === 'approve') await applyGameSubmissionReview(id, 'approved', '');
           else if (action === 'reject') await applyGameSubmissionReview(id, 'rejected', 'Rejected in bulk review');
@@ -11637,8 +12208,10 @@ if (targetKey === 'logins' && action === 'reject') {
         }
       }
       if (targetKey === 'logins') selectedLoginRequestIds.clear();
+      else if (targetKey === 'modapps') selectedModApplicationIds.clear();
       else selectedGameSubmissionIds.clear();
       if (targetKey === 'logins') loadLoginRequestsOnce(true);
+      else if (targetKey === 'modapps') loadModApplicationsOnce(true);
       else loadGameSubmissionsOnce(true);
     },
     `${action.charAt(0).toUpperCase() + action.slice(1)} Selected`
@@ -11786,22 +12359,138 @@ const settings = await loadCasinoGameSettings().catch(() => getCachedCasinoGameS
 populateAdminCasinoGameSettingsForm(settings);
 }
 
+function getAdminCasinoGameSettingsDraft() {
+  return normalizeCasinoGameSettingsData({
+    blackjackDealerStandValue: Number(document.getElementById('admin-casino-blackjack-stand')?.value),
+    rouletteSelectedBoostPct: Number(document.getElementById('admin-casino-roulette-boost')?.value),
+    slotsNoMatchChancePct: Number(document.getElementById('admin-casino-slot-no-match')?.value),
+    slotsSymbolWeights: {
+      '7': Number(document.getElementById('admin-casino-slot-weight-7')?.value),
+      BAR: Number(document.getElementById('admin-casino-slot-weight-bar')?.value),
+      CHERRY: Number(document.getElementById('admin-casino-slot-weight-cherry')?.value),
+      STAR: Number(document.getElementById('admin-casino-slot-weight-star')?.value),
+      BELL: Number(document.getElementById('admin-casino-slot-weight-bell')?.value)
+    }
+  });
+}
+
+function formatAdminChancePct(value, digits = 2) {
+  const numeric = Math.max(0, Number(value) || 0);
+  return `${numeric.toFixed(digits)}%`;
+}
+
+function formatAdminOpenRateText(chancePct) {
+  const normalizedChance = Math.max(0, Number(chancePct) || 0);
+  if (normalizedChance <= 0) return 'never at the current rate';
+  const opensPerHit = Math.max(1, Math.round(100 / normalizedChance));
+  return `about 1 in ${opensPerHit.toLocaleString()} opens on average`;
+}
+
+function getNormalizedGeneralShopCaseOddsProfile(stats = null) {
+  const profile = getGeneralShopCaseOddsProfile(stats);
+  const totalWeight = profile.reduce((sum, entry) => sum + Math.max(0, Number(entry.effectiveWeight) || 0), 0) || 1;
+  return profile.map((entry) => ({
+    ...entry,
+    effectiveChancePct: (Math.max(0, Number(entry.effectiveWeight) || 0) / totalWeight) * 100
+  }));
+}
+
+function computeSlotOutcomeProbabilities(settings = getCachedCasinoGameSettings()) {
+  const entries = getSlotWeightEntries(settings);
+  const symbolProbabilities = entries.reduce((map, entry) => {
+    map[entry.symbol] = entry.pct / 100;
+    return map;
+  }, {});
+  const forcedMissRate = Math.max(0, Math.min(1, (Number(settings.slotsNoMatchChancePct) || 0) / 100));
+  const weightedSpinRate = 1 - forcedMissRate;
+  const allTripleRateFromWeightedSpins = entries.reduce((sum, entry) => sum + ((symbolProbabilities[entry.symbol] || 0) ** 3), 0);
+  const tripleSevenRate = weightedSpinRate * ((symbolProbabilities['7'] || 0) ** 3);
+  const tripleOtherRate = weightedSpinRate * Math.max(0, allTripleRateFromWeightedSpins - ((symbolProbabilities['7'] || 0) ** 3));
+  const exactPairRate = weightedSpinRate * entries.reduce((sum, entry) => {
+    const probability = symbolProbabilities[entry.symbol] || 0;
+    return sum + (3 * (probability ** 2) * (1 - probability));
+  }, 0);
+  const missRate = Math.max(0, 1 - forcedMissRate - tripleSevenRate - tripleOtherRate - exactPairRate) + forcedMissRate;
+  const expectedNetPerBet = (tripleSevenRate * 8) + (tripleOtherRate * 3) + exactPairRate - missRate;
+  return {
+    entries,
+    forcedMissRate,
+    weightedSpinRate,
+    tripleSevenRate,
+    tripleOtherRate,
+    exactPairRate,
+    missRate,
+    expectedNetPerBet
+  };
+}
+
+function renderAdminCasinoChanceExplainers(settings = getAdminCasinoGameSettingsDraft()) {
+  const slotNode = document.getElementById('admin-casino-slot-breakdown');
+  if (slotNode) {
+    const slotMath = computeSlotOutcomeProbabilities(settings);
+    const symbolChips = slotMath.entries.map((entry) => `
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:0.55rem; padding:0.38rem 0.52rem; border-radius:0.72rem; background:rgba(13, 19, 28, 0.92); border:1px solid rgba(56, 72, 92, 0.85); min-width:0;">
+        <span style="display:inline-flex; align-items:center; gap:0.35rem; font-weight:700; color:#f4f7fb; min-width:0;">${escapeHtml(getSlotSymbolEmoji(entry.symbol))}<span>${escapeHtml(entry.symbol)}</span></span>
+        <span style="font-size:0.75rem; color:#9fe3a5; font-weight:700; white-space:nowrap;">${formatAdminChancePct(entry.pct, 1)} of normal reels</span>
+      </div>`).join('');
+    const expectedNetText = `${slotMath.expectedNetPerBet >= 0 ? '+' : ''}${slotMath.expectedNetPerBet.toFixed(2)}`;
+    slotNode.innerHTML = `
+      <div style="padding:0.85rem 0.95rem; border-radius:0.9rem; background:rgba(9, 14, 22, 0.94); border:1px solid rgba(44, 58, 78, 0.95); display:grid; gap:0.7rem;">
+        <div style="display:grid; gap:0.25rem;">
+          <div style="font-size:0.8rem; font-weight:800; color:#f4f7fb; letter-spacing:0.02em;">How slots works right now</div>
+          <div style="font-size:0.76rem; color:#9fb0c2;">${formatAdminChancePct(slotMath.forcedMissRate * 100, 1)} of spins are forced misses first. The other ${formatAdminChancePct(slotMath.weightedSpinRate * 100, 1)} use the symbol weights below on each reel. Raising one weight steals chance from the other symbols on normal spins.</div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:0.45rem;">${symbolChips}</div>
+        <div style="display:grid; gap:0.35rem; font-size:0.76rem; color:#dbe6f3;">
+          <div><strong style="color:#fff;">Overall spin results:</strong> 7-7-7 ${formatAdminChancePct(slotMath.tripleSevenRate * 100, 3)} • other triple ${formatAdminChancePct(slotMath.tripleOtherRate * 100, 3)} • any exact pair ${formatAdminChancePct(slotMath.exactPairRate * 100, 2)} • lose ${formatAdminChancePct(slotMath.missRate * 100, 2)}</div>
+          <div><strong style="color:#fff;">Average net:</strong> ${expectedNetText}x bet per spin. Positive means players gain on average; negative means the casino gains on average.</div>
+        </div>
+      </div>`;
+  }
+
+  const caseNode = document.getElementById('admin-casino-case-odds-breakdown');
+  if (caseNode) {
+    const baseProfile = getNormalizedGeneralShopCaseOddsProfile();
+    const charmProfile = getNormalizedGeneralShopCaseOddsProfile({ ownedGeneralShopItemIds: [GENERAL_SHOP_CASE_ODDS_BOOST_ITEM_ID] });
+    const baseRed = baseProfile.find((entry) => entry.id === 'covert')?.effectiveChancePct || 0;
+    const baseGold = baseProfile.find((entry) => entry.id === 'special')?.effectiveChancePct || 0;
+    const charmRed = charmProfile.find((entry) => entry.id === 'covert')?.effectiveChancePct || 0;
+    const charmGold = charmProfile.find((entry) => entry.id === 'special')?.effectiveChancePct || 0;
+    caseNode.innerHTML = `
+      <div style="padding:0.85rem 0.95rem; border-radius:0.9rem; background:rgba(14, 18, 12, 0.92); border:1px solid rgba(74, 84, 52, 0.9); display:grid; gap:0.55rem;">
+        <div style="display:grid; gap:0.25rem;">
+          <div style="font-size:0.8rem; font-weight:800; color:#fff4cf; letter-spacing:0.02em;">Why users still hit reds and golds</div>
+          <div style="font-size:0.76rem; color:#d8d2b6;">Slot sliders do not control case drops. Reds and golds come from the separate case rarity table, and every case open is an independent roll, so streaks can still happen.</div>
+        </div>
+        <div style="font-size:0.76rem; color:#f4ead2;"><strong style="color:#fff;">Base case odds:</strong> ${baseProfile.map((entry) => `${escapeHtml(entry.shortLabel)} ${formatAdminChancePct(entry.effectiveChancePct, entry.id === 'special' ? 2 : 1)}`).join(' • ')}</div>
+        <div style="font-size:0.76rem; color:#f4ead2;"><strong style="color:#fff;">With ${escapeHtml(GENERAL_SHOP_CASE_ODDS_BOOST_ITEM_ID)}:</strong> ${charmProfile.map((entry) => `${escapeHtml(entry.shortLabel)} ${formatAdminChancePct(entry.effectiveChancePct, entry.id === 'special' ? 2 : 1)}`).join(' • ')}</div>
+        <div style="font-size:0.76rem; color:#d8d2b6;">At base odds, red is ${formatAdminOpenRateText(baseRed)} and gold is ${formatAdminOpenRateText(baseGold)}. With the charm, red becomes ${formatAdminOpenRateText(charmRed)} and gold becomes ${formatAdminOpenRateText(charmGold)}. That is low, but not zero, so some users will still hit back-to-back rares just from independent random rolls.</div>
+      </div>`;
+  }
+}
+
 function syncAdminCasinoSlotWeightLabels() {
-const sliderIds = ['7', 'bar', 'cherry', 'star', 'bell'];
-const sliderValues = sliderIds.map((suffix) => {
-  const input = document.getElementById(`admin-casino-slot-weight-${suffix}`);
-  return Math.max(1, Number(input ? input.value : 1) || 1);
-});
-sliderIds.forEach((suffix, index) => {
+const settings = getAdminCasinoGameSettingsDraft();
+const weightEntries = getSlotWeightEntries(settings);
+const sliderLabelMap = {
+  '7': '7',
+  bar: 'BAR',
+  cherry: 'CHERRY',
+  star: 'STAR',
+  bell: 'BELL'
+};
+Object.entries(sliderLabelMap).forEach(([suffix, symbol]) => {
+  const entry = weightEntries.find((item) => item.symbol === symbol);
   const valueNode = document.getElementById(`admin-casino-slot-weight-${suffix}-value`);
-  if (!valueNode) return;
-  valueNode.textContent = `${sliderValues[index]} wt`;
+  if (!entry || !valueNode) return;
+  valueNode.textContent = `${entry.weight} wt • ${formatAdminChancePct(entry.pct, 1)}`;
 });
 const noMatchInput = document.getElementById('admin-casino-slot-no-match');
 const noMatchValueNode = document.getElementById('admin-casino-slot-no-match-value');
 if (noMatchInput && noMatchValueNode) {
-  noMatchValueNode.textContent = `${Math.max(0, Math.min(100, Number(noMatchInput.value) || 0))}%`;
+  noMatchValueNode.textContent = `${Math.max(0, Math.min(100, Number(noMatchInput.value) || 0))}% forced miss`;
 }
+renderAdminCasinoChanceExplainers(settings);
 }
 
 function populateAdminCasinoGameSettingsForm(settings = getCachedCasinoGameSettings()) {
@@ -13985,6 +14674,7 @@ const featuredDropRarity = featuredDrop ? getGeneralShopRarityConfig(featuredDro
 const equippedRewardTitle = getEquippedProfileRewardTitle(profileUserKey, stats, casinoStats, profile);
 const equippedRewardCosmetic = getEquippedProfileRewardCosmetic(profileUserKey, stats, casinoStats, profile);
 const statusQuote = sanitizeNullableText(profile.statusQuote, '');
+const isOwnerProfile = OWNER_USERS.includes(normalizeUsername(profileUserKey));
 badgesEl.innerHTML = badges.length ? `${showcasedBadges.length ? `<div class="profile-showcase-row">${showcasedBadges.map((badge) => `<span class="profile-badge profile-badge--showcase">${escapeHtml(badge.icon)} ${escapeHtml(badge.label)}</span>`).join('')}</div>` : ''}<div class="profile-showcase-row">${badges.map((badge) => `<span class="profile-badge">${escapeHtml(badge.icon)} ${escapeHtml(badge.label)}</span>`).join('')}</div>` : '<span style="color:#888; font-size:0.84rem;">No badges yet.</span>';
 detailListEl.innerHTML = [
   ['Title', equippedRewardTitle || 'None equipped'],
@@ -13993,6 +14683,7 @@ detailListEl.innerHTML = [
   ['Quote', statusQuote || 'No quote set'],
   ['Favorite Game', favoriteGameName],
   ['Joined', joinedLabel],
+  ...(isOwnerProfile ? [['Site Founder', 'Started the site on Feb 26, 2026']] : []),
   ['Profile Background', equippedProfileBackground ? equippedProfileBackground.title : 'Default'],
   ['Background Rarity', equippedProfileBackground ? equippedProfileBackgroundRarity.label : 'Default'],
   ['Best Drop', featuredDrop ? featuredDrop.title : 'None selected'],
@@ -15646,6 +16337,10 @@ let lastChatNotificationMessageId = '';
 let currentChatRoom = 'general';
 let blockedUsers = new Set();
 let chatMessagesUnsub = null;
+let chatMessagesSnapshot = null;
+let chatMessagesSnapshotReady = false;
+let chatMessagesListenerStartedAtMs = 0;
+let chatLastNewestMessageId = '';
 let knownChatMessageIds = new Set();
 let typingUsersLoadedOnce = false;
 let recentCrossRoomTypingNotifications = {};
@@ -16074,6 +16769,72 @@ isPublic: false
 });
 }
 
+function getCurrentChatRoom() {
+const storedRoomId = normalizeUsername(localStorage.getItem('chatRoom') || 'general') || 'general';
+if (storedRoomId === 'admin-room' && !canAccessRoom(getDefaultAdminRoom())) {
+  return 'general';
+}
+return storedRoomId;
+}
+
+function renderChatRoomToolbarState() {
+const toolbar = document.getElementById('chat-room-toolbar');
+const toggleButton = document.getElementById('chat-room-toggle-btn');
+if (!toolbar) return;
+toolbar.classList.toggle('is-collapsed', !chatRoomToolbarOpen);
+if (toggleButton) {
+  toggleButton.textContent = chatRoomToolbarOpen ? 'Close Rooms' : 'Open Rooms';
+  toggleButton.setAttribute('aria-expanded', chatRoomToolbarOpen ? 'true' : 'false');
+}
+}
+
+function toggleChatRoomToolbar() {
+chatRoomToolbarOpen = !chatRoomToolbarOpen;
+localStorage.setItem('chatRoomToolbarOpen', chatRoomToolbarOpen ? '1' : '0');
+renderChatRoomToolbarState();
+}
+
+function updateChatSendAsUi() {
+const row = document.getElementById('chat-send-as-row');
+const input = document.getElementById('chat-send-as-input');
+if (!row || !input) return;
+const activeName = sanitizeNullableText(currentChatUser || getUserName() || '', '');
+row.style.display = activeName ? 'flex' : 'none';
+input.value = activeName;
+input.readOnly = true;
+input.placeholder = activeName || 'Username';
+input.title = activeName ? `Posting as ${activeName}` : 'No username set';
+applyReadOnlyUiState();
+}
+
+function changeChatRoom(roomId) {
+const requestedRoomId = normalizeUsername(roomId) || 'general';
+if (requestedRoomId !== 'general' && requestedRoomId !== 'admin-room' && !doesChatRoomExist(requestedRoomId)) {
+  return;
+}
+const room = getChatRoomConfig(requestedRoomId);
+if (!canAccessRoom(room)) {
+  return;
+}
+markCurrentRoomRead();
+currentChatRoom = room.id;
+localStorage.setItem('chatRoom', currentChatRoom);
+clearReply();
+chatMessagesSnapshot = null;
+chatMessagesSnapshotReady = false;
+chatLastNewestMessageId = '';
+knownChatMessageIds = new Set();
+if (chatMessagesUnsub) {
+  chatMessagesUnsub();
+  chatMessagesUnsub = null;
+}
+renderChatRoomToolbarState();
+renderChatRoomSummary();
+refreshRoomPinnedMessageListener();
+updateChatSendAsUi();
+loadChatMessages();
+}
+
 function getRoomAudienceLabel(room) {
 if (!room) return '0 members';
 const roomId = normalizeUsername(room.id || '');
@@ -16111,221 +16872,238 @@ if (summary) {
   const roomTitle = `<span class="chat-room-summary-title">${renderRoomIconHtml(room.icon)}<span>${escapeHtml(room.name)}</span></span>`;
   summary.innerHTML = `${roomTitle}<div class="chat-room-pill-row"><span class="chat-room-pill">${escapeHtml(accessLabel)}</span><span class="chat-room-pill">${escapeHtml(audienceLabel)}</span><span class="chat-room-pill">${escapeHtml(roleLabel)}</span>${room.readOnly ? '<span class="chat-room-pill">Room Frozen</span>' : ''}${room.mediaBlocked ? '<span class="chat-room-pill">Media Locked</span>' : ''}${room.inviteCode ? `<span class="chat-room-pill">Invite ready</span>` : ''}</div>${room.description ? `<div style="margin-top:0.32rem; color:#9fb0c2; font-size:0.76rem;">${escapeHtml(room.description)}</div>` : ''}`;
 }
-const input = document.getElementById('chat-message-input');
-if (input && !isReadOnlyForCurrentUser()) {
-input.placeholder = `Message ${room.name}...`;
-}
-updateChatSendAsUi();
 }
 
-function canUseChatSendAs(username = currentChatUser) {
-const role = getUserRole(username);
-return role === 'owner' || role === 'admin';
+function renderChatMessagesSnapshot(snapshot) {
+const messagesDiv = document.getElementById('chat-messages');
+if (!messagesDiv || !snapshot) return;
+
+const accessibleDocsDesc = snapshot.docs.filter((doc) => {
+const data = doc.data() || {};
+if (!doesChatRoomExist(data.room || 'general')) return false;
+const roomConfig = getChatRoomConfig(data.room || 'general');
+if (!canAccessRoom(roomConfig)) return false;
+if (!canModerate(currentChatUser) && isUserBlocked(data.authoredBy || data.user || '')) return false;
+return true;
+});
+
+const visibleDocsDesc = accessibleDocsDesc.filter((doc) => {
+const data = doc.data() || {};
+const roomConfig = getChatRoomConfig(data.room || 'general');
+const room = roomConfig.id;
+if (room !== currentChatRoom) return false;
+return true;
+});
+
+const isInitialRender = !chatMessagesSnapshotReady;
+
+if (!chatMessagesSnapshotReady) {
+accessibleDocsDesc.forEach((doc) => knownChatMessageIds.add(doc.id));
+} else {
+snapshot.docChanges().forEach((change) => {
+if (change.type !== 'added') return;
+if (knownChatMessageIds.has(change.doc.id)) return;
+const changeData = change.doc.data() || {};
+const messageTimestampMs = getTimestampMs(changeData.timestamp) || Math.max(0, Number(changeData.timestampMs || 0));
+knownChatMessageIds.add(change.doc.id);
+if (messageTimestampMs && messageTimestampMs < chatMessagesListenerStartedAtMs) return;
+notifyCrossRoomMessage(changeData);
+});
 }
 
-function updateChatSendAsUi() {
-const row = document.getElementById('chat-send-as-row');
-const input = document.getElementById('chat-send-as-input');
-const container = document.getElementById('chat-container');
-const me = normalizeUsername(currentChatUser || getUserName() || '');
-const canSendAs = !!me && canUseChatSendAs(me);
-const isMinimized = !!(container && container.classList.contains('minimized'));
-if (!row || !input) return;
-if (!canSendAs) {
-row.style.display = 'none';
-input.value = '';
+const newestMessageId = visibleDocsDesc.length ? visibleDocsDesc[0].id : '';
+const hasNewMessage = chatMessagesSnapshotReady && newestMessageId && newestMessageId !== chatLastNewestMessageId;
+const wasAtBottom = isChatNearBottom(messagesDiv);
+chatMessagesSnapshotReady = true;
+chatLastNewestMessageId = newestMessageId;
+const scrollPos = messagesDiv.scrollTop;
+const chatContainer = document.getElementById('chat-container');
+const isChatOpen = chatContainer.style.display !== 'none' && !chatContainer.classList.contains('minimized');
+if (hasNewMessage && !isChatOpen) {
+chatUnreadCount++;
+updateUnreadBadge();
+}
+if (hasNewMessage && !wasAtBottom) {
+chatPendingNewMessageCount += 1;
+}
+if (hasNewMessage && newestMessageId && newestMessageId !== lastChatNotificationMessageId) {
+const newestData = visibleDocsDesc[0] ? (visibleDocsDesc[0].data() || {}) : null;
+const myUserKey = normalizeUsername(currentChatUser);
+const fromUserKey = normalizeUsername(newestData && newestData.user || '');
+const fromUserLabel = sanitizeNullableText(newestData && (newestData.displayUser || newestData.user), fromUserKey || 'someone');
+const newestText = sanitizeNullableText(newestData && newestData.message, '');
+const mentionsMe = myUserKey && newestText.toLowerCase().includes(`@${myUserKey}`);
+const repliesToMe = myUserKey && newestData && newestData.replyTo && normalizeUsername(newestData.replyTo.user || '') === myUserKey;
+if (newestData && fromUserKey && fromUserKey !== myUserKey && !newestData.system && (mentionsMe || repliesToMe)) {
+pushNotification({
+type: repliesToMe ? 'reply' : 'mention',
+title: repliesToMe ? `Reply from ${fromUserLabel}` : `Mention from ${fromUserLabel}`,
+body: newestText.slice(0, 180) || 'Open chat to read the new message.',
+ read: false,
+ action: { kind: 'room', roomId: currentChatRoom }
+});
+lastChatNotificationMessageId = newestMessageId;
+}
+}
+
+messagesDiv.innerHTML = '';
+const isAdmin = canModerate(currentChatUser);
+window._chatDocs = {};
+window._chatDocOrder = [];
+
+const docsForRender = visibleDocsDesc.slice().reverse();
+const unreadMarkerMs = Number(roomReadMarkers[normalizeUsername(currentChatRoom || 'general')] || 0);
+let unreadSeparatorShown = false;
+if (!docsForRender.length) {
+messagesDiv.innerHTML = '<div class="dm-empty-state">No messages in this room yet.</div>';
+}
+docsForRender.forEach(doc => {
+const docId = doc.id;
+const data = doc.data();
+window._chatDocs[docId] = data;
+window._chatDocOrder.push(docId);
+
+const messageDiv = document.createElement('div');
+const authorKey = normalizeUsername(data.authoredBy || data.user || '');
+const isOwn = authorKey === normalizeUsername(currentChatUser || getUserName() || '');
+const isSystem = data.system === true;
+const hasImage = typeof data.imageData === 'string' && data.imageData !== '';
+const videoSource = getRenderableChatVideoSource(data);
+const videoEmbedUrl = getRenderableChatVideoEmbedUrl(data);
+const hasVideo = !!videoSource;
+const hasVideoEmbed = !!videoEmbedUrl;
+const hasGif = data.type === 'gif' && data.gifUrl && isTrustedGifUrl(data.gifUrl);
+const messageText = sanitizeNullableText(data.message, '');
+const safeCaption = messageText ? renderFormattedMessageHtml(messageText) : '';
+const linkPreviewHtml = renderLinkPreviewHtml(data.linkPreview || null);
+const messageColor = data.color || (isSystem ? '#2f2f2f' : (isOwn ? '#1565c0' : '#5f6368'));
+const timeStr = formatChatDateTime(getTimestampMs(data.timestamp));
+const roomBadge = !isSystem ? `<span class="chat-room-badge">${escapeHtml(getChatRoomConfig(data.room || 'general').name)}</span>` : '';
+const displayUser = sanitizeNullableText(data.displayUser || data.user, 'unknown');
+const profileUser = normalizeUsername(data.profileUser || data.user || 'unknown');
+const rewardCosmetic = !isSystem ? getEquippedProfileRewardCosmetic(profileUser, getStatsForUserKey(profileUser), getCachedCasinoProfileStats(profileUser), getCachedProfile(profileUser)) : null;
+
+const replyHtml = data.replyTo ? `
+         <div class="chat-message-reply-quote">
+           <strong>${escapeHtml(sanitizeNullableText(data.replyTo.user, ''))}</strong>: ${escapeHtml(sanitizeNullableText(data.replyTo.text, '').slice(0, 80))}
+         </div>` : '';
+
+const reactions = data.reactions || {};
+const reactionsHtml = isSystem ? '' : Object.entries(reactions).map(([emoji, users]) => {
+if (!users.length) return '';
+const hasReacted = users.includes(currentChatUser);
+const userList = users.map(u => escapeHtml(u)).join(', ');
+return `<span class="reaction-pill ${hasReacted ? 'reacted' : ''}" onclick="toggleReaction('${docId}','${emoji}')" title="${userList}">${emoji} ${users.length}<span class="reaction-tooltip">${userList}</span></span>`;
+}).join('');
+
+const imageReactions = Array.isArray(data.reactionImages) ? data.reactionImages : [];
+const imageReactionsHtml = isSystem ? '' : imageReactions.map((item) => {
+const url = (item && typeof item.url === 'string') ? item.url : '';
+const users = (item && Array.isArray(item.users)) ? item.users : [];
+if (!url || !users.length) return '';
+const hasReacted = users.includes(currentChatUser);
+const userList = users.map(u => escapeHtml(u)).join(', ');
+const safeUrl = escapeHtml(url);
+const encodedUrl = encodeURIComponent(url);
+return `<span class="reaction-pill ${hasReacted ? 'reacted' : ''}" onclick="toggleImageReaction('${docId}','${encodedUrl}')" title="${userList}"><img class="reaction-image-thumb" src="${safeUrl}" alt="reaction" />${users.length}<span class="reaction-tooltip">${userList}</span></span>`;
+}).join('');
+
+const replyBtn = isSystem ? '' : `<button class="chat-action-btn" onclick="setReplyTo('${docId}')">↩ Reply</button>`;
+const threadBtn = isSystem ? '' : `<button class="chat-action-btn" onclick="openChatThreadModal('${docId}')">🧵 Thread</button>`;
+const reactBtns = isSystem ? '' : ['❤️','😂','😢','🔥'].map(e => `<button class="chat-action-btn" onclick="toggleReaction('${docId}','${e}')">${e}</button>`).join('');
+const imageReactBtn = isSystem ? '' : `<button class="chat-action-btn" onclick="promptImageReaction('${docId}')">🖼 Img</button>`;
+const canDeleteMessage = hasRolePermission(currentChatUser, 'deleteMessage');
+const canMuteUser = hasRolePermission(currentChatUser, 'mute');
+const canKickUser = hasRolePermission(currentChatUser, 'kick');
+const canTempBanUser = hasRolePermission(currentChatUser, 'tempBan');
+const modTarget = encodeURIComponent(authorKey || displayUser);
+const modUserBtn = isAdmin && !isSystem ? `<button class="chat-action-btn" onclick="openAdminUserHistoryFor('${modTarget}')">👤 User</button>` : '';
+const muteBtn = isAdmin && canMuteUser && !isSystem && !isOwn ? `<button class="chat-action-btn" style="color:#ffb74d;" onclick="quickMuteFromUser('${modTarget}')">🔇 Mute</button>` : '';
+const kickBtn = isAdmin && canKickUser && !isSystem && !isOwn ? `<button class="chat-action-btn" style="color:#ce93d8;" onclick="quickKickFromUser('${modTarget}')">👢 Kick</button>` : '';
+const tempBanBtn = isAdmin && canTempBanUser && !isSystem && !isOwn ? `<button class="chat-action-btn" style="color:#f48fb1;" onclick="quickTempBanFromUser('${modTarget}')">⏱ Temp</button>` : '';
+const deleteBtn = isAdmin && canDeleteMessage ? `<button class="chat-action-btn" style="color:#ff8a80;" onclick="adminDeleteMessage('${docId}')">🗑 Delete</button>` : '';
+const pinBtn = isAdmin && !isSystem ? `<button class="chat-action-btn" style="color:#ffca28;" onclick="pinMessage('${docId}','room')">📌 Room</button><button class="chat-action-btn" style="color:#80cbc4;" onclick="pinMessage('${docId}','global')">🌐 Global</button>` : '';
+const reportBtn = !isSystem && !isAdmin && !isOwn ? `<button class="chat-action-btn" style="color:#ff8a80; opacity:0.75;" onclick="reportMessage('${docId}')">⚑ Report</button>` : '';
+const timestampMs = data.timestamp && typeof data.timestamp.toDate === 'function' ? data.timestamp.toDate().getTime() : 0;
+const canEditOwn = !isSystem && isOwn && !!data.message && timestampMs && (Date.now() - timestampMs <= DM_EDIT_WINDOW_MS);
+const editBtn = canEditOwn ? `<button class="chat-action-btn" onclick="editOwnMessage('${docId}')">✎ Edit</button>` : '';
+const historyBtn = isAdmin && Array.isArray(data.editHistory) && data.editHistory.length ? `<button class="chat-action-btn" onclick="showMessageEditHistory('${docId}')">🕘 History</button>` : '';
+const editedMarker = data.editedAt ? `<span class="chat-edited-marker">edited</span>` : '';
+
+messageDiv.className = `chat-message ${isSystem ? 'system' : (isOwn ? 'own' : 'other')}`;
+if (rewardCosmetic) {
+  messageDiv.style.borderColor = rewardCosmetic.accent;
+  messageDiv.style.boxShadow = `0 0 0 1px ${rewardCosmetic.soft}, 0 16px 30px ${rewardCosmetic.glow}`;
+}
+const ownerTag = !isSystem ? getOwnerTagHtml(profileUser || displayUser) : '';
+const customTag = !isSystem ? getUserTagHtml(profileUser || displayUser) : '';
+const profileTarget = encodeURIComponent(profileUser || normalizeUsername(displayUser || 'unknown'));
+const nameColor = isSystem ? '' : (/^#[0-9a-fA-F]{3,8}$/.test(messageColor) ? messageColor : (isOwn ? '#1565c0' : '#5f6368'));
+const avatarHtml = !isSystem ? renderInlineProfileAvatarHtml(profileUser || displayUser) : '';
+const roleNameMarkup = !isSystem ? getRoleNameEffectMarkup(profileUser || displayUser, displayUser, {
+  baseClass: 'chat-message-user-text',
+  defaultColor: nameColor,
+  accentColor: nameColor
+}) : { containerStyle: '', html: '' };
+const messageTimestampMs = getTimestampMs(data.timestamp);
+if (!unreadSeparatorShown && unreadMarkerMs && messageTimestampMs && messageTimestampMs > unreadMarkerMs) {
+  const separator = document.createElement('div');
+  separator.className = 'chat-message-separator';
+  separator.textContent = 'New messages';
+  messagesDiv.appendChild(separator);
+  unreadSeparatorShown = true;
+}
+messageDiv.innerHTML = `
+         ${replyHtml}
+         ${isSystem ? '' : `<div class="chat-message-user chat-user-link"${roleNameMarkup.containerStyle ? ` style="${roleNameMarkup.containerStyle}"` : ''} onclick="openUserProfileFromChat('${profileTarget}', event)">${avatarHtml}${roleNameMarkup.html}${ownerTag}${customTag}</div>`}
+         ${hasImage ? `<img class="chat-message-image" src="${data.imageData}" alt="Chat image" />` : ''}
+         ${hasVideo ? `<video class="chat-message-video" src="${escapeHtml(videoSource)}" controls loop playsinline preload="metadata"></video>` : ''}
+         ${!hasVideo && hasVideoEmbed ? `<iframe class="chat-message-video-embed" src="${escapeHtml(videoEmbedUrl)}" allow="autoplay; fullscreen; picture-in-picture" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>` : ''}
+         ${hasGif ? `<img class="chat-message-image" src="${escapeHtml(data.gifUrl)}" alt="GIF" />` : ''}
+         ${safeCaption ? `<div class="chat-message-caption chat-message-text">${safeCaption}</div>` : ''}
+         ${linkPreviewHtml}
+         ${!isSystem && timeStr ? `<div class="chat-message-meta-row">${roomBadge}<div class="chat-message-time">${timeStr}</div>${editedMarker}</div>` : ''}
+         ${(reactionsHtml || imageReactionsHtml) ? `<div class="chat-reactions">${reactionsHtml}${imageReactionsHtml}</div>` : ''}
+         ${(isSystem && isAdmin) || !isSystem ? `<div class="chat-message-actions">${replyBtn}${threadBtn}${reactBtns}${imageReactBtn}${editBtn}${historyBtn}${modUserBtn}${muteBtn}${kickBtn}${tempBanBtn}${pinBtn}${deleteBtn}${reportBtn}</div>` : ''}
+       `;
+messagesDiv.appendChild(messageDiv);
+});
+
+if (isInitialRender || wasAtBottom) {
+scrollChatToLatest();
+} else {
+messagesDiv.scrollTop = scrollPos;
+updateOlderChatsButton(hasNewMessage);
+}
+if (!docsForRender.length) updateOlderChatsButton(false);
+}
+
+async function loadChatMessages() {
+if (!chatInitialized) return;
+
+try {
+if (chatMessagesUnsub) {
+if (chatMessagesSnapshot) {
+renderChatMessagesSnapshot(chatMessagesSnapshot);
+}
 return;
 }
-row.style.display = isMinimized ? 'none' : 'flex';
-input.placeholder = getUserRole(me) === 'owner'
-? 'Any username'
-: `Username (shows as user (${me}))`;
-input.title = getUserRole(me) === 'owner'
-? 'Owner messages can fully appear as the typed username.'
-: 'Admin messages appear as the typed username followed by your admin username.';
-}
+const db = getPrimaryDb();
+const messagesRef = db.collection('site_messages')
+.orderBy('timestamp', 'desc')
+.limit(200);
 
-function isChatNearBottom(messagesDiv = document.getElementById('chat-messages')) {
-if (!messagesDiv) return true;
-return messagesDiv.scrollHeight - messagesDiv.scrollTop - messagesDiv.clientHeight < 60;
-}
+chatMessagesSnapshotReady = false;
+chatMessagesListenerStartedAtMs = Date.now();
+chatLastNewestMessageId = '';
 
-function updateOlderChatsButton(forceShow = false) {
-const button = document.getElementById('chat-jump-latest-btn');
-const messagesDiv = document.getElementById('chat-messages');
-if (!button || !messagesDiv) return;
-const hasMessages = messagesDiv.children.length > 0;
-const show = hasMessages && (forceShow || !isChatNearBottom(messagesDiv));
-button.style.display = show ? 'inline-flex' : 'none';
-button.classList.toggle('has-unread-burst', chatPendingNewMessageCount > 0);
-button.textContent = chatPendingNewMessageCount > 0
-? `Jump to latest (${chatPendingNewMessageCount} new)`
-: 'You are looking at older chats';
+chatMessagesUnsub = messagesRef.onSnapshot(snapshot => {
+chatMessagesSnapshot = snapshot;
+renderChatMessagesSnapshot(snapshot);
+});
+} catch (err) {
+console.error("Error loading messages:", err);
 }
-
-function scrollChatToLatest() {
-const messagesDiv = document.getElementById('chat-messages');
-if (!messagesDiv) return;
-messagesDiv.scrollTop = messagesDiv.scrollHeight;
-markCurrentRoomRead();
-updateOlderChatsButton(false);
-}
-
-function getChatMessageIdentity() {
-const actualUser = sanitizeNullableText(currentChatUser || getUserName() || 'guest', 'guest');
-const actualKey = normalizeUsername(actualUser) || 'guest';
-if (!canUseChatSendAs(actualKey)) {
-return {
-actualUser,
-actualKey,
-displayUser: actualUser,
-profileUser: actualKey,
-impersonating: false
-};
-}
-const input = document.getElementById('chat-send-as-input');
-const aliasKey = normalizeUsername(input && input.value || '');
-if (!aliasKey || aliasKey === actualKey) {
-return {
-actualUser,
-actualKey,
-displayUser: actualUser,
-profileUser: actualKey,
-impersonating: false
-};
-}
-const isOwner = getUserRole(actualKey) === 'owner';
-return {
-actualUser,
-actualKey,
-displayUser: isOwner ? aliasKey : `${aliasKey} (${actualKey})`,
-profileUser: aliasKey,
-impersonating: true
-};
-}
-
-function applyChatIdentityToMessageData(msgData) {
-const identity = getChatMessageIdentity();
-msgData.user = identity.actualUser;
-msgData.authoredBy = identity.actualKey;
-msgData.profileUser = identity.profileUser;
-if (identity.impersonating) {
-msgData.displayUser = identity.displayUser;
-msgData.impersonatedUser = identity.profileUser;
-} else {
-delete msgData.displayUser;
-delete msgData.impersonatedUser;
-}
-return msgData;
-}
-
-function renderChatRoomToolbarState() {
-const toolbar = document.getElementById('chat-room-toolbar');
-const button = document.getElementById('chat-room-toggle-btn');
-if (!toolbar || !button) return;
-toolbar.classList.toggle('is-collapsed', !chatRoomToolbarOpen);
-button.textContent = chatRoomToolbarOpen ? 'Close Rooms' : 'Open Rooms';
-}
-
-function toggleChatRoomToolbar() {
-chatRoomToolbarOpen = !chatRoomToolbarOpen;
-localStorage.setItem('chatRoomToolbarOpen', chatRoomToolbarOpen ? '1' : '0');
-renderChatRoomToolbarState();
-}
-
-function changeChatRoom(roomId) {
-const room = getChatRoomConfig(roomId);
-if (!canAccessRoom(room)) return;
-currentChatRoom = room.id;
-localStorage.setItem('chatRoom', currentChatRoom);
-clearReply();
-renderChatRoomSummary();
-renderTypingIndicator();
-refreshRoomPinnedMessageListener();
-loadChatMessages();
-}
-
-function getCurrentChatRoom() {
-const stored = normalizeUsername(localStorage.getItem('chatRoom') || '');
-return stored || currentChatRoom || 'general';
-}
-
-function updateCreateRoomMembersVisibility() {
-const privacy = document.getElementById('create-room-privacy');
-const wrap = document.getElementById('create-room-members-wrap');
-if (!privacy || !wrap) return;
-wrap.style.display = privacy.value === 'private' ? 'block' : 'none';
-}
-
-function openCreateRoomModal() {
-const status = document.getElementById('create-room-status');
-const name = document.getElementById('create-room-name');
-const description = document.getElementById('create-room-description');
-const members = document.getElementById('create-room-members');
-const privacy = document.getElementById('create-room-privacy');
-const title = document.getElementById('create-room-modal-title');
-const subtle = document.getElementById('create-room-modal-subtle');
-const submitButton = document.getElementById('create-room-submit-btn');
-const inviteWrap = document.getElementById('create-room-invite-wrap');
-const inviteCode = document.getElementById('create-room-invite-code');
-activeRoomEditorId = '';
-pendingCreateRoomIconData = '';
-if (status) status.textContent = '';
-if (name) name.value = '';
-if (document.getElementById('create-room-icon')) document.getElementById('create-room-icon').value = '';
-if (document.getElementById('create-room-icon-upload')) document.getElementById('create-room-icon-upload').value = '';
-if (description) description.value = '';
-createRoomMemberSelection = [];
-if (members) members.value = '';
-if (privacy) privacy.value = 'public';
-if (title) title.textContent = 'Create Room';
-if (subtle) subtle.textContent = 'General stays public for everyone. Admin Room is staff-only. Create a new room and either open it to everyone or only specific usernames.';
-if (submitButton) submitButton.textContent = 'Create Room';
-if (inviteWrap) inviteWrap.style.display = 'none';
-if (inviteCode) inviteCode.value = '';
-updateCreateRoomMembersVisibility();
-syncCreateRoomMembersField();
-renderCreateRoomMemberSearch();
-updateCreateRoomIconPreview();
-openModalById('create-room-modal');
-if (name) setTimeout(() => name.focus(), 50);
-}
-
-function openEditRoomModal(encodedRoomId = '') {
-const status = document.getElementById('create-room-status');
-const name = document.getElementById('create-room-name');
-const description = document.getElementById('create-room-description');
-const members = document.getElementById('create-room-members');
-const privacy = document.getElementById('create-room-privacy');
-const title = document.getElementById('create-room-modal-title');
-const subtle = document.getElementById('create-room-modal-subtle');
-const submitButton = document.getElementById('create-room-submit-btn');
-const inviteWrap = document.getElementById('create-room-invite-wrap');
-const inviteCode = document.getElementById('create-room-invite-code');
-const requestedRoomId = normalizeUsername(decodeURIComponent(encodedRoomId || ''));
-const room = getChatRoomConfig(requestedRoomId || currentChatRoom);
-if (!canManageRoom(room)) return;
-activeRoomEditorId = room.id;
-pendingCreateRoomIconData = room.icon || '';
-if (status) status.textContent = '';
-if (name) name.value = room.name;
-if (document.getElementById('create-room-icon')) document.getElementById('create-room-icon').value = room.icon && !room.icon.startsWith('data:image/') ? room.icon : '';
-if (document.getElementById('create-room-icon-upload')) document.getElementById('create-room-icon-upload').value = '';
-if (description) description.value = room.description === 'Custom chat room' ? '' : room.description;
-createRoomMemberSelection = room.members.filter(member => member !== room.createdBy);
-if (members) members.value = createRoomMemberSelection.join(', ');
-if (privacy) privacy.value = room.isPublic ? 'public' : 'private';
-if (title) title.textContent = 'Edit Room';
-if (subtle) subtle.textContent = 'Update the room name, description, or who can join.';
-if (submitButton) submitButton.textContent = 'Save Room';
-if (inviteWrap) inviteWrap.style.display = room.inviteCode ? 'block' : 'none';
-if (inviteCode) inviteCode.value = room.inviteCode || '';
-updateCreateRoomMembersVisibility();
-syncCreateRoomMembersField();
-renderCreateRoomMemberSearch();
-updateCreateRoomIconPreview();
-openModalById('create-room-modal');
-if (name) setTimeout(() => name.focus(), 50);
 }
 
 function closeCreateRoomModal() {
@@ -18896,7 +19674,7 @@ alert('Failed to update admin slow mode bypass.');
 function renderAdminRolePermissions() {
 const container = document.getElementById('admin-role-permissions');
 if (!container) return;
-const roles = ['owner', 'hivise', 'admin', 'mod', 'moderator', 'reviewer', 'helper', 'chud', 'cameronsbitch', 'member'];
+const roles = ['owner', 'hivise', 'admin', 'mod', 'moderator', 'trialmod', 'reviewer', 'helper', 'chud', 'cameronsbitch', 'member'];
 const permissions = ['ban', 'mute', 'kick', 'warn', 'tempBan', 'manageSettings', 'assignRoles', 'manageRolePermissions', 'deleteMessage', 'reviewSubmissions', 'manageLoginRequests', 'viewReports', 'viewUserHistory', 'viewUserTimeline', 'viewArchives', 'manageAccounts', 'manageProfileCleanup', 'manageCasino', 'manageSeasonRepair', 'manageCasinoRollback', 'manageRewardGrants', 'manageProfileBackgrounds', 'manageGeneralShop', 'manageGameBios', 'manageLeaderboard', 'useOwnerTool', 'viewAppeals', 'viewAuditLog', 'viewAnalytics', 'manageRooms', 'manageLiveRooms', 'viewImpersonation', 'manageCustomTags'];
 const permLabels = { ban: 'Ban', mute: 'Mute', kick: 'Kick', warn: 'Warn', tempBan: 'Temp Ban', manageSettings: 'Core Settings', assignRoles: 'Assign Roles', manageRolePermissions: 'Role Perms', deleteMessage: 'Delete Msg', reviewSubmissions: 'Game/Case Reviews', manageLoginRequests: 'Login Requests', viewReports: 'Message Reports', viewUserHistory: 'User History', viewUserTimeline: 'User Timeline', viewArchives: 'Archived Chats', manageAccounts: 'Accounts', manageProfileCleanup: 'Profile Cleanup', manageCasino: 'Casino Controls', manageSeasonRepair: 'Season Repair', manageCasinoRollback: 'Casino Rollback', manageRewardGrants: 'Reward Grants', manageProfileBackgrounds: 'Profile BG Shop', manageGeneralShop: 'General Shop', manageGameBios: 'Game Bios', manageLeaderboard: 'Reset Leaderboard', useOwnerTool: 'Owner Tool', viewAppeals: 'Appeals', viewAuditLog: 'Audit Log', viewAnalytics: 'Analytics', manageRooms: 'Rooms', manageLiveRooms: 'Live Rooms', viewImpersonation: 'Impersonation', manageCustomTags: 'Custom Tags' };
 const perms = moderationSettings.rolePermissions || DEFAULT_ROLE_PERMISSIONS;
@@ -21449,7 +22227,7 @@ return;
 const username = resolveAdminTargetUsername('admin-role-username');
 const role = normalizeUsername(document.getElementById('admin-role-select').value || 'member');
 const statusDiv = document.getElementById('admin-ban-status');
-const allowed = ['hivise', 'cameronsbitch','chud','member', 'helper', 'reviewer', 'mod', 'moderator', 'admin'];
+const allowed = ['hivise', 'cameronsbitch','chud','member', 'helper', 'reviewer', 'trialmod', 'mod', 'moderator', 'admin'];
 if (!username) {
 statusDiv.textContent = 'Enter a username for role assignment.';
 return;
@@ -21734,32 +22512,20 @@ const entriesDiv = document.getElementById('leaderboard-entries');
 if (!entriesDiv) return;
 try {
 await loadCasinoSeasonState().catch(() => {});
-await loadChudWall(true).catch(() => {});
-const db = getPrimaryDb();
-const adminDb = getAdminDb();
-const bannedUsers = await getBannedUsernames();
-const bannedSet = new Set((bannedUsers || []).map(u => normalizeUsername(u)));
-const [statsSnapshot, approvedAccountsSnapshot, profilesSnapshot] = await Promise.all([
-db.collection(USER_STATS_COLLECTION).get(),
-adminDb.collection(LOGIN_REQUESTS_COLLECTION).where('status', '==', 'approved').get(),
-adminDb.collection(USER_PROFILES_COLLECTION).get()
+await loadChudWall().catch(() => {});
+const [bannedUsers, allStats, directorySnapshot] = await Promise.all([
+loadDynamicLeaderboardBannedUsers().catch(() => []),
+loadDynamicLeaderboardStatsMap().catch(() => ({})),
+loadCasinoDirectorySnapshot().catch(() => ({ knownUsers: [] }))
 ]);
-const allStats = {};
-statsSnapshot.forEach(doc => { allStats[normalizeUsername(doc.id)] = doc.data(); });
+const bannedSet = new Set((bannedUsers || []).map(u => normalizeUsername(u)));
 const localStats = getStatsStore();
-const knownUsers = new Set();
-Object.keys(allStats).forEach((username) => knownUsers.add(normalizeUsername(username)));
+const knownUsers = new Set(Array.isArray(directorySnapshot.knownUsers) ? directorySnapshot.knownUsers : []);
+Object.keys(allStats || {}).forEach((username) => knownUsers.add(normalizeUsername(username)));
 Object.keys(localStats || {}).forEach((username) => knownUsers.add(normalizeUsername(username)));
-approvedAccountsSnapshot.forEach((doc) => knownUsers.add(normalizeUsername(doc.id)));
 Object.keys(roleCache || {}).forEach((username) => knownUsers.add(normalizeUsername(username)));
 Object.keys(userTagCache || {}).forEach((username) => knownUsers.add(normalizeUsername(username)));
 knownUsers.add(normalizeUsername(currentChatUser || getUserName() || ''));
-profilesSnapshot.forEach((doc) => {
-const key = normalizeUsername(doc.id);
-if (!key) return;
-userProfileCache[key] = buildProfileCacheEntry(key, doc.data() || {});
-knownUsers.add(key);
-});
 
 const leaderboardData = Array.from(knownUsers)
 .filter(Boolean)
@@ -21871,7 +22637,7 @@ const pinnedUser = escapeHtml(sanitizeNullableText(data && data.user, 'unknown')
 const pinnedText = escapeHtml(sanitizeNullableText(data && data.text, ''));
 const videoPayload = getPinnedMessageVideoPayload(data || {});
 const mediaHtml = !videoPayload ? '' : (videoPayload.kind === 'embed'
-  ? `<iframe class="pinned-message-entry-video-embed" src="${escapeHtml(videoPayload.value)}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>`
+  ? `<iframe class="pinned-message-entry-video-embed" src="${escapeHtml(videoPayload.value)}" allow="autoplay; fullscreen; picture-in-picture" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>`
   : `<video class="pinned-message-entry-video" src="${escapeHtml(videoPayload.value)}" controls loop muted playsinline preload="metadata"></video>`);
 const removeBtn = canModerate(currentChatUser) && data && data.pinId
   ? `<button class="pinned-message-entry-remove" onclick="clearPinnedMessageEntry('${scope === 'global' ? 'global' : 'room'}','${encodeURIComponent(data.pinId)}','${encodeURIComponent(data.room || '')}')">✕</button>`
@@ -22793,6 +23559,24 @@ try {
 }
 }
 
+function applyChatIdentityToMessageData(data = {}) {
+const actor = normalizeUsername(currentChatUser || getUserName() || sanitizeNullableText(data.user, 'guest')) || 'guest';
+const visibleName = sanitizeNullableText(data.displayUser || data.user, actor);
+const profileUser = normalizeUsername(data.profileUser || actor) || actor;
+const payload = {
+  ...data,
+  user: actor,
+  authoredBy: normalizeUsername(data.authoredBy || actor) || actor,
+  profileUser,
+  displayUser: visibleName
+};
+const impersonatedUser = normalizeUsername(data.impersonatedUser || '');
+if (impersonatedUser && impersonatedUser !== payload.authoredBy) {
+  payload.impersonatedUser = impersonatedUser;
+}
+return payload;
+}
+
 async function sendGifMessage(gifUrl, caption = '') {
 if (!chatInitialized) { alert('Chat not initialized. Please refresh the page.'); return; }
 if (isReadOnlyForCurrentUser()) { alert('Chat is currently read-only.'); return; }
@@ -22889,230 +23673,6 @@ document.addEventListener('mousemove', dragChat);
 document.addEventListener('mouseup', stopChatDrag);
 document.addEventListener('touchmove', dragChat, { passive: false });
 document.addEventListener('touchend', stopChatDrag);
-
-async function loadChatMessages() {
-if (!chatInitialized) return;
-
-try {
-if (chatMessagesUnsub) {
-chatMessagesUnsub();
-chatMessagesUnsub = null;
-}
-const db = getPrimaryDb();
-const messagesRef = db.collection('site_messages')
-.orderBy('timestamp', 'desc')
-.limit(200);
-
-let snapshotReady = false;
-let lastNewestMessageId = '';
-const listenerStartedAtMs = Date.now();
-
-chatMessagesUnsub = messagesRef.onSnapshot(snapshot => {
-const messagesDiv = document.getElementById('chat-messages');
-
-const accessibleDocsDesc = snapshot.docs.filter((doc) => {
-const data = doc.data() || {};
-if (!doesChatRoomExist(data.room || 'general')) return false;
-const roomConfig = getChatRoomConfig(data.room || 'general');
-if (!canAccessRoom(roomConfig)) return false;
-if (!canModerate(currentChatUser) && isUserBlocked(data.authoredBy || data.user || '')) return false;
-return true;
-});
-
-const visibleDocsDesc = accessibleDocsDesc.filter((doc) => {
-const data = doc.data() || {};
-const roomConfig = getChatRoomConfig(data.room || 'general');
-const room = roomConfig.id;
-if (room !== currentChatRoom) return false;
-return true;
-});
-
-const isInitialRender = !snapshotReady;
-
-if (!snapshotReady) {
-accessibleDocsDesc.forEach((doc) => knownChatMessageIds.add(doc.id));
-} else {
-snapshot.docChanges().forEach((change) => {
-if (change.type !== 'added') return;
-if (knownChatMessageIds.has(change.doc.id)) return;
-const changeData = change.doc.data() || {};
-const messageTimestampMs = getTimestampMs(changeData.timestamp) || Math.max(0, Number(changeData.timestampMs || 0));
-knownChatMessageIds.add(change.doc.id);
-if (messageTimestampMs && messageTimestampMs < listenerStartedAtMs) return;
-notifyCrossRoomMessage(changeData);
-});
-}
-
-const newestMessageId = visibleDocsDesc.length ? visibleDocsDesc[0].id : '';
-const hasNewMessage = snapshotReady && newestMessageId && newestMessageId !== lastNewestMessageId;
-const wasAtBottom = isChatNearBottom(messagesDiv);
-snapshotReady = true;
-lastNewestMessageId = newestMessageId;
-const scrollPos = messagesDiv.scrollTop;
-const chatContainer = document.getElementById('chat-container');
-const isChatOpen = chatContainer.style.display !== 'none' && !chatContainer.classList.contains('minimized');
-if (hasNewMessage && !isChatOpen) {
-chatUnreadCount++;
-updateUnreadBadge();
-}
-if (hasNewMessage && !wasAtBottom) {
-chatPendingNewMessageCount += 1;
-}
-if (hasNewMessage && newestMessageId && newestMessageId !== lastChatNotificationMessageId) {
-const newestData = visibleDocsDesc[0] ? (visibleDocsDesc[0].data() || {}) : null;
-const myUserKey = normalizeUsername(currentChatUser);
-const fromUserKey = normalizeUsername(newestData && newestData.user || '');
-const fromUserLabel = sanitizeNullableText(newestData && (newestData.displayUser || newestData.user), fromUserKey || 'someone');
-const newestText = sanitizeNullableText(newestData && newestData.message, '');
-const mentionsMe = myUserKey && newestText.toLowerCase().includes(`@${myUserKey}`);
-const repliesToMe = myUserKey && newestData && newestData.replyTo && normalizeUsername(newestData.replyTo.user || '') === myUserKey;
-if (newestData && fromUserKey && fromUserKey !== myUserKey && !newestData.system && (mentionsMe || repliesToMe)) {
-pushNotification({
-type: repliesToMe ? 'reply' : 'mention',
-title: repliesToMe ? `Reply from ${fromUserLabel}` : `Mention from ${fromUserLabel}`,
-body: newestText.slice(0, 180) || 'Open chat to read the new message.',
- read: false,
- action: { kind: 'room', roomId: currentChatRoom }
-});
-lastChatNotificationMessageId = newestMessageId;
-}
-}
-
-messagesDiv.innerHTML = '';
-const isAdmin = canModerate(currentChatUser);
-window._chatDocs = {};
-window._chatDocOrder = [];
-
-const docsForRender = visibleDocsDesc.slice().reverse();
-const unreadMarkerMs = Number(roomReadMarkers[normalizeUsername(currentChatRoom || 'general')] || 0);
-let unreadSeparatorShown = false;
-if (!docsForRender.length) {
-messagesDiv.innerHTML = '<div class="dm-empty-state">No messages in this room yet.</div>';
-}
-docsForRender.forEach(doc => {
-const docId = doc.id;
-const data = doc.data();
-window._chatDocs[docId] = data;
-window._chatDocOrder.push(docId);
-
-const messageDiv = document.createElement('div');
-const authorKey = normalizeUsername(data.authoredBy || data.user || '');
-const isOwn = authorKey === normalizeUsername(currentChatUser || getUserName() || '');
-const isSystem = data.system === true;
-const hasImage = typeof data.imageData === 'string' && data.imageData !== '';
-const videoSource = getRenderableChatVideoSource(data);
-const videoEmbedUrl = getRenderableChatVideoEmbedUrl(data);
-const hasVideo = !!videoSource;
-const hasVideoEmbed = !!videoEmbedUrl;
-const hasGif = data.type === 'gif' && data.gifUrl && isTrustedGifUrl(data.gifUrl);
-const messageText = sanitizeNullableText(data.message, '');
-const safeCaption = messageText ? renderFormattedMessageHtml(messageText) : '';
-const linkPreviewHtml = renderLinkPreviewHtml(data.linkPreview || null);
-const messageColor = data.color || (isSystem ? '#2f2f2f' : (isOwn ? '#1565c0' : '#5f6368'));
-const timeStr = formatChatDateTime(getTimestampMs(data.timestamp));
-const roomBadge = !isSystem ? `<span class="chat-room-badge">${escapeHtml(getChatRoomConfig(data.room || 'general').name)}</span>` : '';
-const displayUser = sanitizeNullableText(data.displayUser || data.user, 'unknown');
-const profileUser = normalizeUsername(data.profileUser || data.user || 'unknown');
-const rewardCosmetic = !isSystem ? getEquippedProfileRewardCosmetic(profileUser, getStatsForUserKey(profileUser), getCachedCasinoProfileStats(profileUser), getCachedProfile(profileUser)) : null;
-
-const replyHtml = data.replyTo ? `
-         <div class="chat-message-reply-quote">
-           <strong>${escapeHtml(sanitizeNullableText(data.replyTo.user, ''))}</strong>: ${escapeHtml(sanitizeNullableText(data.replyTo.text, '').slice(0, 80))}
-         </div>` : '';
-
-const reactions = data.reactions || {};
-const reactionsHtml = isSystem ? '' : Object.entries(reactions).map(([emoji, users]) => {
-if (!users.length) return '';
-const hasReacted = users.includes(currentChatUser);
-const userList = users.map(u => escapeHtml(u)).join(', ');
-return `<span class="reaction-pill ${hasReacted ? 'reacted' : ''}" onclick="toggleReaction('${docId}','${emoji}')" title="${userList}">${emoji} ${users.length}<span class="reaction-tooltip">${userList}</span></span>`;
-}).join('');
-
-const imageReactions = Array.isArray(data.reactionImages) ? data.reactionImages : [];
-const imageReactionsHtml = isSystem ? '' : imageReactions.map((item) => {
-const url = (item && typeof item.url === 'string') ? item.url : '';
-const users = (item && Array.isArray(item.users)) ? item.users : [];
-if (!url || !users.length) return '';
-const hasReacted = users.includes(currentChatUser);
-const userList = users.map(u => escapeHtml(u)).join(', ');
-const safeUrl = escapeHtml(url);
-const encodedUrl = encodeURIComponent(url);
-return `<span class="reaction-pill ${hasReacted ? 'reacted' : ''}" onclick="toggleImageReaction('${docId}','${encodedUrl}')" title="${userList}"><img class="reaction-image-thumb" src="${safeUrl}" alt="reaction" />${users.length}<span class="reaction-tooltip">${userList}</span></span>`;
-}).join('');
-
-const replyBtn = isSystem ? '' : `<button class="chat-action-btn" onclick="setReplyTo('${docId}')">↩ Reply</button>`;
-const threadBtn = isSystem ? '' : `<button class="chat-action-btn" onclick="openChatThreadModal('${docId}')">🧵 Thread</button>`;
-const reactBtns = isSystem ? '' : ['❤️','😂','😢','🔥'].map(e => `<button class="chat-action-btn" onclick="toggleReaction('${docId}','${e}')">${e}</button>`).join('');
-const imageReactBtn = isSystem ? '' : `<button class="chat-action-btn" onclick="promptImageReaction('${docId}')">🖼 Img</button>`;
-const canDeleteMessage = hasRolePermission(currentChatUser, 'deleteMessage');
-const canMuteUser = hasRolePermission(currentChatUser, 'mute');
-const canKickUser = hasRolePermission(currentChatUser, 'kick');
-const canTempBanUser = hasRolePermission(currentChatUser, 'tempBan');
-const modTarget = encodeURIComponent(authorKey || displayUser);
-const modUserBtn = isAdmin && !isSystem ? `<button class="chat-action-btn" onclick="openAdminUserHistoryFor('${modTarget}')">👤 User</button>` : '';
-const muteBtn = isAdmin && canMuteUser && !isSystem && !isOwn ? `<button class="chat-action-btn" style="color:#ffb74d;" onclick="quickMuteFromUser('${modTarget}')">🔇 Mute</button>` : '';
-const kickBtn = isAdmin && canKickUser && !isSystem && !isOwn ? `<button class="chat-action-btn" style="color:#ce93d8;" onclick="quickKickFromUser('${modTarget}')">👢 Kick</button>` : '';
-const tempBanBtn = isAdmin && canTempBanUser && !isSystem && !isOwn ? `<button class="chat-action-btn" style="color:#f48fb1;" onclick="quickTempBanFromUser('${modTarget}')">⏱ Temp</button>` : '';
-const deleteBtn = isAdmin && canDeleteMessage ? `<button class="chat-action-btn" style="color:#ff8a80;" onclick="adminDeleteMessage('${docId}')">🗑 Delete</button>` : '';
-const pinBtn = isAdmin && !isSystem ? `<button class="chat-action-btn" style="color:#ffca28;" onclick="pinMessage('${docId}','room')">📌 Room</button><button class="chat-action-btn" style="color:#80cbc4;" onclick="pinMessage('${docId}','global')">🌐 Global</button>` : '';
-const reportBtn = !isSystem && !isAdmin && !isOwn ? `<button class="chat-action-btn" style="color:#ff8a80; opacity:0.75;" onclick="reportMessage('${docId}')">⚑ Report</button>` : '';
-const timestampMs = data.timestamp && typeof data.timestamp.toDate === 'function' ? data.timestamp.toDate().getTime() : 0;
-const canEditOwn = !isSystem && isOwn && !!data.message && timestampMs && (Date.now() - timestampMs <= DM_EDIT_WINDOW_MS);
-const editBtn = canEditOwn ? `<button class="chat-action-btn" onclick="editOwnMessage('${docId}')">✎ Edit</button>` : '';
-const historyBtn = isAdmin && Array.isArray(data.editHistory) && data.editHistory.length ? `<button class="chat-action-btn" onclick="showMessageEditHistory('${docId}')">🕘 History</button>` : '';
-const editedMarker = data.editedAt ? `<span class="chat-edited-marker">edited</span>` : '';
-
-messageDiv.className = `chat-message ${isSystem ? 'system' : (isOwn ? 'own' : 'other')}`;
-if (rewardCosmetic) {
-  messageDiv.style.borderColor = rewardCosmetic.accent;
-  messageDiv.style.boxShadow = `0 0 0 1px ${rewardCosmetic.soft}, 0 16px 30px ${rewardCosmetic.glow}`;
-}
-const ownerTag = !isSystem ? getOwnerTagHtml(profileUser || displayUser) : '';
-const customTag = !isSystem ? getUserTagHtml(profileUser || displayUser) : '';
-const profileTarget = encodeURIComponent(profileUser || normalizeUsername(displayUser || 'unknown'));
-const nameColor = isSystem ? '' : (/^#[0-9a-fA-F]{3,8}$/.test(messageColor) ? messageColor : (isOwn ? '#1565c0' : '#5f6368'));
-const avatarHtml = !isSystem ? renderInlineProfileAvatarHtml(profileUser || displayUser) : '';
-const roleNameMarkup = !isSystem ? getRoleNameEffectMarkup(profileUser || displayUser, displayUser, {
-  baseClass: 'chat-message-user-text',
-  defaultColor: nameColor,
-  accentColor: nameColor
-}) : { containerStyle: '', html: '' };
-const messageTimestampMs = getTimestampMs(data.timestamp);
-if (!unreadSeparatorShown && unreadMarkerMs && messageTimestampMs && messageTimestampMs > unreadMarkerMs) {
-  const separator = document.createElement('div');
-  separator.className = 'chat-message-separator';
-  separator.textContent = 'New messages';
-  messagesDiv.appendChild(separator);
-  unreadSeparatorShown = true;
-}
-messageDiv.innerHTML = `
-         ${replyHtml}
-         ${isSystem ? '' : `<div class="chat-message-user chat-user-link"${roleNameMarkup.containerStyle ? ` style="${roleNameMarkup.containerStyle}"` : ''} onclick="openUserProfileFromChat('${profileTarget}', event)">${avatarHtml}${roleNameMarkup.html}${ownerTag}${customTag}</div>`}
-         ${hasImage ? `<img class="chat-message-image" src="${data.imageData}" alt="Chat image" />` : ''}
-         ${hasVideo ? `<video class="chat-message-video" src="${escapeHtml(videoSource)}" controls loop playsinline preload="metadata"></video>` : ''}
-         ${!hasVideo && hasVideoEmbed ? `<iframe class="chat-message-video-embed" src="${escapeHtml(videoEmbedUrl)}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>` : ''}
-         ${hasGif ? `<img class="chat-message-image" src="${escapeHtml(data.gifUrl)}" alt="GIF" />` : ''}
-         ${safeCaption ? `<div class="chat-message-caption chat-message-text">${safeCaption}</div>` : ''}
-         ${linkPreviewHtml}
-         ${!isSystem && timeStr ? `<div class="chat-message-meta-row">${roomBadge}<div class="chat-message-time">${timeStr}</div>${editedMarker}</div>` : ''}
-         ${(reactionsHtml || imageReactionsHtml) ? `<div class="chat-reactions">${reactionsHtml}${imageReactionsHtml}</div>` : ''}
-         ${(isSystem && isAdmin) || !isSystem ? `<div class="chat-message-actions">${replyBtn}${threadBtn}${reactBtns}${imageReactBtn}${editBtn}${historyBtn}${modUserBtn}${muteBtn}${kickBtn}${tempBanBtn}${pinBtn}${deleteBtn}${reportBtn}</div>` : ''}
-       `;
-messagesDiv.appendChild(messageDiv);
-});
-
-if (isInitialRender || wasAtBottom) {
-scrollChatToLatest();
-} else {
-messagesDiv.scrollTop = scrollPos;
-updateOlderChatsButton(hasNewMessage);
-}
-if (!docsForRender.length) updateOlderChatsButton(false);
-});
-} catch (err) {
-console.error("Error loading messages:", err);
-}
-}
 
 async function sendMessage() {
 const input = document.getElementById('chat-message-input');
