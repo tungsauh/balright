@@ -46,8 +46,24 @@ let chatInitialized = false;
 let currentChatUser = '';
 let currentChatColor = '#1565c0';
 let chatRoomToolbarOpen = localStorage.getItem('chatRoomToolbarOpen') !== '0';
-const TYRONE_RELEASE_COUNTDOWN_TARGET_MS = new Date('2026-04-26T00:00:00').getTime();
+const TYRONE_RELEASE_COUNTDOWN_TARGET_MS = new Date('2026-04-27T00:00:00').getTime();
+const TYRONE_RELEASE_VOTE_DOC_ID = 'tyrone_release_vote';
+const TYRONE_RELEASE_VOTE_DATE_KEY = '2026-04-22';
+const TYRONE_RELEASE_VOTE_START_HOUR = 7;
+const TYRONE_RELEASE_VOTE_START_MINUTE = 30;
+const TYRONE_RELEASE_VOTE_END_HOUR = 13;
+const TYRONE_RELEASE_VOTE_END_MINUTE = 50;
+const TYRONE_RELEASE_DEFAULT_TITLE = 'Shitty Tyrone Souls and/or Tyrone vs Cops';
+const TYRONE_RELEASE_VOTE_OPTIONS = Object.freeze([
+  { id: 'tyrone-souls', label: 'Tyrone Souls' },
+  { id: 'cuck-simulator', label: 'Cuck Simulator' },
+  { id: 'tyrone-vs-cops', label: 'Tyrone vs Cops' },
+  { id: 'tyrone-souls-and-vs-cops', label: 'Tyrone Souls and vs Cops' }
+]);
 let tyroneReleaseCountdownInterval = null;
+let tyroneReleaseVoteUnsub = null;
+let tyroneReleaseVoteCache = { dateKey: TYRONE_RELEASE_VOTE_DATE_KEY, ballots: [] };
+let tyroneReleaseVotePendingPrimaryOptionId = '';
 
 window.getActiveTimedBan = window.getActiveTimedBan || async function() {
   return null;
@@ -68,10 +84,251 @@ function formatReleaseCountdownParts(totalMs) {
   };
 }
 
+function parseVoteDateKey(dateKey) {
+  const text = sanitizeNullableText(dateKey, '');
+  const parts = text.split('-').map((part) => Number(part));
+  if (parts.length !== 3 || parts.some((part) => !Number.isFinite(part))) return null;
+  return { year: parts[0], month: parts[1], day: parts[2] };
+}
+
+function getTyroneReleaseVoteWindowMs() {
+  const parsed = parseVoteDateKey(TYRONE_RELEASE_VOTE_DATE_KEY);
+  if (!parsed) return { startMs: 0, endMs: 0 };
+  const startMs = new Date(parsed.year, parsed.month - 1, parsed.day, TYRONE_RELEASE_VOTE_START_HOUR, TYRONE_RELEASE_VOTE_START_MINUTE, 0, 0).getTime();
+  const endMs = new Date(parsed.year, parsed.month - 1, parsed.day, TYRONE_RELEASE_VOTE_END_HOUR, TYRONE_RELEASE_VOTE_END_MINUTE, 0, 0).getTime();
+  return { startMs, endMs };
+}
+
+function getTyroneReleaseVotePhase(nowMs = Date.now()) {
+  const { startMs, endMs } = getTyroneReleaseVoteWindowMs();
+  if (!startMs || !endMs) return 'closed';
+  if (nowMs < startMs) return 'before';
+  if (nowMs < endMs) return 'open';
+  return 'closed';
+}
+
+function normalizeTyroneReleaseVoteOptionId(value) {
+  const id = sanitizeNullableText(value, '').toLowerCase();
+  return TYRONE_RELEASE_VOTE_OPTIONS.some((entry) => entry.id === id) ? id : '';
+}
+
+function normalizeTyroneReleaseVoteData(rawData) {
+  const data = rawData && typeof rawData === 'object' ? rawData : {};
+  const dateKey = sanitizeNullableText(data.dateKey, TYRONE_RELEASE_VOTE_DATE_KEY);
+  const ballotsInput = Array.isArray(data.ballots) ? data.ballots : [];
+  const latestByUser = {};
+  ballotsInput.forEach((entry) => {
+    const username = normalizeUsername(entry && entry.username);
+    const optionId = normalizeTyroneReleaseVoteOptionId(entry && entry.optionId);
+    if (!username || !optionId) return;
+    const rawBackupOptionId = normalizeTyroneReleaseVoteOptionId(entry && entry.backupOptionId);
+    const backupOptionId = optionId === 'cuck-simulator' && rawBackupOptionId && rawBackupOptionId !== optionId
+      ? rawBackupOptionId
+      : '';
+    latestByUser[username] = {
+      username,
+      optionId,
+      backupOptionId,
+      votedAtMs: Math.max(0, Number(entry && entry.votedAtMs) || 0)
+    };
+  });
+  return {
+    dateKey,
+    ballots: Object.values(latestByUser)
+  };
+}
+
+function getTyroneReleaseVoteCounts() {
+  const counts = {};
+  TYRONE_RELEASE_VOTE_OPTIONS.forEach((entry) => {
+    counts[entry.id] = 0;
+  });
+  if (sanitizeNullableText(tyroneReleaseVoteCache.dateKey, '') !== TYRONE_RELEASE_VOTE_DATE_KEY) return counts;
+  (tyroneReleaseVoteCache.ballots || []).forEach((entry) => {
+    const optionId = normalizeTyroneReleaseVoteOptionId(entry && entry.optionId);
+    if (!optionId) return;
+    counts[optionId] = (counts[optionId] || 0) + 1;
+  });
+  return counts;
+}
+
+function getTyroneReleaseVoteWinnerOptionId() {
+  const counts = getTyroneReleaseVoteCounts();
+  let winner = '';
+  let highest = -1;
+  TYRONE_RELEASE_VOTE_OPTIONS.forEach((entry) => {
+    const votes = Number(counts[entry.id] || 0);
+    if (votes > highest) {
+      winner = entry.id;
+      highest = votes;
+    }
+  });
+  return highest > 0 ? winner : '';
+}
+
+function getTyroneReleaseVoteOptionLabel(optionId) {
+  const match = TYRONE_RELEASE_VOTE_OPTIONS.find((entry) => entry.id === optionId);
+  return match ? match.label : '';
+}
+
+function updateTyroneReleaseTitleFromVote() {
+  const titleNode = document.getElementById('tyrone-release-countdown-title');
+  if (!titleNode) return;
+  const phase = getTyroneReleaseVotePhase();
+  if (phase !== 'closed') {
+    titleNode.textContent = 'Community Vote In Progress';
+    return;
+  }
+  const winnerId = getTyroneReleaseVoteWinnerOptionId();
+  const winnerLabel = getTyroneReleaseVoteOptionLabel(winnerId);
+  titleNode.textContent = winnerLabel || TYRONE_RELEASE_DEFAULT_TITLE;
+}
+
+function renderTyroneReleaseVoteUi(phase = getTyroneReleaseVotePhase()) {
+  const statusNode = document.getElementById('tyrone-release-vote-status');
+  const optionsNode = document.getElementById('tyrone-release-vote-options');
+  if (!statusNode || !optionsNode) return;
+  const counts = getTyroneReleaseVoteCounts();
+  const totalVotes = Object.values(counts).reduce((sum, value) => sum + Number(value || 0), 0);
+  const me = normalizeUsername(currentChatUser || (typeof getUserName === 'function' ? getUserName() : ''));
+  const myVote = (tyroneReleaseVoteCache.ballots || []).find((entry) => normalizeUsername(entry && entry.username) === me);
+  if (phase !== 'open' || !me) {
+    tyroneReleaseVotePendingPrimaryOptionId = '';
+  }
+  const canVote = phase === 'open' && !!me;
+  if (phase === 'before') {
+    statusNode.textContent = 'Vote opens at 7:30 AM and ends at 1:50 PM. Countdown starts at 1:50 PM.';
+  } else if (phase === 'open') {
+    if (me && tyroneReleaseVotePendingPrimaryOptionId === 'cuck-simulator') {
+      statusNode.textContent = `${totalVotes} vote${totalVotes === 1 ? '' : 's'} so far. Pick a second option as a backup because Cuck Simulator might be impossible because it is so big.`;
+    } else if (me && myVote) {
+      const selectedLabel = getTyroneReleaseVoteOptionLabel(myVote.optionId);
+      const backupLabel = myVote.backupOptionId ? getTyroneReleaseVoteOptionLabel(myVote.backupOptionId) : '';
+      const cuckWarning = myVote.optionId === 'cuck-simulator'
+        ? ` Cuck Simulator might be impossible because it is so big.${backupLabel ? ` Backup: ${backupLabel}.` : ' Pick Cuck Simulator again and choose a backup option.'}`
+        : '';
+      statusNode.textContent = `${totalVotes} vote${totalVotes === 1 ? '' : 's'} so far. You picked ${selectedLabel}.${cuckWarning} You can switch your vote before 1:50 PM.`;
+    } else {
+      statusNode.textContent = `${totalVotes} vote${totalVotes === 1 ? '' : 's'} so far.${me ? ' Pick one option before 1:50 PM.' : ' Sign in to vote.'}`;
+    }
+  } else {
+    const winnerId = getTyroneReleaseVoteWinnerOptionId();
+    const winnerLabel = getTyroneReleaseVoteOptionLabel(winnerId);
+    statusNode.textContent = winnerLabel
+      ? `Vote closed. Winner: ${winnerLabel}.`
+      : 'Vote closed with no winning option selected.';
+  }
+  optionsNode.innerHTML = TYRONE_RELEASE_VOTE_OPTIONS.map((entry) => {
+    const selected = (myVote && (myVote.optionId === entry.id || myVote.backupOptionId === entry.id))
+      || (tyroneReleaseVotePendingPrimaryOptionId === 'cuck-simulator' && entry.id === 'cuck-simulator');
+    return `<button class="release-vote-btn ${selected ? 'is-selected' : ''}" ${canVote ? '' : 'disabled'} onclick="submitTyroneReleaseVote('${entry.id}')">${escapeHtml(entry.label)} (${counts[entry.id] || 0})</button>`;
+  }).join('');
+}
+
+async function submitTyroneReleaseVote(optionId) {
+  const normalizedOptionId = normalizeTyroneReleaseVoteOptionId(optionId);
+  const statusNode = document.getElementById('tyrone-release-vote-status');
+  if (!normalizedOptionId) return;
+  if (getTyroneReleaseVotePhase() !== 'open') {
+    if (statusNode) statusNode.textContent = 'Voting is closed right now.';
+    return;
+  }
+  const username = normalizeUsername(currentChatUser || (typeof getUserName === 'function' ? getUserName() : ''));
+  if (!username) {
+    if (statusNode) statusNode.textContent = 'Sign in first, then vote.';
+    return;
+  }
+  let finalPrimaryOptionId = normalizedOptionId;
+  let finalBackupOptionId = '';
+  if (tyroneReleaseVotePendingPrimaryOptionId === 'cuck-simulator') {
+    if (normalizedOptionId === 'cuck-simulator') {
+      if (statusNode) statusNode.textContent = 'Pick a different second option as your backup for Cuck Simulator.';
+      return;
+    }
+    finalPrimaryOptionId = 'cuck-simulator';
+    finalBackupOptionId = normalizedOptionId;
+  } else if (normalizedOptionId === 'cuck-simulator') {
+    tyroneReleaseVotePendingPrimaryOptionId = 'cuck-simulator';
+    renderTyroneReleaseVoteUi('open');
+    if (statusNode) statusNode.textContent = 'Pick a second option as a backup because Cuck Simulator might be impossible because it is so big.';
+    return;
+  }
+  try {
+    const db = getAdminDb();
+    const ref = db.collection('chat_meta').doc(TYRONE_RELEASE_VOTE_DOC_ID);
+    await db.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(ref);
+      const current = normalizeTyroneReleaseVoteData(snapshot.exists ? (snapshot.data() || {}) : {});
+      const currentBallots = sanitizeNullableText(current.dateKey, '') === TYRONE_RELEASE_VOTE_DATE_KEY
+        ? (current.ballots || [])
+        : [];
+      const filtered = currentBallots.filter((entry) => normalizeUsername(entry && entry.username) !== username);
+      filtered.push({
+        username,
+        optionId: finalPrimaryOptionId,
+        backupOptionId: finalBackupOptionId,
+        votedAtMs: Date.now()
+      });
+      transaction.set(ref, {
+        dateKey: TYRONE_RELEASE_VOTE_DATE_KEY,
+        ballots: filtered,
+        updatedAtMs: Date.now(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    });
+    tyroneReleaseVotePendingPrimaryOptionId = '';
+    if (statusNode) {
+      const selectedLabel = getTyroneReleaseVoteOptionLabel(finalPrimaryOptionId);
+      const backupLabel = finalBackupOptionId ? getTyroneReleaseVoteOptionLabel(finalBackupOptionId) : '';
+      const backupText = backupLabel ? ` Backup saved as ${backupLabel}.` : '';
+      const cuckWarning = finalPrimaryOptionId === 'cuck-simulator'
+        ? ' Cuck Simulator might be impossible because it is so big.'
+        : '';
+      statusNode.textContent = `Vote saved for ${selectedLabel}.${backupText} ${cuckWarning}`.trim();
+    }
+  } catch (err) {
+    if (statusNode) statusNode.textContent = 'Could not save vote right now.';
+  }
+}
+
+function listenForTyroneReleaseVote() {
+  try {
+    if (tyroneReleaseVoteUnsub) tyroneReleaseVoteUnsub();
+    tyroneReleaseVoteUnsub = getAdminDb().collection('chat_meta').doc(TYRONE_RELEASE_VOTE_DOC_ID)
+      .onSnapshot((doc) => {
+        tyroneReleaseVoteCache = normalizeTyroneReleaseVoteData(doc.exists ? (doc.data() || {}) : {});
+        updateTyroneReleaseTitleFromVote();
+        renderTyroneReleaseVoteUi();
+      });
+  } catch (_) {
+    tyroneReleaseVoteCache = normalizeTyroneReleaseVoteData({});
+    updateTyroneReleaseTitleFromVote();
+    renderTyroneReleaseVoteUi();
+  }
+}
+
 function updateTyroneReleaseCountdown() {
   const countdownNode = document.getElementById('tyrone-release-countdown');
   const statusNode = document.getElementById('tyrone-release-countdown-status');
   if (!countdownNode || !statusNode) return;
+  const votePhase = getTyroneReleaseVotePhase();
+  updateTyroneReleaseTitleFromVote();
+  renderTyroneReleaseVoteUi(votePhase);
+  if (votePhase !== 'closed') {
+    const voteWindow = getTyroneReleaseVoteWindowMs();
+    if (votePhase === 'before') {
+      const untilStartMs = Math.max(0, voteWindow.startMs - Date.now());
+      const untilStart = formatReleaseCountdownParts(untilStartMs);
+      countdownNode.textContent = 'Paused for vote';
+      statusNode.textContent = `Vote starts in ${untilStart.days}d ${String(untilStart.hours).padStart(2, '0')}h ${String(untilStart.minutes).padStart(2, '0')}m ${String(untilStart.seconds).padStart(2, '0')}s.`;
+      return;
+    }
+    const untilEndMs = Math.max(0, voteWindow.endMs - Date.now());
+    const untilEnd = formatReleaseCountdownParts(untilEndMs);
+    countdownNode.textContent = 'Paused for vote';
+    statusNode.textContent = `Vote ends in ${untilEnd.days}d ${String(untilEnd.hours).padStart(2, '0')}h ${String(untilEnd.minutes).padStart(2, '0')}m ${String(untilEnd.seconds).padStart(2, '0')}s. Countdown starts at 1:50 PM.`;
+    return;
+  }
   const remainingMs = Math.max(0, TYRONE_RELEASE_COUNTDOWN_TARGET_MS - Date.now());
   const parts = formatReleaseCountdownParts(remainingMs);
   countdownNode.textContent = `${parts.days}d ${String(parts.hours).padStart(2, '0')}h ${String(parts.minutes).padStart(2, '0')}m ${String(parts.seconds).padStart(2, '0')}s`;
@@ -84,10 +341,11 @@ function updateTyroneReleaseCountdown() {
     }
     return;
   }
-  statusNode.textContent = 'Target window: April 26, 2026. Not guaranteed because this might be impossible.';
+  statusNode.textContent = 'Target window: April 27, 2026. Not guaranteed because this might be impossible.';
 }
 
 function initializeTyroneReleaseCountdown() {
+  listenForTyroneReleaseVote();
   updateTyroneReleaseCountdown();
   if (tyroneReleaseCountdownInterval) {
     clearInterval(tyroneReleaseCountdownInterval);
@@ -7666,6 +7924,15 @@ button.textContent = chatPendingNewMessageCount > 0
   : 'You are looking at older chats';
 }
 
+function scrollChatToLatest() {
+const messagesDiv = document.getElementById('chat-messages');
+if (!messagesDiv) return;
+messagesDiv.scrollTop = messagesDiv.scrollHeight;
+markCurrentRoomRead();
+chatUnreadCount = 0;
+updateUnreadBadge();
+}
+
 function loadGameRatings() {
 gameRatings = readJsonStorage(GAME_RATINGS_STORAGE_KEY, {}) || {};
 }
@@ -11811,6 +12078,9 @@ try {
     statusEl.textContent = existingData ? 'Mod application updated and sent for review.' : 'Mod application sent for review.';
     statusEl.classList.add('has-success');
   }
+  await postSystemNotice(existingData
+    ? `${username} updated their trial mod application. Pending review.`
+    : `${username} submitted a trial mod application. Pending review.`);
   [motivationEl, conflictsEl, trustEl, notesEl].forEach((el) => {
     if (el) el.value = '';
   });

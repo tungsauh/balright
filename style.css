@@ -381,6 +381,49 @@ color: #f0cfc6;
 max-width: 42rem;
 }
 
+.release-vote-panel {
+margin-top: 0.45rem;
+padding: 0.55rem 0.6rem;
+border-radius: 0.7rem;
+background: rgba(14, 6, 6, 0.48);
+border: 1px solid rgba(211, 122, 96, 0.28);
+display: grid;
+gap: 0.4rem;
+}
+
+.release-vote-status {
+font-size: 0.75rem;
+color: #ffd7cc;
+line-height: 1.35;
+}
+
+.release-vote-options {
+display: flex;
+flex-wrap: wrap;
+gap: 0.35rem;
+}
+
+.release-vote-btn {
+padding: 0.35rem 0.55rem;
+border-radius: 0.45rem;
+border: 1px solid rgba(211, 122, 96, 0.55);
+background: rgba(33, 12, 12, 0.78);
+color: #ffe6de;
+font-size: 0.73rem;
+font-weight: 700;
+cursor: pointer;
+}
+
+.release-vote-btn.is-selected {
+background: rgba(140, 44, 28, 0.86);
+border-color: rgba(255, 162, 126, 0.9);
+}
+
+.release-vote-btn:disabled {
+opacity: 0.55;
+cursor: not-allowed;
+}
+
 .release-countdown-clock {
 display: grid;
 gap: 0.28rem;
