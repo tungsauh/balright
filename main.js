@@ -1975,9 +1975,17 @@ async function loadCasinoProfileStats(username) {
   try {
     const doc = await getCasinoBalanceCollection().doc(key).get();
     if (doc.exists) {
-      casinoProfileStatsCache[key] = normalizeCasinoProfileStatsData(key, doc.data() || {});
+      const data = doc.data() || {};
+      const nextStats = normalizeCasinoProfileStatsData(key, data);
+      casinoProfileStatsCache[key] = nextStats;
+      updateCasinoDirectorySnapshotEntry(key, {
+        balance: nextStats.balance,
+        displayName: sanitizeNullableText(data.displayName || key, key),
+        stats: nextStats
+      });
     } else {
       casinoProfileStatsCache[key] = getDefaultCasinoProfileStats(key);
+      updateCasinoDirectorySnapshotEntry(key, null);
     }
   } catch (_) {}
   return getCachedCasinoProfileStats(key);
@@ -2031,6 +2039,11 @@ async function ensureCasinoBalanceRecord() {
     }, { merge: true });
   }
   casinoProfileStatsCache[user] = stats;
+  updateCasinoDirectorySnapshotEntry(user, {
+    balance: stats.balance,
+    displayName,
+    stats
+  });
   return { user, displayName, ref, ...stats };
 }
 
@@ -2859,12 +2872,31 @@ function invalidateCasinoDirectorySnapshotCache() {
 casinoDirectorySnapshotCache = null;
 }
 
+function updateCasinoDirectorySnapshotEntry(username, entry = null) {
+const key = normalizeUsername(username);
+if (!key || !casinoDirectorySnapshotCache) return;
+const knownUsers = new Set(Array.isArray(casinoDirectorySnapshotCache.knownUsers) ? casinoDirectorySnapshotCache.knownUsers : []);
+if (!entry) {
+  delete casinoDirectorySnapshotCache.balanceMap[key];
+  knownUsers.delete(key);
+} else {
+  casinoDirectorySnapshotCache.balanceMap[key] = {
+    balance: Math.max(0, Number(entry.balance || 0)),
+    displayName: sanitizeNullableText(entry.displayName || key, key),
+    stats: normalizeCasinoProfileStatsData(key, entry.stats || entry)
+  };
+  knownUsers.add(key);
+}
+casinoDirectorySnapshotCache.knownUsers = Array.from(knownUsers).filter(Boolean);
+casinoDirectorySnapshotCache.loadedAtMs = Date.now();
+}
+
 function invalidateDynamicLeaderboardSourceCaches() {
 dynamicLeaderboardStatsCache = null;
 dynamicLeaderboardBannedUsersCache = null;
 }
 
-function buildCasinoDirectorySnapshot(balancesSnapshot, approvedAccountsSnapshot, profilesSnapshot) {
+function buildCasinoDirectorySnapshot(balancesSnapshot) {
 const balanceMap = {};
 const knownUsers = new Set();
 balancesSnapshot.forEach((doc) => {
@@ -2878,17 +2910,6 @@ balancesSnapshot.forEach((doc) => {
   };
   knownUsers.add(key);
 });
-approvedAccountsSnapshot.forEach((doc) => {
-  const key = normalizeUsername(doc.id || ((doc.data() || {}).username));
-  if (key) knownUsers.add(key);
-});
-profilesSnapshot.forEach((doc) => {
-  const key = normalizeUsername(doc.id);
-  if (!key) return;
-  userProfileCache[key] = buildProfileCacheEntry(key, doc.data() || {});
-  knownUsers.add(key);
-});
-Object.keys(roleCache || {}).forEach((username) => knownUsers.add(normalizeUsername(username)));
 const currentUserKey = normalizeUsername(currentChatUser || (typeof getUserName === 'function' ? getUserName() : '') || '');
 if (currentUserKey) knownUsers.add(currentUserKey);
 return {
@@ -2906,13 +2927,8 @@ if (!force && casinoDirectorySnapshotCache && (nowMs - casinoDirectorySnapshotCa
 if (!force && casinoDirectorySnapshotLoadPromise) return casinoDirectorySnapshotLoadPromise;
 casinoDirectorySnapshotLoadPromise = (async () => {
   try {
-    const adminDb = getAdminDb();
-    const [balancesSnapshot, approvedAccountsSnapshot, profilesSnapshot] = await Promise.all([
-      getCasinoBalanceCollection().get(),
-      adminDb.collection(LOGIN_REQUESTS_COLLECTION).where('status', '==', 'approved').get(),
-      adminDb.collection(USER_PROFILES_COLLECTION).get()
-    ]);
-    const snapshotData = buildCasinoDirectorySnapshot(balancesSnapshot, approvedAccountsSnapshot, profilesSnapshot);
+    const balancesSnapshot = await getCasinoBalanceCollection().get();
+    const snapshotData = buildCasinoDirectorySnapshot(balancesSnapshot);
     casinoDirectorySnapshotCache = snapshotData;
     return snapshotData;
   } catch (err) {
@@ -6406,7 +6422,6 @@ function scheduleDynamicLeaderboardTagRefresh(delayMs = 450) {
 if (dynamicLeaderboardTagRefreshTimer) {
 clearTimeout(dynamicLeaderboardTagRefreshTimer);
 }
-invalidateCasinoDirectorySnapshotCache();
 invalidateDynamicLeaderboardSourceCaches();
 const nextDelayMs = Math.max(
   Math.max(0, Number(delayMs) || 0),
@@ -7872,7 +7887,7 @@ let casinoGameSettingsCache = null;
 let casinoTransferUsersCache = [];
 let casinoTransferUsersLoadPromise = null;
 let casinoTransferUsersLoaded = false;
-const CASINO_DIRECTORY_CACHE_MS = 60000;
+const CASINO_DIRECTORY_CACHE_MS = 5 * 60 * 1000;
 let casinoDirectorySnapshotCache = null;
 let casinoDirectorySnapshotLoadPromise = null;
 let casinoLeaderboardView = 'balance';
@@ -23116,6 +23131,7 @@ for (let index = 0; index < docs.length; index += 200) {
   await batch.commit();
 }
 casinoProfileStatsCache = {};
+invalidateCasinoDirectorySnapshotCache();
 if (!suppressUiRefresh) {
   await loadCasinoBalance().catch(() => {});
   if (typeof renderGeneralShopModal === 'function') renderGeneralShopModal();
