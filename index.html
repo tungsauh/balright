@@ -575,33 +575,32 @@ cursor: pointer;
 <input type="range" id="admin-casino-slot-no-match" min="0" max="100" value="0" oninput="syncAdminCasinoSlotWeightLabels()" />
 </div>
 </div>
-<div class="admin-inline-input-row">
-<div style="display:grid; gap:0.2rem; flex:1 1 120px; min-width:0;">
+<div style="display:grid; gap:0.45rem; margin-top:0.55rem;">
+<div style="display:grid; gap:0.2rem; min-width:0;">
 <label for="admin-casino-slot-weight-7" style="font-size:0.72rem; color:#9fb0c2; font-weight:600; display:flex; justify-content:space-between; gap:0.4rem;"><span>7 weight</span><span id="admin-casino-slot-weight-7-value">1 wt</span></label>
 <input type="range" id="admin-casino-slot-weight-7" min="1" max="50" value="1" oninput="syncAdminCasinoSlotWeightLabels()" />
 </div>
-<div style="display:grid; gap:0.2rem; flex:1 1 120px; min-width:0;">
+<div style="display:grid; gap:0.2rem; min-width:0;">
 <label for="admin-casino-slot-weight-bar" style="font-size:0.72rem; color:#9fb0c2; font-weight:600; display:flex; justify-content:space-between; gap:0.4rem;"><span>BAR weight</span><span id="admin-casino-slot-weight-bar-value">2 wt</span></label>
 <input type="range" id="admin-casino-slot-weight-bar" min="1" max="50" value="2" oninput="syncAdminCasinoSlotWeightLabels()" />
 </div>
-<div style="display:grid; gap:0.2rem; flex:1 1 120px; min-width:0;">
+<div style="display:grid; gap:0.2rem; min-width:0;">
 <label for="admin-casino-slot-weight-cherry" style="font-size:0.72rem; color:#9fb0c2; font-weight:600; display:flex; justify-content:space-between; gap:0.4rem;"><span>CHERRY weight</span><span id="admin-casino-slot-weight-cherry-value">4 wt</span></label>
 <input type="range" id="admin-casino-slot-weight-cherry" min="1" max="50" value="4" oninput="syncAdminCasinoSlotWeightLabels()" />
 </div>
 </div>
-<div class="admin-inline-input-row">
-<div style="display:grid; gap:0.2rem; flex:1 1 120px; min-width:0;">
+<div style="display:grid; gap:0.45rem; margin-top:0.55rem;">
+<div style="display:grid; gap:0.2rem; min-width:0;">
 <label for="admin-casino-slot-weight-star" style="font-size:0.72rem; color:#9fb0c2; font-weight:600; display:flex; justify-content:space-between; gap:0.4rem;"><span>STAR weight</span><span id="admin-casino-slot-weight-star-value">3 wt</span></label>
 <input type="range" id="admin-casino-slot-weight-star" min="1" max="50" value="3" oninput="syncAdminCasinoSlotWeightLabels()" />
 </div>
-<div style="display:grid; gap:0.2rem; flex:1 1 120px; min-width:0;">
+<div style="display:grid; gap:0.2rem; min-width:0;">
 <label for="admin-casino-slot-weight-bell" style="font-size:0.72rem; color:#9fb0c2; font-weight:600; display:flex; justify-content:space-between; gap:0.4rem;"><span>BELL weight</span><span id="admin-casino-slot-weight-bell-value">3 wt</span></label>
 <input type="range" id="admin-casino-slot-weight-bell" min="1" max="50" value="3" oninput="syncAdminCasinoSlotWeightLabels()" />
 </div>
-<button onclick="adminSaveCasinoGameSettings()" style="background:#00695c; color:#fff; border:none; border-radius:0.25rem;">Save Chances</button>
+<button onclick="adminSaveCasinoGameSettings()" style="background:#00695c; color:#fff; border:none; border-radius:0.25rem; margin-top:0.2rem;">Save Chances</button>
 </div>
 <div id="admin-casino-slot-breakdown" class="admin-note-text" style="margin-top:0.55rem;"></div>
-<div id="admin-casino-case-odds-breakdown" class="admin-note-text" style="margin-top:0.55rem;"></div>
 <div id="admin-casino-status" class="admin-note-text" style="margin-top:0.5rem;"></div>
 <div id="admin-casino-manager" class="admin-scroll-panel" style="max-height:220px; margin-top:0.55rem;"></div>
 </div>
@@ -726,14 +725,14 @@ cursor: pointer;
 </div>
 <div id="admin-general-shop-visual-status" class="admin-note-text">Paste a gradient, color, or direct image URL, or import an image file.</div>
 <div id="admin-general-shop-preview" style="margin-top:0.55rem; min-height:7rem; border-radius:0.75rem; border:1px solid #2e3a4c; background:linear-gradient(180deg, #222 0%, #171c24 100%); display:flex; align-items:flex-end; padding:0.8rem; box-sizing:border-box; color:#fff; font-weight:700;">Shop item preview</div>
-<div class="admin-inline-input-row" style="margin-top:0.55rem;">
+<div class="admin-inline-input-row" style="margin-top:0.55rem; flex-direction:column; align-items:stretch;">
 <button onclick="adminSaveGeneralShopItem()" style="background:#1565c0; color:#fff; border:none; border-radius:0.25rem;">Save Item</button>
-<button onclick="adminImportCsgoCatalog()" style="background:#1b5e20; color:#fff; border:none; border-radius:0.25rem;">Import CS Cases + Skins</button>
 <button onclick="adminSetAllGeneralShopCasesActive(false)" style="background:#8e0000; color:#fff; border:none; border-radius:0.25rem;">Hide All Cases</button>
 <button onclick="adminSetAllGeneralShopCasesActive(true)" style="background:#2e7d32; color:#fff; border:none; border-radius:0.25rem;">Show All Cases</button>
+<button onclick="adminDeleteAllGeneralShopCases()" style="background:#5d0000; color:#fff; border:none; border-radius:0.25rem;">Delete All Cases</button>
+<button onclick="adminDeleteAllGeneralShopCaseDrops()" style="background:#6d1b00; color:#fff; border:none; border-radius:0.25rem;">Delete All Case Drops</button>
 <button onclick="resetAdminGeneralShopForm()" style="background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Clear Form</button>
 </div>
-<div id="admin-general-shop-cs-import-status" class="admin-note-text" style="margin-top:0.35rem; padding:0.5rem 0.65rem; border:1px solid #2e3a4c; border-radius:0.45rem; background:#121a24; min-height:1.2rem;">CS import idle.</div>
 <div id="admin-general-shop-status" class="admin-note-text"></div>
 <div id="admin-general-shop-manager" class="admin-compact-list"></div>
 </div>
@@ -894,6 +893,23 @@ cursor: pointer;
 </div>
 <div id="admin-live-room-status" class="admin-note-text"></div>
 <div id="admin-live-room-controls" class="admin-scroll-panel" style="max-height:240px;"></div>
+</div>
+
+<div class="admin-section-card" data-admin-scope="owner" data-admin-permission="manageSettings">
+<div class="admin-section-title">Casino Failover</div>
+<div class="admin-helper-text admin-helper-text--flush">Switch the live casino between the main and backup Firebase projects, or mirror the top-level casino collections into the backup project.</div>
+<div id="admin-casino-failover-summary" class="admin-helper-text admin-helper-text--flush" style="margin-top:0.45rem;"></div>
+<div class="admin-button-row" style="margin-top:0.55rem;">
+<button id="admin-casino-primary-btn" onclick="adminSetCasinoTarget('primary')" class="admin-btn admin-btn--slate">Use Primary Casino</button>
+<button id="admin-casino-backup-btn" onclick="adminSetCasinoTarget('backup')" class="admin-btn admin-btn--purple">Use Backup Casino</button>
+<button id="admin-casino-sync-btn" onclick="adminSyncCasinoBackup()" class="admin-btn admin-btn--teal">Sync Backup Now</button>
+</div>
+<div class="admin-button-row" style="margin-top:0.45rem;">
+<button id="admin-casino-sync-primary-btn" onclick="adminSyncCasinoPrimary()" class="admin-btn admin-btn--blue">Sync Back To Primary</button>
+<button id="admin-casino-return-primary-btn" onclick="adminReturnCasinoToPrimary()" class="admin-btn admin-btn--success">Move Back To Primary Safely</button>
+</div>
+<div class="admin-helper-text admin-helper-text--flush" style="margin-top:0.35rem;">Firestore rules and indexes still need to be copied manually in Firebase because this repo does not contain those project files.</div>
+<div id="admin-casino-failover-status" class="admin-note-text" style="margin-top:0.45rem;"></div>
 </div>
 </div>
 

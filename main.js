@@ -37,9 +37,24 @@ messagingSenderId: "534969019133",
 appId: "1:534969019133:web:e2a4169fd920077816ac94"
 };
 
+const casinoBackupFirebaseConfig = {
+apiKey: "AIzaSyB0ZJddOQUvWSffLIk6Xou_oQ_i0uswOt4",
+authDomain: "balright-casino2.firebaseapp.com",
+projectId: "balright-casino2",
+storageBucket: "balright-casino2.firebasestorage.app",
+messagingSenderId: "354454301356",
+appId: "1:354454301356:web:b85456f36b3cc08859cd09"
+};
+
 const ADMIN_APP_NAME = 'balright-admin';
 const ARCHIVE_APP_NAME = 'balright-archive';
 const CASINO_APP_NAME = 'balright-casino';
+const CASINO_BACKUP_APP_NAME = 'balright-casino2';
+const PRIMARY_CASINO_TARGET = 'primary';
+const BACKUP_CASINO_TARGET = 'backup';
+const ACTIVE_CASINO_TARGET_STORAGE_KEY = 'activeCasinoTarget';
+const CASINO_FAILOVER_RELOAD_STORAGE_KEY = 'casinoFailoverReloadAt';
+const CASINO_FAILOVER_RELOAD_COOLDOWN_MS = 15000;
 const configuredFirestoreDbs = new WeakSet();
 
 let chatInitialized = false;
@@ -602,6 +617,10 @@ function getGeneralShopTradesCollection() {
   return getCasinoDb().collection(GENERAL_SHOP_TRADES_COLLECTION);
 }
 
+function getGeneralShopMarketCollection() {
+  return getCasinoDb().collection(GENERAL_SHOP_MARKET_COLLECTION);
+}
+
 function getProfileBackgroundShopCollection() {
   return getCasinoDb().collection(PROFILE_BACKGROUND_SHOP_COLLECTION);
 }
@@ -633,6 +652,7 @@ const GLOBAL_ALERT_DEFAULT_ACTIVE_MINUTES = 30;
 const PROFILE_BADGE_SHOWCASE_LIMIT = 3;
 const IFRAME_RECENT_HISTORY_KEY = 'iframeRecentHistoryV1';
 const IFRAME_RECENT_HISTORY_LIMIT = 10;
+const CASINO_WEEKLY_RESET_REMOTE_CHECK_WINDOW_MS = 10 * 60 * 1000;
 
 function getCasinoSeasonStateDoc() {
   return getCasinoConfigCollection().doc(CASINO_SEASON_STATE_DOC_ID);
@@ -972,6 +992,7 @@ async function loadCasinoSeasonState(force = false) {
   casinoSeasonStateLoadPromise = (async () => {
     try {
       const doc = await getCasinoSeasonStateDoc().get();
+      casinoSeasonStateLoadedFromRemote = true;
       if (doc.exists) {
         casinoSeasonStateCache = normalizeCasinoSeasonStateData(doc.data() || {});
       } else {
@@ -993,6 +1014,7 @@ function listenForCasinoSeasonState() {
   if (casinoSeasonStateUnsub) return;
   try {
     casinoSeasonStateUnsub = getCasinoSeasonStateDoc().onSnapshot((doc) => {
+      casinoSeasonStateLoadedFromRemote = true;
       casinoSeasonStateCache = normalizeCasinoSeasonStateData(doc.exists ? (doc.data() || {}) : {});
       updateCasinoSeasonUi();
       if (document.getElementById('leaderboard-modal')?.style.display === 'flex') {
@@ -1013,6 +1035,58 @@ async function ensureCasinoWeeklyReset(force = false) {
     const targetWeekStartMs = schedule.currentWeekStartMs;
     const nextResetAtMs = schedule.nextResetAtMs;
     const stateRef = getCasinoSeasonStateDoc();
+    const cachedState = normalizeCasinoSeasonStateData(casinoSeasonStateCache || {}, nowMs);
+    const canSkipRemoteCheck = !force
+      && casinoSeasonStateLoadedFromRemote
+      && cachedState.currentWeekStartMs === targetWeekStartMs
+      && !cachedState.resetTargetWeekStartMs
+      && (Math.max(0, Number(cachedState.nextResetAtMs || nextResetAtMs)) - nowMs) > CASINO_WEEKLY_RESET_REMOTE_CHECK_WINDOW_MS;
+    if (canSkipRemoteCheck) {
+      return cachedState;
+    }
+
+    const initialStateSnap = await stateRef.get().catch(() => null);
+    if (initialStateSnap) {
+      casinoSeasonStateLoadedFromRemote = true;
+      casinoSeasonStateCache = normalizeCasinoSeasonStateData(initialStateSnap.exists ? (initialStateSnap.data() || {}) : {}, nowMs);
+    }
+    const initialState = normalizeCasinoSeasonStateData(casinoSeasonStateCache || {}, nowMs);
+    const initialLockActive = initialState.resetTargetWeekStartMs === targetWeekStartMs
+      && initialState.resetTriggeredAtMs
+      && (nowMs - initialState.resetTriggeredAtMs) < CASINO_WEEKLY_RESET_LOCK_MS;
+    if (initialState.currentWeekStartMs === targetWeekStartMs && !initialState.resetTargetWeekStartMs) {
+      return initialState;
+    }
+    if (initialLockActive) {
+      return initialState;
+    }
+
+    let shouldRunReset = false;
+    await getCasinoDb().runTransaction(async (tx) => {
+      const snap = await tx.get(stateRef);
+      const current = normalizeCasinoSeasonStateData(snap.exists ? (snap.data() || {}) : {}, nowMs);
+      const lockActive = current.resetTargetWeekStartMs === targetWeekStartMs
+        && current.resetTriggeredAtMs
+        && (nowMs - current.resetTriggeredAtMs) < CASINO_WEEKLY_RESET_LOCK_MS;
+      if (current.currentWeekStartMs === targetWeekStartMs && !current.resetTargetWeekStartMs) {
+        casinoSeasonStateCache = current;
+        return;
+      }
+      if (lockActive) {
+        casinoSeasonStateCache = current;
+        return;
+      }
+      tx.set(stateRef, {
+        nextResetAtMs,
+        resetTargetWeekStartMs: targetWeekStartMs,
+        resetTriggeredAtMs: nowMs
+      }, { merge: true });
+      shouldRunReset = true;
+    });
+    if (!shouldRunReset) {
+      return loadCasinoSeasonState(true);
+    }
+
     const balancesSnapshot = await getCasinoBalanceCollection().get().catch(() => null);
     const winner = (() => {
       const entries = [];
@@ -1034,34 +1108,7 @@ async function ensureCasinoWeeklyReset(force = false) {
       });
       return entries[0] || { username: '', displayName: '', balance: 0 };
     })();
-    let shouldRunReset = false;
-    await getCasinoDb().runTransaction(async (tx) => {
-      const snap = await tx.get(stateRef);
-      const current = normalizeCasinoSeasonStateData(snap.exists ? (snap.data() || {}) : {}, nowMs);
-      const lockActive = current.resetTargetWeekStartMs === targetWeekStartMs
-        && current.resetTriggeredAtMs
-        && (nowMs - current.resetTriggeredAtMs) < CASINO_WEEKLY_RESET_LOCK_MS;
-      if (current.currentWeekStartMs === targetWeekStartMs && !current.resetTargetWeekStartMs) {
-        casinoSeasonStateCache = current;
-        return;
-      }
-      if (lockActive) {
-        casinoSeasonStateCache = current;
-        return;
-      }
-      tx.set(stateRef, {
-        previousWinnerUsername: winner.username,
-        previousWinnerDisplayName: winner.displayName,
-        previousWinnerBalance: winner.balance,
-        nextResetAtMs,
-        resetTargetWeekStartMs: targetWeekStartMs,
-        resetTriggeredAtMs: nowMs
-      }, { merge: true });
-      shouldRunReset = true;
-    });
-    if (!shouldRunReset) {
-      return loadCasinoSeasonState(true);
-    }
+
     await resetCasinoLeaderboardData({ clearCoinFlips: true, suppressUiRefresh: true });
     await stateRef.set({
       currentWeekStartMs: targetWeekStartMs,
@@ -1492,6 +1539,93 @@ function sanitizeOwnedGeneralShopItemSaleValues(ids, saleValues) {
   return normalizedIds.map((_, index) => Math.max(0, Math.min(1000000000, Math.floor(Number(source[index]) || 0))));
 }
 
+function sanitizeOwnedGeneralShopInventoryInstanceId(value) {
+  const raw = String(value || '').trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+  return raw.slice(0, 80);
+}
+
+function getStableStringHash(value = '') {
+  let hash = 0;
+  const text = String(value || '');
+  for (let index = 0; index < text.length; index += 1) {
+    hash = ((hash << 5) - hash) + text.charCodeAt(index);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function getDeterministicGeneralShopFloatValue(seed = '') {
+  const hash = getStableStringHash(seed || 'general-shop-float');
+  return Math.min(0.9999, Math.max(0.0001, (hash % 10000) / 10000));
+}
+
+function sanitizeOwnedGeneralShopItemInstanceIds(ids, instanceIds, saleValues = []) {
+  const normalizedIds = sanitizeOwnedGeneralShopItemIds(ids);
+  const source = Array.isArray(instanceIds) ? instanceIds : [];
+  const values = sanitizeOwnedGeneralShopItemSaleValues(normalizedIds, saleValues);
+  return normalizedIds.map((itemId, index) => {
+    const provided = sanitizeOwnedGeneralShopInventoryInstanceId(source[index]);
+    return provided || `legacy-${itemId}-${values[index]}-${index + 1}`;
+  });
+}
+
+function sanitizeOwnedGeneralShopItemFloatValues(ids, floatValues, instanceIds, saleValues = []) {
+  const normalizedIds = sanitizeOwnedGeneralShopItemIds(ids);
+  const source = Array.isArray(floatValues) ? floatValues : [];
+  const normalizedInstanceIds = sanitizeOwnedGeneralShopItemInstanceIds(normalizedIds, instanceIds, saleValues);
+  return normalizedIds.map((itemId, index) => {
+    const numeric = Number(source[index]);
+    if (Number.isFinite(numeric) && numeric >= 0 && numeric <= 1) {
+      return Math.min(1, Math.max(0, numeric));
+    }
+    return getDeterministicGeneralShopFloatValue(`${normalizedInstanceIds[index]}|${itemId}`);
+  });
+}
+
+function createGeneralShopInventoryInstanceId(itemId = '') {
+  const safeItemId = normalizeOptionalGeneralShopItemId(itemId || 'item') || 'item';
+  return sanitizeOwnedGeneralShopInventoryInstanceId(`gsi-${safeItemId}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`);
+}
+
+function formatGeneralShopFloatValue(value = 0) {
+  return Math.min(1, Math.max(0, Number(value) || 0)).toFixed(4);
+}
+
+function getGeneralShopFloatWearLabel(value = 0) {
+  const normalized = Math.min(1, Math.max(0, Number(value) || 0));
+  if (normalized <= 0.07) return 'Factory New';
+  if (normalized <= 0.15) return 'Minimal Wear';
+  if (normalized <= 0.38) return 'Field-Tested';
+  if (normalized <= 0.45) return 'Well-Worn';
+  return 'Battle-Scarred';
+}
+
+function getOwnedGeneralShopInventoryArrays(stats) {
+  const itemIds = sanitizeOwnedGeneralShopItemIds(stats && stats.ownedGeneralShopItemIds);
+  const saleValues = sanitizeOwnedGeneralShopItemSaleValues(itemIds, stats && stats.ownedGeneralShopItemSaleValues);
+  const instanceIds = sanitizeOwnedGeneralShopItemInstanceIds(itemIds, stats && stats.ownedGeneralShopItemInstanceIds, saleValues);
+  const floatValues = sanitizeOwnedGeneralShopItemFloatValues(itemIds, stats && stats.ownedGeneralShopItemFloatValues, instanceIds, saleValues);
+  return {
+    itemIds,
+    saleValues,
+    instanceIds,
+    floatValues
+  };
+}
+
+function buildOwnedGeneralShopInventoryState(itemIds = [], saleValues = [], instanceIds = [], floatValues = []) {
+  const normalizedItemIds = sanitizeOwnedGeneralShopItemIds(itemIds);
+  const normalizedSaleValues = sanitizeOwnedGeneralShopItemSaleValues(normalizedItemIds, saleValues);
+  const normalizedInstanceIds = sanitizeOwnedGeneralShopItemInstanceIds(normalizedItemIds, instanceIds, normalizedSaleValues);
+  const normalizedFloatValues = sanitizeOwnedGeneralShopItemFloatValues(normalizedItemIds, floatValues, normalizedInstanceIds, normalizedSaleValues);
+  return {
+    ownedGeneralShopItemIds: normalizedItemIds,
+    ownedGeneralShopItemSaleValues: normalizedSaleValues,
+    ownedGeneralShopItemInstanceIds: normalizedInstanceIds,
+    ownedGeneralShopItemFloatValues: normalizedFloatValues
+  };
+}
+
 function getGeneralShopCaseDropSaleMultiplier(rarity) {
   const resolved = normalizeGeneralShopRarity(rarity);
   if (resolved === 'restricted') return 0.75;
@@ -1774,6 +1908,8 @@ function normalizeCasinoProfileStatsData(username, data = {}) {
     ownedGeneralShopCaseCounts: sanitizeOwnedGeneralShopCaseCounts(data.ownedGeneralShopCaseCounts),
     ownedGeneralShopItemIds: sanitizeOwnedGeneralShopItemIds(data.ownedGeneralShopItemIds),
     ownedGeneralShopItemSaleValues: [],
+    ownedGeneralShopItemInstanceIds: [],
+    ownedGeneralShopItemFloatValues: [],
     selectedGeneralShopFeaturedItemId: '',
     allTimeBestGeneralShopDropItemId: '',
     allTimeBestGeneralShopDropTitle: '',
@@ -1782,7 +1918,12 @@ function normalizeCasinoProfileStatsData(username, data = {}) {
     ownedProfileBackgroundIds: sanitizeOwnedProfileBackgroundIds(data.ownedProfileBackgroundIds),
     selectedProfileBackgroundId: ''
   };
-  normalizedStats.ownedGeneralShopItemSaleValues = sanitizeOwnedGeneralShopItemSaleValues(normalizedStats.ownedGeneralShopItemIds, data.ownedGeneralShopItemSaleValues);
+  Object.assign(normalizedStats, buildOwnedGeneralShopInventoryState(
+    normalizedStats.ownedGeneralShopItemIds,
+    data.ownedGeneralShopItemSaleValues,
+    data.ownedGeneralShopItemInstanceIds,
+    data.ownedGeneralShopItemFloatValues
+  ));
   const selectedGeneralShopFeaturedItemId = normalizeOptionalGeneralShopItemId(data.selectedGeneralShopFeaturedItemId || '');
   normalizedStats.selectedGeneralShopFeaturedItemId = normalizedStats.ownedGeneralShopItemIds.includes(selectedGeneralShopFeaturedItemId) ? selectedGeneralShopFeaturedItemId : '';
   const storedBestDropItemId = normalizeOptionalGeneralShopItemId(data.allTimeBestGeneralShopDropItemId || '');
@@ -6074,7 +6215,7 @@ leastActive: '',
 hotHandUsers: [],
 coldTableUsers: []
 };
-const DYNAMIC_LEADERBOARD_TAG_REFRESH_MIN_INTERVAL_MS = 12000;
+const DYNAMIC_LEADERBOARD_TAG_REFRESH_MIN_INTERVAL_MS = 60000;
 let dynamicLeaderboardTagRefreshTimer = null;
 let dynamicLeaderboardTagRefreshPromise = null;
 let dynamicLeaderboardTagLastRefreshAtMs = 0;
@@ -6679,6 +6820,7 @@ if (canModerate(currentChatUser)) {
 migrateLegacyUserBansToFirestore().catch((err) => console.error('Legacy ban migration failed:', err));
 }
 renderAdminProjectStatus();
+renderAdminCasinoFailoverState();
 renderAdminRolePermissions();
 updateAdminSectionVisibility();
 updateAdminOwnerToolState();
@@ -7583,6 +7725,7 @@ const CASINO_CONFIG_COLLECTION = 'casino_config';
 const CASINO_INVENTORY_HISTORY_COLLECTION = 'casino_inventory_history';
 const GENERAL_SHOP_TRADES_COLLECTION = 'general_shop_trades';
 const GENERAL_SHOP_COLLECTION = 'general_shop';
+const GENERAL_SHOP_MARKET_COLLECTION = 'general_shop_market';
 const PROFILE_BACKGROUND_SHOP_COLLECTION = 'profile_background_shop';
 const POKER_ROOMS_COLLECTION = 'poker_rooms';
 const SITE_EVENT_DOC_ID = 'site_event_banner';
@@ -7643,9 +7786,6 @@ const GENERAL_SHOP_RARITY_CONFIG = [
 const GENERAL_SHOP_CASE_ODDS_BOOST_ITEM_ID = 'crimson-fortune-charm';
 const GENERAL_SHOP_CASE_ODDS_BOOST_COVERT_MULTIPLIER = 1.25;
 const GENERAL_SHOP_CASE_ODDS_BOOST_SPECIAL_MULTIPLIER = 1.4;
-const CSGO_API_SKINS_SOURCE_URL = 'https://raw.githubusercontent.com/ByMykel/CSGO-API/main/public/api/en/skins.json';
-const CSGO_API_CRATES_SOURCE_URL = 'https://raw.githubusercontent.com/ByMykel/CSGO-API/main/public/api/en/crates.json';
-const CSGO_IMPORT_CREDIT_NOTE = 'CS metadata/images by Valve via CSGO-API.';
 const PROFILE_REWARD_COSMETICS = [
 { id: 'glacier', label: 'Glacier Glass', accent: '#6ec6ff', soft: 'rgba(110, 198, 255, 0.24)', glow: 'rgba(40, 122, 196, 0.22)', swatch: 'linear-gradient(135deg, rgba(16, 51, 77, 0.98), rgba(78, 164, 221, 0.88), rgba(206, 241, 255, 0.92))', description: 'Cold blue glass trim for chat cards and profile panels.' },
 { id: 'ember', label: 'Ember Signal', accent: '#ff8a65', soft: 'rgba(255, 138, 101, 0.22)', glow: 'rgba(176, 82, 39, 0.22)', swatch: 'linear-gradient(135deg, rgba(64, 17, 12, 0.98), rgba(189, 74, 34, 0.9), rgba(255, 174, 107, 0.92))', description: 'Burnt orange trim unlocked from heavy chat activity.' },
@@ -7732,12 +7872,13 @@ let casinoGameSettingsCache = null;
 let casinoTransferUsersCache = [];
 let casinoTransferUsersLoadPromise = null;
 let casinoTransferUsersLoaded = false;
-const CASINO_DIRECTORY_CACHE_MS = 12000;
+const CASINO_DIRECTORY_CACHE_MS = 60000;
 let casinoDirectorySnapshotCache = null;
 let casinoDirectorySnapshotLoadPromise = null;
 let casinoLeaderboardView = 'balance';
 let casinoLeaderboardModalMode = 'casino';
 let casinoSeasonStateCache = normalizeCasinoSeasonStateData({});
+let casinoSeasonStateLoadedFromRemote = false;
 let casinoSeasonStateLoadPromise = null;
 let casinoSeasonStateUnsub = null;
 let casinoWeeklyResetPromise = null;
@@ -7748,10 +7889,8 @@ let chudWallUnsub = null;
 let generalShopCache = [];
 let generalShopUnsub = null;
 let generalShopStatus = { message: '', tone: 'neutral' };
-let generalShopCsImportStatus = { message: 'CS import idle.', tone: 'neutral' };
-let generalShopAutoImportAttempted = false;
-let generalShopAutoImportRunning = false;
 let generalShopInventoryStatus = { message: '', tone: 'neutral' };
+let generalShopMarketCache = [];
 let generalShopInventoryItemSort = 'owned';
 let activeGeneralShopEditId = '';
 let generalShopCaseOpenRequestInFlight = false;
@@ -8478,17 +8617,6 @@ function normalizeGeneralShopRarity(value) {
   return GENERAL_SHOP_RARITY_CONFIG.some((entry) => entry.id === raw) ? raw : 'mil-spec';
 }
 
-function mapCsgoRarityToGeneralShop(rawRarity) {
-  const rarityId = sanitizeNullableText(rawRarity && rawRarity.id, '').toLowerCase();
-  const rarityName = sanitizeNullableText(rawRarity && rawRarity.name, '').toLowerCase();
-  const joined = `${rarityId} ${rarityName}`;
-  if (joined.includes('extraordinary') || joined.includes('ancient') || joined.includes('contraband')) return 'special';
-  if (joined.includes('covert') || joined.includes('legendary')) return 'covert';
-  if (joined.includes('classified')) return 'classified';
-  if (joined.includes('restricted')) return 'restricted';
-  return 'mil-spec';
-}
-
 function normalizeOptionalGeneralShopRarity(value) {
   const raw = normalizeRoomId(value || '');
   return GENERAL_SHOP_RARITY_CONFIG.some((entry) => entry.id === raw) ? raw : '';
@@ -8944,14 +9072,13 @@ function getRenderableGeneralShopItems(stats) {
 }
 
 function getOwnedGeneralShopItems(stats) {
-  return sanitizeOwnedGeneralShopItemIds(stats && stats.ownedGeneralShopItemIds)
+  return getOwnedGeneralShopInventoryArrays(stats).itemIds
     .map((itemId) => getGeneralShopItem(itemId))
     .filter((item) => item && item.itemType !== 'case');
 }
 
 function getOwnedGeneralShopItemEntries(stats) {
-  const itemIds = sanitizeOwnedGeneralShopItemIds(stats && stats.ownedGeneralShopItemIds);
-  const saleValues = sanitizeOwnedGeneralShopItemSaleValues(itemIds, stats && stats.ownedGeneralShopItemSaleValues);
+  const { itemIds, saleValues, instanceIds, floatValues } = getOwnedGeneralShopInventoryArrays(stats);
   return itemIds.map((itemId, index) => {
     const item = getGeneralShopItem(itemId);
     if (!item || item.itemType === 'case') return null;
@@ -8959,7 +9086,9 @@ function getOwnedGeneralShopItemEntries(stats) {
     return {
       itemId,
       item,
-      saleValue: resolvedSaleValue
+      saleValue: resolvedSaleValue,
+      inventoryId: sanitizeOwnedGeneralShopInventoryInstanceId(instanceIds[index]) || createGeneralShopInventoryInstanceId(itemId),
+      floatValue: Math.min(1, Math.max(0, Number(floatValues[index]) || 0))
     };
   }).filter(Boolean);
 }
@@ -9906,6 +10035,236 @@ async function loadInventoryHistoryForUser(username) {
   return inventoryHistoryCache;
 }
 
+function normalizeGeneralShopMarketListingData(id, data = {}) {
+  return {
+    id: sanitizeNullableText(id, ''),
+    seller: normalizeUsername(data.seller || ''),
+    sellerDisplayName: sanitizeNullableText(data.sellerDisplayName, data.seller || '').slice(0, 40),
+    itemId: normalizeOptionalGeneralShopItemId(data.itemId || ''),
+    itemTitle: sanitizeNullableText(data.itemTitle, '').slice(0, 80),
+    rarity: normalizeGeneralShopRarity(data.rarity || 'mil-spec'),
+    inventoryId: sanitizeOwnedGeneralShopInventoryInstanceId(data.inventoryId || ''),
+    floatValue: Math.min(1, Math.max(0, Number(data.floatValue) || 0)),
+    saleValue: Math.max(0, Math.floor(Number(data.saleValue) || 0)),
+    listPrice: Math.max(0, Math.floor(Number(data.listPrice) || 0)),
+    createdAtMs: data.createdAt && typeof data.createdAt.toDate === 'function' ? data.createdAt.toDate().getTime() : Math.max(0, Number(data.createdAtMs || 0))
+  };
+}
+
+async function loadGeneralShopMarketListings() {
+  try {
+    const snapshot = await getGeneralShopMarketCollection().limit(80).get();
+    generalShopMarketCache = snapshot.docs
+      .map((doc) => normalizeGeneralShopMarketListingData(doc.id, doc.data() || {}))
+      .filter((entry) => entry && entry.id && entry.itemId && entry.inventoryId && entry.listPrice > 0)
+      .sort((a, b) => b.createdAtMs - a.createdAtMs);
+  } catch (_) {
+    generalShopMarketCache = [];
+  }
+  return generalShopMarketCache;
+}
+
+function findOwnedGeneralShopEntryIndexByInventoryId(stats, inventoryId) {
+  const targetId = sanitizeOwnedGeneralShopInventoryInstanceId(inventoryId || '');
+  if (!targetId) return -1;
+  const arrays = getOwnedGeneralShopInventoryArrays(stats);
+  return arrays.instanceIds.findIndex((entryId) => entryId === targetId);
+}
+
+function removeOwnedGeneralShopInventoryEntry(stats, inventoryId) {
+  const arrays = getOwnedGeneralShopInventoryArrays(stats);
+  const index = findOwnedGeneralShopEntryIndexByInventoryId(stats, inventoryId);
+  if (index < 0) return null;
+  const removedEntry = {
+    itemId: arrays.itemIds[index],
+    saleValue: arrays.saleValues[index],
+    inventoryId: arrays.instanceIds[index],
+    floatValue: arrays.floatValues[index]
+  };
+  arrays.itemIds.splice(index, 1);
+  arrays.saleValues.splice(index, 1);
+  arrays.instanceIds.splice(index, 1);
+  arrays.floatValues.splice(index, 1);
+  return {
+    inventory: buildOwnedGeneralShopInventoryState(arrays.itemIds, arrays.saleValues, arrays.instanceIds, arrays.floatValues),
+    removedEntry
+  };
+}
+
+function appendOwnedGeneralShopInventoryEntry(stats, entry) {
+  const arrays = getOwnedGeneralShopInventoryArrays(stats);
+  arrays.itemIds.push(normalizeOptionalGeneralShopItemId(entry && entry.itemId || ''));
+  arrays.saleValues.push(Math.max(0, Math.floor(Number(entry && entry.saleValue || 0))));
+  arrays.instanceIds.push(sanitizeOwnedGeneralShopInventoryInstanceId(entry && entry.inventoryId || '') || createGeneralShopInventoryInstanceId(entry && entry.itemId || 'item'));
+  arrays.floatValues.push(Math.min(1, Math.max(0, Number(entry && entry.floatValue))));
+  return buildOwnedGeneralShopInventoryState(arrays.itemIds, arrays.saleValues, arrays.instanceIds, arrays.floatValues);
+}
+
+async function listOwnedGeneralShopCaseDropOnMarket(encodedInventoryId) {
+  const inventoryId = sanitizeOwnedGeneralShopInventoryInstanceId(decodeURIComponent(encodedInventoryId || ''));
+  const user = getCasinoPlayerKey();
+  if (!user || !inventoryId) return;
+  const currentStats = getCachedCasinoProfileStats(user);
+  const ownedEntry = getOwnedGeneralShopItemEntries(currentStats).find((entry) => entry.inventoryId === inventoryId);
+  if (!ownedEntry || !ownedEntry.item || ownedEntry.item.itemType !== 'case-drop') {
+    setGeneralShopInventoryStatus('That skin is no longer in your inventory.', 'error');
+    return;
+  }
+  const suggestedPrice = Math.max(1, Math.floor(Number(ownedEntry.saleValue || 0)));
+  const priceInput = prompt(`List ${ownedEntry.item.title} on the market for what price?`, String(suggestedPrice));
+  if (priceInput === null) return;
+  const listPrice = Math.max(1, Math.min(1000000000, Math.floor(Number(priceInput) || 0)));
+  if (!listPrice) {
+    setGeneralShopInventoryStatus('Enter a valid market price.', 'error');
+    return;
+  }
+  const listingRef = getGeneralShopMarketCollection().doc();
+  try {
+    const balanceRef = getCasinoBalanceCollection().doc(user);
+    let nextStats = getDefaultCasinoProfileStats(user);
+    await getCasinoDb().runTransaction(async (tx) => {
+      const snap = await tx.get(balanceRef);
+      const liveStats = normalizeCasinoProfileStatsData(user, snap.exists ? (snap.data() || {}) : {});
+      const removal = removeOwnedGeneralShopInventoryEntry(liveStats, inventoryId);
+      if (!removal || !removal.removedEntry) throw new Error('That skin is no longer in your inventory.');
+      const nextFeaturedItemId = liveStats.selectedGeneralShopFeaturedItemId === removal.removedEntry.itemId && !removal.inventory.ownedGeneralShopItemIds.includes(removal.removedEntry.itemId)
+        ? ''
+        : normalizeOptionalGeneralShopItemId(liveStats.selectedGeneralShopFeaturedItemId || '');
+      nextStats = {
+        ...liveStats,
+        ...removal.inventory,
+        selectedGeneralShopFeaturedItemId: nextFeaturedItemId
+      };
+      tx.set(balanceRef, {
+        username: user,
+        displayName: sanitizeNullableText((snap.exists ? (snap.data() || {}).displayName : '') || getCasinoPlayerDisplayName(), user),
+        ...nextStats,
+        updatedAtMs: Date.now()
+      }, { merge: true });
+      tx.set(listingRef, {
+        seller: user,
+        sellerDisplayName: getCasinoPlayerDisplayName(),
+        itemId: ownedEntry.itemId,
+        itemTitle: ownedEntry.item.title,
+        rarity: normalizeGeneralShopRarity(ownedEntry.item.rarity),
+        inventoryId: removal.removedEntry.inventoryId,
+        floatValue: removal.removedEntry.floatValue,
+        saleValue: removal.removedEntry.saleValue,
+        listPrice,
+        createdAtMs: Date.now(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    });
+    casinoProfileStatsCache[user] = nextStats;
+    await loadGeneralShopMarketListings();
+    await loadCasinoBalance().catch(() => {});
+    await refreshCasinoProfileUiForUser(user);
+    await addCasinoInventoryHistory({ type: 'market_list', actor: user, itemId: ownedEntry.itemId, itemTitle: ownedEntry.item.title, itemType: ownedEntry.item.itemType, rarity: ownedEntry.item.rarity, value: listPrice, note: `${getGeneralShopFloatWearLabel(ownedEntry.floatValue)} • ${formatGeneralShopFloatValue(ownedEntry.floatValue)}` });
+    await publishCasinoActivity({ type: 'shop', title: `${getCasinoPlayerDisplayName()} listed a skin`, body: `${ownedEntry.item.title} hit the market for $${listPrice.toLocaleString()}.`, by: user });
+    renderGeneralShopModal();
+    renderGeneralShopInventoryModal();
+    setGeneralShopInventoryStatus(`${ownedEntry.item.title} listed for $${listPrice.toLocaleString()}.`, 'success');
+  } catch (err) {
+    setGeneralShopInventoryStatus(err && err.message ? err.message : 'Could not list that skin right now.', 'error');
+  }
+}
+
+async function cancelGeneralShopMarketListing(encodedListingId) {
+  const listingId = sanitizeNullableText(decodeURIComponent(encodedListingId || ''), '');
+  const user = getCasinoPlayerKey();
+  if (!listingId || !user) return;
+  const listingRef = getGeneralShopMarketCollection().doc(listingId);
+  try {
+    const balanceRef = getCasinoBalanceCollection().doc(user);
+    let nextStats = getDefaultCasinoProfileStats(user);
+    await getCasinoDb().runTransaction(async (tx) => {
+      const [listingSnap, balanceSnap] = await Promise.all([tx.get(listingRef), tx.get(balanceRef)]);
+      if (!listingSnap.exists) throw new Error('That market listing no longer exists.');
+      const listing = normalizeGeneralShopMarketListingData(listingSnap.id, listingSnap.data() || {});
+      if (listing.seller !== user) throw new Error('You can only cancel your own listings.');
+      const liveStats = normalizeCasinoProfileStatsData(user, balanceSnap.exists ? (balanceSnap.data() || {}) : {});
+      nextStats = {
+        ...liveStats,
+        ...appendOwnedGeneralShopInventoryEntry(liveStats, listing)
+      };
+      tx.set(balanceRef, {
+        username: user,
+        displayName: sanitizeNullableText((balanceSnap.exists ? (balanceSnap.data() || {}).displayName : '') || getCasinoPlayerDisplayName(), user),
+        ...nextStats,
+        updatedAtMs: Date.now()
+      }, { merge: true });
+      tx.delete(listingRef);
+    });
+    casinoProfileStatsCache[user] = nextStats;
+    await loadGeneralShopMarketListings();
+    renderGeneralShopModal();
+    renderGeneralShopInventoryModal();
+    setGeneralShopInventoryStatus('Listing cancelled and skin returned to your inventory.', 'success');
+  } catch (err) {
+    setGeneralShopInventoryStatus(err && err.message ? err.message : 'Could not cancel that listing.', 'error');
+  }
+}
+
+async function buyGeneralShopMarketListing(encodedListingId) {
+  const listingId = sanitizeNullableText(decodeURIComponent(encodedListingId || ''), '');
+  const buyer = getCasinoPlayerKey();
+  if (!listingId || !buyer) return;
+  const listingRef = getGeneralShopMarketCollection().doc(listingId);
+  try {
+    const buyerRef = getCasinoBalanceCollection().doc(buyer);
+    let nextBuyerStats = getDefaultCasinoProfileStats(buyer);
+    let purchasedListing = null;
+    await getCasinoDb().runTransaction(async (tx) => {
+      const [listingSnap, buyerSnap] = await Promise.all([tx.get(listingRef), tx.get(buyerRef)]);
+      if (!listingSnap.exists) throw new Error('That listing was already bought.');
+      const listing = normalizeGeneralShopMarketListingData(listingSnap.id, listingSnap.data() || {});
+      purchasedListing = listing;
+      if (listing.seller === buyer) throw new Error('You already own that listing.');
+      const sellerRef = getCasinoBalanceCollection().doc(listing.seller);
+      const sellerSnap = await tx.get(sellerRef);
+      const buyerStats = normalizeCasinoProfileStatsData(buyer, buyerSnap.exists ? (buyerSnap.data() || {}) : {});
+      const sellerStats = normalizeCasinoProfileStatsData(listing.seller, sellerSnap.exists ? (sellerSnap.data() || {}) : {});
+      if (buyerStats.balance < listing.listPrice) {
+        throw new Error(`You need $${(listing.listPrice - buyerStats.balance).toLocaleString()} more casino cash.`);
+      }
+      nextBuyerStats = {
+        ...buyerStats,
+        balance: buyerStats.balance - listing.listPrice,
+        ...appendOwnedGeneralShopInventoryEntry(buyerStats, listing)
+      };
+      const nextSellerBalance = sellerStats.balance + listing.listPrice;
+      tx.set(buyerRef, {
+        username: buyer,
+        displayName: sanitizeNullableText((buyerSnap.exists ? (buyerSnap.data() || {}).displayName : '') || getCasinoPlayerDisplayName(), buyer),
+        ...nextBuyerStats,
+        updatedAtMs: Date.now()
+      }, { merge: true });
+      tx.set(sellerRef, {
+        username: listing.seller,
+        displayName: sanitizeNullableText((sellerSnap.exists ? (sellerSnap.data() || {}).displayName : '') || listing.sellerDisplayName || listing.seller, listing.seller),
+        ...sellerStats,
+        balance: nextSellerBalance,
+        biggestBalance: Math.max(sellerStats.biggestBalance, nextSellerBalance),
+        updatedAtMs: Date.now()
+      }, { merge: true });
+      tx.delete(listingRef);
+    });
+    casinoProfileStatsCache[buyer] = nextBuyerStats;
+    await loadGeneralShopMarketListings();
+    await loadCasinoBalance().catch(() => {});
+    await refreshCasinoProfileUiForUser(buyer);
+    if (purchasedListing) {
+      await addCasinoInventoryHistory({ type: 'market_buy', actor: buyer, targetUser: purchasedListing.seller, itemId: purchasedListing.itemId, itemTitle: purchasedListing.itemTitle || 'Market skin', itemType: 'case-drop', rarity: purchasedListing.rarity, value: purchasedListing.listPrice, note: `${getGeneralShopFloatWearLabel(purchasedListing.floatValue)} • ${formatGeneralShopFloatValue(purchasedListing.floatValue)}` });
+      await publishCasinoActivity({ type: 'shop', title: `${getCasinoPlayerDisplayName()} bought a market skin`, body: `${purchasedListing.itemTitle || 'A skin'} bought for $${purchasedListing.listPrice.toLocaleString()}.`, by: buyer });
+    }
+    renderGeneralShopModal();
+    renderGeneralShopInventoryModal();
+    setGeneralShopInventoryStatus('Market purchase complete.', 'success');
+  } catch (err) {
+    setGeneralShopInventoryStatus(err && err.message ? err.message : 'Could not buy that listing.', 'error');
+  }
+}
+
 function normalizeGeneralShopTradeOfferData(id, data = {}) {
   return {
     id: sanitizeNullableText(id, ''),
@@ -9935,12 +10294,16 @@ function normalizeGeneralShopTradeItemEntries(rawEntries) {
     if (typeof entry === 'string') {
       return {
         itemId: normalizeOptionalGeneralShopItemId(entry),
-        saleValue: 0
+        saleValue: 0,
+        inventoryId: '',
+        floatValue: 0
       };
     }
     return {
       itemId: normalizeOptionalGeneralShopItemId(entry && entry.itemId || ''),
-      saleValue: Math.max(0, Math.floor(Number(entry && entry.saleValue || 0)))
+      saleValue: Math.max(0, Math.floor(Number(entry && entry.saleValue || 0))),
+      inventoryId: sanitizeOwnedGeneralShopInventoryInstanceId(entry && entry.inventoryId || ''),
+      floatValue: Math.min(1, Math.max(0, Number(entry && entry.floatValue) || 0))
     };
   }).filter((entry) => entry.itemId).slice(0, 9);
 }
@@ -9948,7 +10311,9 @@ function normalizeGeneralShopTradeItemEntries(rawEntries) {
 function serializeGeneralShopTradeItemEntries(entries) {
   return normalizeGeneralShopTradeItemEntries(entries).map((entry) => ({
     itemId: entry.itemId,
-    saleValue: Math.max(0, Math.floor(Number(entry.saleValue || 0)))
+    saleValue: Math.max(0, Math.floor(Number(entry.saleValue || 0))),
+    inventoryId: sanitizeOwnedGeneralShopInventoryInstanceId(entry.inventoryId || ''),
+    floatValue: Math.min(1, Math.max(0, Number(entry.floatValue) || 0))
   }));
 }
 
@@ -9989,6 +10354,8 @@ function getGeneralShopTradeSideEntries(trade, side) {
 }
 
 function getGeneralShopTradeEntryKey(entry) {
+  const inventoryId = sanitizeOwnedGeneralShopInventoryInstanceId(entry && entry.inventoryId || '');
+  if (inventoryId) return inventoryId;
   return `${normalizeOptionalGeneralShopItemId(entry && entry.itemId || '')}|${Math.max(0, Math.floor(Number(entry && entry.saleValue || 0)))}`;
 }
 
@@ -10023,34 +10390,37 @@ function canMutateGeneralShopTrade(trade, username) {
 }
 
 function removeTradeEntriesFromOwnedInventory(stats, entriesToRemove) {
-  const nextIds = sanitizeOwnedGeneralShopItemIds(stats && stats.ownedGeneralShopItemIds).slice();
-  const nextValues = sanitizeOwnedGeneralShopItemSaleValues(nextIds, stats && stats.ownedGeneralShopItemSaleValues).slice();
+  const arrays = getOwnedGeneralShopInventoryArrays(stats);
   const requested = normalizeGeneralShopTradeItemEntries(entriesToRemove);
   for (const entry of requested) {
+    const targetInventoryId = sanitizeOwnedGeneralShopInventoryInstanceId(entry.inventoryId || '');
     const targetId = entry.itemId;
     const targetValue = Math.max(0, Math.floor(Number(entry.saleValue || 0)));
-    const index = nextIds.findIndex((itemId, itemIndex) => itemId === targetId && Math.max(0, Math.floor(Number(nextValues[itemIndex] || 0))) === targetValue);
+    const index = targetInventoryId
+      ? arrays.instanceIds.findIndex((value) => value === targetInventoryId)
+      : arrays.itemIds.findIndex((itemId, itemIndex) => itemId === targetId && Math.max(0, Math.floor(Number(arrays.saleValues[itemIndex] || 0))) === targetValue);
     if (index < 0) {
       return null;
     }
-    nextIds.splice(index, 1);
-    nextValues.splice(index, 1);
+    arrays.itemIds.splice(index, 1);
+    arrays.saleValues.splice(index, 1);
+    arrays.instanceIds.splice(index, 1);
+    arrays.floatValues.splice(index, 1);
   }
-  return {
-    ownedGeneralShopItemIds: nextIds,
-    ownedGeneralShopItemSaleValues: sanitizeOwnedGeneralShopItemSaleValues(nextIds, nextValues)
-  };
+  return buildOwnedGeneralShopInventoryState(arrays.itemIds, arrays.saleValues, arrays.instanceIds, arrays.floatValues);
 }
 
 function appendTradeEntriesToOwnedInventory(stats, entriesToAdd) {
-  const currentIds = sanitizeOwnedGeneralShopItemIds(stats && stats.ownedGeneralShopItemIds);
-  const currentValues = sanitizeOwnedGeneralShopItemSaleValues(currentIds, stats && stats.ownedGeneralShopItemSaleValues);
-  const nextIds = currentIds.concat(normalizeGeneralShopTradeItemEntries(entriesToAdd).map((entry) => entry.itemId));
-  const nextValues = currentValues.concat(normalizeGeneralShopTradeItemEntries(entriesToAdd).map((entry) => Math.max(0, Math.floor(Number(entry.saleValue || 0)))));
-  return {
-    ownedGeneralShopItemIds: sanitizeOwnedGeneralShopItemIds(nextIds),
-    ownedGeneralShopItemSaleValues: sanitizeOwnedGeneralShopItemSaleValues(nextIds, nextValues)
-  };
+  let nextInventory = buildOwnedGeneralShopInventoryState(
+    getOwnedGeneralShopInventoryArrays(stats).itemIds,
+    getOwnedGeneralShopInventoryArrays(stats).saleValues,
+    getOwnedGeneralShopInventoryArrays(stats).instanceIds,
+    getOwnedGeneralShopInventoryArrays(stats).floatValues
+  );
+  normalizeGeneralShopTradeItemEntries(entriesToAdd).forEach((entry) => {
+    nextInventory = appendOwnedGeneralShopInventoryEntry(nextInventory, entry);
+  });
+  return nextInventory;
 }
 
 function getGeneralShopTradeAcceptedState(trade, username) {
@@ -10114,11 +10484,13 @@ function closeGeneralShopTradeModal() {
 
 async function addItemToGeneralShopTrade(encodedTradeId, encodedEntryKey) {
   const tradeId = sanitizeNullableText(decodeURIComponent(encodedTradeId || ''), '');
-  const [rawItemId, rawSaleValue] = sanitizeNullableText(decodeURIComponent(encodedEntryKey || ''), '').split('|');
+  const [rawInventoryId, rawItemId, rawSaleValue, rawFloatValue] = sanitizeNullableText(decodeURIComponent(encodedEntryKey || ''), '').split('|');
+  const inventoryId = sanitizeOwnedGeneralShopInventoryInstanceId(rawInventoryId || '');
   const itemId = normalizeOptionalGeneralShopItemId(rawItemId || '');
   const saleValue = Math.max(0, Math.floor(Number(rawSaleValue) || 0));
+  const floatValue = Math.min(1, Math.max(0, Number(rawFloatValue) || 0));
   const user = getCasinoPlayerKey();
-  if (!tradeId || !itemId || !user) return;
+  if (!tradeId || !inventoryId || !itemId || !user) return;
   const tradeRef = getGeneralShopTradesCollection().doc(tradeId);
   const balanceRef = getCasinoBalanceCollection().doc(user);
   try {
@@ -10131,11 +10503,11 @@ async function addItemToGeneralShopTrade(encodedTradeId, encodedEntryKey) {
       const sideKey = side === 'to' ? 'toItems' : 'fromItems';
       const currentStats = normalizeCasinoProfileStatsData(user, balanceSnap.exists ? (balanceSnap.data() || {}) : {});
       const availableEntries = getAvailableGeneralShopTradeEntriesForUser(trade, user, currentStats);
-      const matched = availableEntries.find((entry) => entry.itemId === itemId && Math.max(0, Math.floor(Number(entry.saleValue || 0))) === saleValue);
+      const matched = availableEntries.find((entry) => entry.inventoryId === inventoryId && entry.itemId === itemId && Math.max(0, Math.floor(Number(entry.saleValue || 0))) === saleValue);
       if (!matched) throw new Error('You no longer have that item available to add.');
       const nextEntries = getGeneralShopTradeSideEntries(trade, side);
       if (nextEntries.length >= 9) throw new Error('Each side can only offer up to 9 items.');
-      nextEntries.push({ itemId, saleValue });
+      nextEntries.push({ inventoryId, itemId, saleValue, floatValue });
       tx.set(tradeRef, {
         [sideKey]: serializeGeneralShopTradeItemEntries(nextEntries),
         fromAccepted: false,
@@ -10348,8 +10720,8 @@ function renderGeneralShopTradeAvailablePool(trade, username) {
   if (!available.length) return '<div class="overlay-subtle">No extra case drops available to add.</div>';
   return `<div style="display:flex; gap:0.45rem; flex-wrap:wrap; margin-top:0.7rem;">${available.map((entry) => {
     const item = entry.item;
-    const entryKey = encodeURIComponent(`${entry.itemId}|${Math.max(0, Number(entry.saleValue || 0))}`);
-    return `<button type="button" onclick="addItemToGeneralShopTrade('${encodeURIComponent(trade.id)}','${entryKey}')" style="padding:0.45rem 0.65rem; border-radius:0.6rem; border:1px solid rgba(125,157,194,0.22); background:#182434; color:#e8f3ff; cursor:pointer;">${escapeHtml(item && item.title || entry.itemId)} • $${Math.max(0, Number(entry.saleValue || 0)).toLocaleString()}</button>`;
+    const entryKey = encodeURIComponent(`${entry.inventoryId}|${entry.itemId}|${Math.max(0, Number(entry.saleValue || 0))}|${formatGeneralShopFloatValue(entry.floatValue)}`);
+    return `<button type="button" onclick="addItemToGeneralShopTrade('${encodeURIComponent(trade.id)}','${entryKey}')" style="padding:0.45rem 0.65rem; border-radius:0.6rem; border:1px solid rgba(125,157,194,0.22); background:#182434; color:#e8f3ff; cursor:pointer;">${escapeHtml(item && item.title || entry.itemId)} • ${escapeHtml(getGeneralShopFloatWearLabel(entry.floatValue))} • ${formatGeneralShopFloatValue(entry.floatValue)}</button>`;
   }).join('')}</div>`;
 }
 
@@ -10549,11 +10921,12 @@ generalShopTradeUnsub = () => {
 
 async function openTradeOfferPrompt(encodedItemId) {
   const user = getCasinoPlayerKey();
-  const itemId = normalizeOptionalGeneralShopItemId(decodeURIComponent(encodedItemId || ''));
-  if (!user || !itemId) return;
-  const item = getGeneralShopItem(itemId);
+  const inventoryId = sanitizeOwnedGeneralShopInventoryInstanceId(decodeURIComponent(encodedItemId || ''));
+  if (!user || !inventoryId) return;
+  const ownedEntry = getOwnedGeneralShopItemEntries(getCachedCasinoProfileStats(user)).find((entry) => entry.inventoryId === inventoryId);
+  const itemId = ownedEntry ? ownedEntry.itemId : '';
+  const item = ownedEntry ? ownedEntry.item : getGeneralShopItem(itemId);
   if (!item || item.itemType !== 'case-drop') return;
-  const ownedEntry = getOwnedGeneralShopItemEntries(getCachedCasinoProfileStats(user)).find((entry) => entry.itemId === itemId);
   if (!ownedEntry) {
     setGeneralShopInventoryStatus('You do not own that case drop anymore.', 'error');
     return;
@@ -10573,7 +10946,7 @@ async function openTradeOfferPrompt(encodedItemId) {
       itemTitle: item.title,
       saleValue: Math.max(0, Math.floor(Number(ownedEntry.saleValue || 0))),
       rarity: normalizeGeneralShopRarity(item.rarity),
-      fromItems: [{ itemId: item.id, saleValue: Math.max(0, Math.floor(Number(ownedEntry.saleValue || 0))) }],
+      fromItems: [{ itemId: item.id, saleValue: Math.max(0, Math.floor(Number(ownedEntry.saleValue || 0))), inventoryId: ownedEntry.inventoryId, floatValue: ownedEntry.floatValue }],
       toItems: [],
       fromAccepted: false,
       toAccepted: false,
@@ -13555,18 +13928,6 @@ node.style.color = tone === 'error'
     : '#9fb0c2';
 }
 
-function setAdminGeneralShopCsImportStatus(message = '', tone = 'neutral') {
-generalShopCsImportStatus = { message: message || 'CS import idle.', tone };
-const node = document.getElementById('admin-general-shop-cs-import-status');
-if (!node) return;
-node.textContent = generalShopCsImportStatus.message;
-node.style.color = tone === 'error'
-  ? '#ffb4a8'
-  : tone === 'success'
-    ? '#9fe3a5'
-    : '#9fb0c2';
-}
-
 function getAdminGeneralShopVisualValue() {
 const uploadedInput = document.getElementById('admin-general-shop-visual-uploaded');
 const valueInput = document.getElementById('admin-general-shop-visual');
@@ -13731,7 +14092,6 @@ setAdminGeneralShopStatus(`Editing ${item.title}.`, 'neutral');
 
 function renderAdminGeneralShopManager() {
 const container = document.getElementById('admin-general-shop-manager');
-setAdminGeneralShopCsImportStatus(generalShopCsImportStatus.message, generalShopCsImportStatus.tone);
 if (!container) return;
 if (!canUseAdminPermission('manageGeneralShop')) {
   container.textContent = 'Insufficient permissions.';
@@ -13845,6 +14205,88 @@ try {
 }
 }
 
+async function adminDeleteAllGeneralShopCases() {
+if (!canUseAdminPermission('manageGeneralShop')) return;
+const cases = getAllGeneralShopItems().filter((item) => item && item.itemType === 'case');
+if (!cases.length) {
+  setAdminGeneralShopStatus('No cases found to delete.', 'error');
+  return;
+}
+if (!confirm(`Permanently delete ${cases.length} case${cases.length === 1 ? '' : 's'}? People who already own them will keep them until they remove them themselves.`)) return;
+try {
+  const db = getCasinoDb();
+  const chunkSize = 400;
+  let deleted = 0;
+  const deletedIds = new Set();
+  for (let i = 0; i < cases.length; i += chunkSize) {
+    const chunk = cases.slice(i, i + chunkSize);
+    const batch = db.batch();
+    chunk.forEach((item) => {
+      batch.delete(getGeneralShopCollection().doc(item.id));
+      deleted += 1;
+      deletedIds.add(item.id);
+    });
+    await batch.commit();
+  }
+  if (activeGeneralShopEditId && deletedIds.has(activeGeneralShopEditId)) {
+    resetAdminGeneralShopForm();
+  }
+  await writeAuditLog('general_shop_delete_all_cases', 'all-cases', `Deleted ${deleted} cases`);
+  setAdminGeneralShopStatus(`Deleted ${deleted} case${deleted === 1 ? '' : 's'}. Current owners still keep them until they remove them.`, 'success');
+} catch (_) {
+  setAdminGeneralShopStatus('Could not delete all cases.', 'error');
+}
+}
+
+async function adminDeleteAllGeneralShopCaseDrops() {
+if (!canUseAdminPermission('manageGeneralShop')) return;
+const caseDrops = getAllGeneralShopItems().filter((item) => item && item.itemType === 'case-drop');
+if (!caseDrops.length) {
+  setAdminGeneralShopStatus('No case drops found to delete.', 'error');
+  return;
+}
+if (!confirm(`Permanently delete ${caseDrops.length} case drop${caseDrops.length === 1 ? '' : 's'}? Any case that used them will be hidden and have its reward list cleared.`)) return;
+try {
+  const allCases = getAllGeneralShopItems().filter((item) => item && item.itemType === 'case');
+  const deletedDropIds = new Set(caseDrops.map((item) => item.id));
+  const affectedCases = allCases.filter((item) => getResolvedGeneralShopCaseRewards(item).some((reward) => reward && deletedDropIds.has(reward.itemId)));
+  const db = getCasinoDb();
+  const chunkSize = 400;
+  const nowMs = Date.now();
+  let deleted = 0;
+  for (let i = 0; i < caseDrops.length; i += chunkSize) {
+    const chunk = caseDrops.slice(i, i + chunkSize);
+    const batch = db.batch();
+    chunk.forEach((item) => {
+      batch.delete(getGeneralShopCollection().doc(item.id));
+      deleted += 1;
+    });
+    await batch.commit();
+  }
+  for (let i = 0; i < affectedCases.length; i += chunkSize) {
+    const chunk = affectedCases.slice(i, i + chunkSize);
+    const batch = db.batch();
+    chunk.forEach((item) => {
+      batch.set(getGeneralShopCollection().doc(item.id), {
+        caseRewards: [],
+        active: false,
+        updatedAtMs: nowMs,
+        updatedBy: currentChatUser || getUserName() || 'owner'
+      }, { merge: true });
+    });
+    await batch.commit();
+  }
+  if (activeGeneralShopEditId && deletedDropIds.has(activeGeneralShopEditId)) {
+    resetAdminGeneralShopForm();
+  }
+  renderAdminGeneralShopCaseReference();
+  await writeAuditLog('general_shop_delete_all_case_drops', 'all-case-drops', `Deleted ${deleted} case drops and hid ${affectedCases.length} cases`);
+  setAdminGeneralShopStatus(`Deleted ${deleted} case drop${deleted === 1 ? '' : 's'} and hid ${affectedCases.length} affected case${affectedCases.length === 1 ? '' : 's'}.`, 'success');
+} catch (_) {
+  setAdminGeneralShopStatus('Could not delete all case drops.', 'error');
+}
+}
+
 async function adminSaveGeneralShopItem() {
 if (!canUseAdminPermission('manageGeneralShop')) return;
 const titleInput = document.getElementById('admin-general-shop-title');
@@ -13903,179 +14345,6 @@ try {
   setAdminGeneralShopStatus(`${normalizedItem.title} saved.`, 'success');
 } catch (err) {
   setAdminGeneralShopStatus('Failed to save the shop item.', 'error');
-}
-}
-
-async function adminImportCsgoCatalog(options = {}) {
-const skipPermissionCheck = options && options.skipPermissionCheck === true;
-const skipConfirm = options && options.skipConfirm === true;
-const silent = options && options.silent === true;
-if (!skipPermissionCheck && !canUseAdminPermission('manageGeneralShop')) return;
-if (!skipConfirm && !confirm('Import CS metadata + images into the General Shop now? This will add case drops and cases and may take a bit.')) return;
-if (!silent) setAdminGeneralShopStatus('Downloading CS metadata and case data...', 'neutral');
-setAdminGeneralShopCsImportStatus('Preparing CS metadata import...', 'neutral');
-try {
-  const [skinsRes, cratesRes] = await Promise.all([
-    fetch(CSGO_API_SKINS_SOURCE_URL, { cache: 'no-store' }),
-    fetch(CSGO_API_CRATES_SOURCE_URL, { cache: 'no-store' })
-  ]);
-  if (!skinsRes.ok || !cratesRes.ok) {
-    throw new Error('Could not download CS metadata right now.');
-  }
-  const [skinsData, cratesData] = await Promise.all([skinsRes.json(), cratesRes.json()]);
-  const skins = Array.isArray(skinsData) ? skinsData : [];
-  const crates = Array.isArray(cratesData) ? cratesData : [];
-  if (!skins.length || !crates.length) {
-    throw new Error('CS metadata source returned no skins or cases.');
-  }
-  setAdminGeneralShopCsImportStatus(`Loaded ${skins.length} skins and ${crates.length} crates. Building catalog...`, 'neutral');
-
-  const nowMs = Date.now();
-  const dropsById = new Map();
-  const skinIdToDrop = new Map();
-
-  skins.forEach((skin, index) => {
-    const rawSkinId = sanitizeNullableText(skin && skin.id, '') || sanitizeNullableText(skin && skin.name, `skin-${index + 1}`);
-    const dropId = normalizeOptionalGeneralShopItemId(`cs2-drop-${normalizeRoomId(rawSkinId)}`) || `cs2-drop-${index + 1}`;
-    const rarity = mapCsgoRarityToGeneralShop(skin && skin.rarity);
-    const descriptionBase = sanitizeNullableText(skin && skin.description, '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-    const description = `${descriptionBase ? `${descriptionBase} ` : ''}${CSGO_IMPORT_CREDIT_NOTE}`;
-    const normalizedDrop = normalizeGeneralShopItem(dropId, {
-      title: sanitizeNullableText(skin && skin.name, `CS Skin ${index + 1}`),
-      description,
-      price: 0,
-      itemType: 'case-drop',
-      rarity,
-      visualData: sanitizeProfileBanner(skin && skin.image) || '',
-      active: false,
-      createdAtMs: nowMs,
-      updatedAtMs: nowMs
-    });
-    dropsById.set(normalizedDrop.id, normalizedDrop);
-    if (rawSkinId) {
-      skinIdToDrop.set(rawSkinId, {
-        itemId: normalizedDrop.id,
-        rarity: normalizedDrop.rarity
-      });
-    }
-  });
-
-  const importedCases = [];
-  crates.forEach((crate, crateIndex) => {
-    const contains = Array.isArray(crate && crate.contains) ? crate.contains : [];
-    const containsRare = Array.isArray(crate && crate.contains_rare) ? crate.contains_rare : [];
-    const rawRewards = contains.concat(containsRare);
-    if (!rawRewards.length) return;
-
-    const rewardMap = new Map();
-    rawRewards.forEach((entry, rewardIndex) => {
-      const rawSkinId = sanitizeNullableText(entry && entry.id, '');
-      let mapped = rawSkinId ? skinIdToDrop.get(rawSkinId) : null;
-      if (!mapped) {
-        const fallbackName = sanitizeNullableText(entry && entry.name, 'Unknown Skin');
-        const fallbackIdSeed = rawSkinId || `${fallbackName}-${crateIndex}-${rewardIndex}`;
-        const fallbackDropId = normalizeOptionalGeneralShopItemId(`cs2-drop-${normalizeRoomId(fallbackIdSeed)}`) || `cs2-drop-fallback-${crateIndex}-${rewardIndex}`;
-        const fallbackDrop = normalizeGeneralShopItem(fallbackDropId, {
-          title: fallbackName,
-          description: CSGO_IMPORT_CREDIT_NOTE,
-          price: 0,
-          itemType: 'case-drop',
-          rarity: mapCsgoRarityToGeneralShop(entry && entry.rarity),
-          visualData: sanitizeProfileBanner(entry && entry.image) || '',
-          active: false,
-          createdAtMs: nowMs,
-          updatedAtMs: nowMs
-        });
-        dropsById.set(fallbackDrop.id, fallbackDrop);
-        mapped = { itemId: fallbackDrop.id, rarity: fallbackDrop.rarity };
-      }
-      rewardMap.set(mapped.itemId, {
-        itemId: mapped.itemId,
-        rarity: mapped.rarity
-      });
-    });
-
-    const caseRewards = Array.from(rewardMap.values());
-    if (!caseRewards.length) return;
-    const rawCaseId = sanitizeNullableText(crate && crate.id, '') || sanitizeNullableText(crate && crate.name, `case-${crateIndex + 1}`);
-    const caseId = normalizeOptionalGeneralShopItemId(`cs2-case-${normalizeRoomId(rawCaseId)}`) || `cs2-case-${crateIndex + 1}`;
-    const baseDescription = sanitizeNullableText(crate && crate.description, '').replace(/\s+/g, ' ').trim();
-    const caseDescription = `${baseDescription ? `${baseDescription} ` : ''}${CSGO_IMPORT_CREDIT_NOTE}`;
-    importedCases.push(normalizeGeneralShopItem(caseId, {
-      title: sanitizeNullableText(crate && crate.name, `CS Case ${crateIndex + 1}`),
-      description: caseDescription,
-      price: 10000,
-      itemType: 'case',
-      rarity: mapCsgoRarityToGeneralShop(crate && crate.rarity),
-      caseRewards,
-      visualData: sanitizeProfileBanner(crate && crate.image) || '',
-      active: true,
-      createdAtMs: nowMs,
-      updatedAtMs: nowMs
-    }));
-  });
-
-  const docsToWrite = [...dropsById.values(), ...importedCases];
-  if (!docsToWrite.length) {
-    throw new Error('No case drops or cases were generated from CS metadata.');
-  }
-
-  const db = getCasinoDb();
-  const chunkSize = 400;
-  let committed = 0;
-  for (let i = 0; i < docsToWrite.length; i += chunkSize) {
-    const chunk = docsToWrite.slice(i, i + chunkSize);
-    const batch = db.batch();
-    chunk.forEach((docData) => {
-      const docRef = getGeneralShopCollection().doc(docData.id);
-      batch.set(docRef, {
-        ...docData,
-        source: 'csgo-api',
-        sourceCredit: 'Counter-Strike assets and metadata are credited to Valve.',
-        importedBy: currentChatUser || getUserName() || 'owner',
-        importedAtMs: nowMs,
-        updatedAtMs: nowMs,
-        updatedBy: currentChatUser || getUserName() || 'owner'
-      }, { merge: true });
-    });
-    await batch.commit();
-    committed += chunk.length;
-    if (!silent) setAdminGeneralShopStatus(`Importing CS catalog... ${committed}/${docsToWrite.length}`, 'neutral');
-    setAdminGeneralShopCsImportStatus(`Importing CS catalog... ${committed}/${docsToWrite.length}`, 'neutral');
-  }
-
-  await writeAuditLog('general_shop_cs_import', 'cs2-catalog', `Imported ${importedCases.length} cases and ${dropsById.size} case drops from CS metadata.`);
-  if (!silent) setAdminGeneralShopStatus(`CS import complete: ${importedCases.length} cases and ${dropsById.size} case drops added. Credit to Counter-Strike/Valve included.`, 'success');
-  setAdminGeneralShopCsImportStatus(`CS import complete: ${importedCases.length} cases and ${dropsById.size} drops.`, 'success');
-  renderAdminGeneralShopCaseReference();
-  renderAdminGeneralShopManager();
-  return { importedCases: importedCases.length, importedDrops: dropsById.size };
-} catch (err) {
-  const message = sanitizeNullableText(err && err.message, 'Failed to import CS metadata.');
-  if (!silent) setAdminGeneralShopStatus(message, 'error');
-  setAdminGeneralShopCsImportStatus(message, 'error');
-  throw err;
-}
-}
-
-async function ensureGeneralShopCsCatalogAutoCreated() {
-if (generalShopAutoImportAttempted || generalShopAutoImportRunning) return;
-if (!canUseAdminPermission('manageGeneralShop')) return;
-generalShopAutoImportAttempted = true;
-generalShopAutoImportRunning = true;
-try {
-  const existing = await getGeneralShopCollection().where('source', '==', 'csgo-api').limit(1).get();
-  if (!existing.empty) {
-    setAdminGeneralShopCsImportStatus('CS catalog already exists.', 'success');
-    return;
-  }
-  setAdminGeneralShopCsImportStatus('Auto-importing CS catalog for first-time setup...', 'neutral');
-  await adminImportCsgoCatalog({ skipPermissionCheck: true, skipConfirm: true, silent: true });
-  setAdminGeneralShopStatus('Auto-created CS cases/skins catalog.', 'success');
-} catch (_) {
-  generalShopAutoImportAttempted = false;
-} finally {
-  generalShopAutoImportRunning = false;
 }
 }
 
@@ -14762,6 +15031,7 @@ const stats = user ? getCachedCasinoProfileStats(user) : getDefaultCasinoProfile
 const caseCounts = getOwnedGeneralShopCaseCounts(stats);
 const cases = getOwnedGeneralShopCases(stats);
 const ownedItems = getSortedOwnedGeneralShopItemEntries(stats);
+const marketListings = Array.isArray(generalShopMarketCache) ? generalShopMarketCache : [];
 const selectedFeaturedItemId = normalizeOptionalGeneralShopItemId(stats && stats.selectedGeneralShopFeaturedItemId || '');
 container.innerHTML = `${renderGeneralShopCaseOpeningPanel()}
   <div class="store-shelf">
@@ -14801,22 +15071,54 @@ container.innerHTML = `${renderGeneralShopCaseOpeningPanel()}
     <div class="store-mini-grid">
       ${user ? (ownedItems.length ? ownedItems.map((entry) => {
         const item = entry.item;
-        const encodedId = encodeURIComponent(entry.itemId);
+        const encodedItemId = encodeURIComponent(entry.itemId);
+        const encodedInventoryId = encodeURIComponent(entry.inventoryId || '');
         const rarity = getGeneralShopRarityConfig(item.rarity);
-        const caseDropSalePrice = Math.max(0, Math.floor(Number(entry.saleValue) || 0));
+        const caseDropReferenceValue = Math.max(0, Math.floor(Number(entry.saleValue) || 0));
+        const floatValue = Math.min(1, Math.max(0, Number(entry.floatValue) || 0));
+        const wearLabel = getGeneralShopFloatWearLabel(floatValue);
         const featured = item.itemType === 'case-drop' && selectedFeaturedItemId === entry.itemId;
         return `<div class="store-mini-card">
           <div class="store-visual-banner" style="${getGeneralShopVisualStyleText(item.visualData, 'display:flex; align-items:flex-end; padding:0.75rem; box-sizing:border-box; color:#fff; font-weight:700;')}">${escapeHtml(item.title)}</div>
           <div class="store-mini-card-title">${escapeHtml(item.title)}</div>
           <div class="store-mini-card-meta">${escapeHtml(item.description || (item.itemType === 'case-drop' ? 'Case reward drop.' : 'Shop item.'))}</div>
-          <div class="store-mini-card-meta" style="color:${item.active ? '#93a9c1' : '#ffcc80'};">${escapeHtml(rarity.label)}${item.itemType === 'case-drop' ? ` • Owned case drop • Sell for $${caseDropSalePrice.toLocaleString()}${featured ? ' • Best Drop' : ''}` : ' • Owned shop item'}${item.active ? '' : ' • Legacy item removed from the live shop'}</div>
+          <div class="store-mini-card-meta" style="color:${item.active ? '#93a9c1' : '#ffcc80'};">${escapeHtml(rarity.label)}${item.itemType === 'case-drop' ? ` • ${escapeHtml(wearLabel)} • Float ${formatGeneralShopFloatValue(floatValue)} • Ref $${caseDropReferenceValue.toLocaleString()}${featured ? ' • Best Drop' : ''}` : ' • Owned shop item'}${item.active ? '' : ' • Legacy item removed from the live shop'}</div>
           <div class="store-mini-card-actions">
             ${item.itemType === 'case-drop'
-              ? `<button type="button" onclick="sellOwnedGeneralShopCaseDrop('${encodedId}')" style="background:#2e7d32; color:#fff; border:none; border-radius:0.55rem;">Sell $${caseDropSalePrice.toLocaleString()}</button><button type="button" onclick="openTradeOfferPrompt('${encodedId}')" style="background:#6a1b9a; color:#fff; border:none; border-radius:0.55rem;">Trade</button><button type="button" onclick="setSelectedGeneralShopFeaturedItem('${encodedId}')" style="background:${featured ? '#c28b18' : '#37474f'}; color:#fff; border:none; border-radius:0.55rem;">${featured ? 'Best Drop' : 'Set Best Drop'}</button>`
-              : `<button type="button" onclick="deleteOwnedGeneralShopItem('${encodedId}')" style="background:#5d4037; color:#fff; border:none; border-radius:0.55rem;">Delete</button>`}
+              ? `<button type="button" onclick="listOwnedGeneralShopCaseDropOnMarket('${encodedInventoryId}')" style="background:#1565c0; color:#fff; border:none; border-radius:0.55rem;">List On Market</button><button type="button" onclick="openTradeOfferPrompt('${encodedInventoryId}')" style="background:#6a1b9a; color:#fff; border:none; border-radius:0.55rem;">Trade</button><button type="button" onclick="setSelectedGeneralShopFeaturedItem('${encodedItemId}')" style="background:${featured ? '#c28b18' : '#37474f'}; color:#fff; border:none; border-radius:0.55rem;">${featured ? 'Best Drop' : 'Set Best Drop'}</button>`
+              : `<button type="button" onclick="deleteOwnedGeneralShopItem('${encodedInventoryId}')" style="background:#5d4037; color:#fff; border:none; border-radius:0.55rem;">Delete</button>`}
           </div>
         </div>`;
       }).join('') : '<div class="submission-empty" style="grid-column:1 / -1;">You do not own any items or case drops yet.</div>') : '<div class="submission-empty" style="grid-column:1 / -1;">Sign in to access your inventory.</div>'}
+    </div>
+  </div>
+  <div class="store-shelf">
+    <div class="store-shelf-header">
+      <div>
+        <div class="store-shelf-title">Skin Market</div>
+        <div class="store-shelf-subtitle">List case drops at your own price and buy other players' skins. Floats stay with the skin.</div>
+      </div>
+      <div class="store-summary-row">${user ? `<span class="store-summary-pill">${marketListings.length} live listing${marketListings.length === 1 ? '' : 's'}</span>` : '<span class="store-summary-pill">Sign in to buy and list skins</span>'}</div>
+    </div>
+    <div class="store-mini-grid">
+      ${marketListings.length ? marketListings.map((listing) => {
+        const item = getGeneralShopItem(listing.itemId);
+        const rarity = getGeneralShopRarityConfig((item && item.rarity) || listing.rarity);
+        const sellerName = sanitizeNullableText(listing.sellerDisplayName, listing.seller || 'seller');
+        const encodedListingId = encodeURIComponent(listing.id);
+        const ownListing = !!user && normalizeUsername(listing.seller) === normalizeUsername(user);
+        return `<div class="store-mini-card">
+          <div class="store-visual-banner" style="${getGeneralShopVisualStyleText(item && item.visualData, 'display:flex; align-items:flex-end; padding:0.75rem; box-sizing:border-box; color:#fff; font-weight:700;')}">${escapeHtml(item && item.title || listing.itemTitle || listing.itemId)}</div>
+          <div class="store-mini-card-title">${escapeHtml(item && item.title || listing.itemTitle || 'Market Skin')}</div>
+          <div class="store-mini-card-meta">${escapeHtml(sellerName)} • ${escapeHtml(getGeneralShopFloatWearLabel(listing.floatValue))} • Float ${formatGeneralShopFloatValue(listing.floatValue)}</div>
+          <div class="store-mini-card-meta" style="color:${rarity.color};">${escapeHtml(rarity.label)} • Ask $${Math.max(0, Number(listing.listPrice || 0)).toLocaleString()} • Ref $${Math.max(0, Number(listing.saleValue || 0)).toLocaleString()}</div>
+          <div class="store-mini-card-actions">
+            ${ownListing
+              ? `<button type="button" onclick="cancelGeneralShopMarketListing('${encodedListingId}')" style="background:#5d4037; color:#fff; border:none; border-radius:0.55rem;">Cancel Listing</button>`
+              : `<button type="button" onclick="buyGeneralShopMarketListing('${encodedListingId}')" style="background:${user ? '#2e7d32' : '#455a64'}; color:#fff; border:none; border-radius:0.55rem;">${user ? `Buy $${Math.max(0, Number(listing.listPrice || 0)).toLocaleString()}` : 'Sign In To Buy'}</button>`}
+          </div>
+        </div>`;
+      }).join('') : '<div class="submission-empty" style="grid-column:1 / -1;">No skins are listed on the market right now.</div>'}
     </div>
   </div>`;
 setGeneralShopInventoryStatus(generalShopInventoryStatus.message, generalShopInventoryStatus.tone);
@@ -14867,12 +15169,16 @@ try {
         throw new Error(`You need $${(currentItem.price - currentStats.balance).toLocaleString()} more casino cash.`);
       }
       purchasedNew = true;
-      const nextOwnedItemIds = currentStats.ownedGeneralShopItemIds.concat(currentItem.id);
+      const nextInventory = appendOwnedGeneralShopInventoryEntry(currentStats, {
+        itemId: currentItem.id,
+        saleValue: 0,
+        inventoryId: createGeneralShopInventoryInstanceId(currentItem.id),
+        floatValue: 0
+      });
       nextStats = {
         ...currentStats,
         balance: currentStats.balance - currentItem.price,
-        ownedGeneralShopItemIds: sanitizeOwnedGeneralShopItemIds(nextOwnedItemIds),
-        ownedGeneralShopItemSaleValues: sanitizeOwnedGeneralShopItemSaleValues(nextOwnedItemIds, (currentStats.ownedGeneralShopItemSaleValues || []).concat(0))
+        ...nextInventory
       };
     }
     tx.set(balanceRef, {
@@ -15024,7 +15330,13 @@ try {
     } else {
       nextCaseCounts[caseItem.id] = currentCount - 1;
     }
-    const nextOwnedItemIds = liveStats.ownedGeneralShopItemIds.concat(rewardInfo.item.id);
+    const rewardInventoryEntry = {
+      itemId: rewardInfo.item.id,
+      saleValue: rewardSaleValue,
+      inventoryId: createGeneralShopInventoryInstanceId(rewardInfo.item.id),
+      floatValue: getDeterministicGeneralShopFloatValue(`${user}|${caseItem.id}|${rewardInfo.item.id}|${Date.now()}|${currentCount}`)
+    };
+    const nextInventory = appendOwnedGeneralShopInventoryEntry(liveStats, rewardInventoryEntry);
     const currentBestDrop = getAllTimeBestGeneralShopDropRecord(liveStats);
     const currentBestDropValue = Math.max(0, Number(currentBestDrop && currentBestDrop.value || 0));
     const currentBestDropRarity = getGeneralShopRaritySortValue(currentBestDrop && currentBestDrop.rarity || 'mil-spec');
@@ -15036,8 +15348,7 @@ try {
     nextStats = {
       ...liveStats,
       ownedGeneralShopCaseCounts: nextCaseCounts,
-      ownedGeneralShopItemIds: sanitizeOwnedGeneralShopItemIds(nextOwnedItemIds),
-      ownedGeneralShopItemSaleValues: sanitizeOwnedGeneralShopItemSaleValues(nextOwnedItemIds, (liveStats.ownedGeneralShopItemSaleValues || []).concat(rewardSaleValue)),
+      ...nextInventory,
       allTimeBestGeneralShopDropItemId: shouldUpdateBestDrop ? rewardInfo.item.id : liveStats.allTimeBestGeneralShopDropItemId,
       allTimeBestGeneralShopDropTitle: shouldUpdateBestDrop ? rewardInfo.item.title : liveStats.allTimeBestGeneralShopDropTitle,
       allTimeBestGeneralShopDropRarity: shouldUpdateBestDrop ? normalizeGeneralShopRarity(rewardInfo.item.rarity) : normalizeGeneralShopRarity(liveStats.allTimeBestGeneralShopDropRarity),
@@ -15093,19 +15404,21 @@ try {
 }
 
 async function deleteOwnedGeneralShopItem(encodedItemId) {
-const itemId = normalizeOptionalGeneralShopItemId(decodeURIComponent(encodedItemId || ''));
+const inventoryId = sanitizeOwnedGeneralShopInventoryInstanceId(decodeURIComponent(encodedItemId || ''));
 const user = getCasinoPlayerKey();
 if (!user) {
   setGeneralShopStatus('You must be logged in to delete a shop item.', 'error');
   setGeneralShopInventoryStatus('You must be logged in to delete a shop item.', 'error');
   return;
 }
-if (!itemId) {
+if (!inventoryId) {
   setGeneralShopStatus('That shop item could not be found.', 'error');
   setGeneralShopInventoryStatus('That shop item could not be found.', 'error');
   return;
 }
-const item = getGeneralShopItem(itemId);
+const currentEntry = getOwnedGeneralShopItemEntries(getCachedCasinoProfileStats(user)).find((entry) => entry.inventoryId === inventoryId);
+const itemId = currentEntry ? currentEntry.itemId : '';
+const item = currentEntry ? currentEntry.item : getGeneralShopItem(itemId);
 const label = item ? item.title : 'this shop item';
 if (!confirm(`Delete ${label} from your account? This does not refund casino cash.`)) return;
 try {
@@ -15114,24 +15427,16 @@ try {
   await getCasinoDb().runTransaction(async (tx) => {
     const snap = await tx.get(balanceRef);
     const currentStats = normalizeCasinoProfileStatsData(user, snap.exists ? (snap.data() || {}) : {});
-    if (!currentStats.ownedGeneralShopItemIds.includes(itemId)) {
+    const removal = removeOwnedGeneralShopInventoryEntry(currentStats, inventoryId);
+    if (!removal || !removal.removedEntry) {
       throw new Error('You do not own that shop item.');
     }
-    const nextOwnedItemIds = currentStats.ownedGeneralShopItemIds.slice();
-    const ownedIndex = nextOwnedItemIds.indexOf(itemId);
-    if (ownedIndex < 0) {
-      throw new Error('You do not own that shop item.');
-    }
-    nextOwnedItemIds.splice(ownedIndex, 1);
-    const nextOwnedItemSaleValues = sanitizeOwnedGeneralShopItemSaleValues(currentStats.ownedGeneralShopItemIds, currentStats.ownedGeneralShopItemSaleValues).slice();
-    nextOwnedItemSaleValues.splice(ownedIndex, 1);
-    const nextFeaturedItemId = currentStats.selectedGeneralShopFeaturedItemId === itemId && !nextOwnedItemIds.includes(itemId)
+    const nextFeaturedItemId = currentStats.selectedGeneralShopFeaturedItemId === removal.removedEntry.itemId && !removal.inventory.ownedGeneralShopItemIds.includes(removal.removedEntry.itemId)
       ? ''
       : normalizeOptionalGeneralShopItemId(currentStats.selectedGeneralShopFeaturedItemId || '');
     nextStats = {
       ...currentStats,
-      ownedGeneralShopItemIds: nextOwnedItemIds,
-      ownedGeneralShopItemSaleValues: sanitizeOwnedGeneralShopItemSaleValues(nextOwnedItemIds, nextOwnedItemSaleValues),
+      ...removal.inventory,
       selectedGeneralShopFeaturedItemId: nextFeaturedItemId
     };
     tx.set(balanceRef, {
@@ -15161,79 +15466,7 @@ try {
 }
 
 async function sellOwnedGeneralShopCaseDrop(encodedItemId) {
-const itemId = normalizeOptionalGeneralShopItemId(decodeURIComponent(encodedItemId || ''));
-const user = getCasinoPlayerKey();
-if (!user) {
-  setGeneralShopStatus('You must be logged in to sell a case drop.', 'error');
-  setGeneralShopInventoryStatus('You must be logged in to sell a case drop.', 'error');
-  return;
-}
-const item = getGeneralShopItem(itemId);
-if (!item || item.itemType !== 'case-drop') {
-  setGeneralShopStatus('That case drop could not be found.', 'error');
-  setGeneralShopInventoryStatus('That case drop could not be found.', 'error');
-  return;
-}
-const currentStats = getCachedCasinoProfileStats(user);
-const currentOwnedItemIds = sanitizeOwnedGeneralShopItemIds(currentStats && currentStats.ownedGeneralShopItemIds);
-const currentSaleValues = getOwnedGeneralShopItemEntries(currentStats).map((entry) => ({ itemId: entry.itemId, saleValue: entry.saleValue }));
-const currentOwnedIndex = currentOwnedItemIds.indexOf(itemId);
-const salePrice = Math.max(0, Math.floor(Number(currentOwnedIndex >= 0 && currentSaleValues[currentOwnedIndex] ? currentSaleValues[currentOwnedIndex].saleValue : 0) || 0));
-if (!confirm(`Sell ${item.title} for $${salePrice.toLocaleString()}?`)) return;
-try {
-  const balanceRef = getCasinoBalanceCollection().doc(user);
-  let nextStats = getDefaultCasinoProfileStats(user);
-  await getCasinoDb().runTransaction(async (tx) => {
-    const snap = await tx.get(balanceRef);
-    const currentStats = normalizeCasinoProfileStatsData(user, snap.exists ? (snap.data() || {}) : {});
-    const nextOwnedItemIds = currentStats.ownedGeneralShopItemIds.slice();
-    const ownedIndex = nextOwnedItemIds.indexOf(itemId);
-    if (ownedIndex < 0) {
-      throw new Error('You do not own that case drop.');
-    }
-    nextOwnedItemIds.splice(ownedIndex, 1);
-    const nextOwnedItemSaleValues = sanitizeOwnedGeneralShopItemSaleValues(currentStats.ownedGeneralShopItemIds, currentStats.ownedGeneralShopItemSaleValues).slice();
-    const resolvedSalePrice = Math.max(0, Math.floor(Number((getOwnedGeneralShopItemEntries(currentStats)[ownedIndex] || {}).saleValue || 0)));
-    nextOwnedItemSaleValues.splice(ownedIndex, 1);
-    const nextBalance = currentStats.balance + resolvedSalePrice;
-    const nextFeaturedItemId = currentStats.selectedGeneralShopFeaturedItemId === itemId && !nextOwnedItemIds.includes(itemId)
-      ? ''
-      : normalizeOptionalGeneralShopItemId(currentStats.selectedGeneralShopFeaturedItemId || '');
-    nextStats = {
-      ...currentStats,
-      balance: nextBalance,
-      biggestBalance: Math.max(currentStats.biggestBalance, nextBalance),
-      ownedGeneralShopItemIds: nextOwnedItemIds,
-      ownedGeneralShopItemSaleValues: sanitizeOwnedGeneralShopItemSaleValues(nextOwnedItemIds, nextOwnedItemSaleValues),
-      selectedGeneralShopFeaturedItemId: nextFeaturedItemId
-    };
-    tx.set(balanceRef, {
-      username: user,
-      displayName: sanitizeNullableText((snap.exists ? (snap.data() || {}).displayName : '') || getCasinoPlayerDisplayName(), user),
-      ...nextStats,
-      updatedAtMs: Date.now()
-    }, { merge: true });
-  });
-  casinoProfileStatsCache[user] = nextStats;
-  await loadCasinoBalance().catch(() => {});
-  await refreshCasinoProfileUiForUser(user);
-  scheduleDynamicLeaderboardTagRefresh();
-  await publishCasinoActivity({
-    type: 'shop',
-    title: `${getCasinoPlayerDisplayName()} sold a case drop`,
-    body: `${item.title} sold for $${salePrice.toLocaleString()}.`,
-    by: user
-  });
-  await addCasinoInventoryHistory({ type: 'sell_case_drop', actor: user, itemId: item.id, itemTitle: item.title, itemType: item.itemType, rarity: item.rarity, value: salePrice });
-  pushNotification({ type: 'shop', title: 'Case drop sold', body: `${item.title} sold for $${salePrice.toLocaleString()}.`, read: false, action: { kind: 'hub', tab: 'history' } });
-  renderGeneralShopModal();
-  renderGeneralShopInventoryModal();
-  setGeneralShopStatus(`${item.title} sold for $${salePrice.toLocaleString()}.`, 'success');
-  setGeneralShopInventoryStatus(`${item.title} sold for $${salePrice.toLocaleString()}.`, 'success');
-} catch (err) {
-  setGeneralShopStatus(err && err.message ? err.message : 'Could not sell that case drop.', 'error');
-  setGeneralShopInventoryStatus(err && err.message ? err.message : 'Could not sell that case drop.', 'error');
-}
+return listOwnedGeneralShopCaseDropOnMarket(encodedItemId);
 }
 
 function renderProfileIdentity(profileUserKey, stats, profile) {
@@ -15412,11 +15645,12 @@ sectionEl.innerHTML = `
           const item = entry.item;
           const rarity = getGeneralShopRarityConfig(item.rarity);
           const saleValue = Math.max(0, Math.floor(Number(entry.saleValue || 0)));
+          const floatValue = Math.min(1, Math.max(0, Number(entry.floatValue || 0)));
           return `<div class="store-mini-card">
             <div class="store-visual-banner" style="${getGeneralShopVisualStyleText(item.visualData, 'display:flex; align-items:flex-end; padding:0.75rem; box-sizing:border-box; color:#fff; font-weight:700;')}">${escapeHtml(item.title)}</div>
             <div class="store-mini-card-title">${escapeHtml(item.title)}</div>
             <div class="store-mini-card-meta">${escapeHtml(item.description || (item.itemType === 'case-drop' ? 'Case reward drop.' : 'Shop item.'))}</div>
-            <div class="store-mini-card-meta" style="color:${item.active ? '#93a9c1' : '#ffcc80'};">${escapeHtml(rarity.label)}${item.itemType === 'case-drop' ? ` • Case drop • Worth $${saleValue.toLocaleString()}` : ` • Shop item • Worth $${Math.max(0, Number(item.price || 0)).toLocaleString()}`}${item.active ? '' : ' • Legacy item'}</div>
+            <div class="store-mini-card-meta" style="color:${item.active ? '#93a9c1' : '#ffcc80'};">${escapeHtml(rarity.label)}${item.itemType === 'case-drop' ? ` • ${escapeHtml(getGeneralShopFloatWearLabel(floatValue))} • Float ${formatGeneralShopFloatValue(floatValue)} • Ref $${saleValue.toLocaleString()}` : ` • Shop item • Worth $${Math.max(0, Number(item.price || 0)).toLocaleString()}`}${item.active ? '' : ' • Legacy item'}</div>
           </div>`;
         }).join('') : '<div class="submission-empty" style="grid-column:1 / -1;">No items or case drops owned.</div>'}
       </div>
@@ -16818,10 +17052,140 @@ const archiveApp = ensureFirebaseApp(archiveFirebaseConfig, ARCHIVE_APP_NAME);
 return archiveApp ? archiveApp.firestore() : null;
 }
 
+function normalizeCasinoTargetKey(value) {
+return value === BACKUP_CASINO_TARGET ? BACKUP_CASINO_TARGET : PRIMARY_CASINO_TARGET;
+}
+
+function getCasinoAppDefinition(targetKey) {
+if (normalizeCasinoTargetKey(targetKey) === BACKUP_CASINO_TARGET) {
+  return {
+    key: BACKUP_CASINO_TARGET,
+    config: casinoBackupFirebaseConfig,
+    appName: CASINO_BACKUP_APP_NAME
+  };
+}
+return {
+  key: PRIMARY_CASINO_TARGET,
+  config: casinoFirebaseConfig,
+  appName: CASINO_APP_NAME
+};
+}
+
+function getStoredCasinoTargetKey() {
+try {
+  return normalizeCasinoTargetKey(localStorage.getItem(ACTIVE_CASINO_TARGET_STORAGE_KEY));
+} catch (_) {
+  return PRIMARY_CASINO_TARGET;
+}
+}
+
+function setStoredCasinoTargetKey(targetKey) {
+const normalizedKey = normalizeCasinoTargetKey(targetKey);
+try {
+  localStorage.setItem(ACTIVE_CASINO_TARGET_STORAGE_KEY, normalizedKey);
+} catch (_) {}
+return normalizedKey;
+}
+
+function getActiveCasinoAppDefinition() {
+const preferredDefinition = getCasinoAppDefinition(getStoredCasinoTargetKey());
+if (isFirebaseConfigReady(preferredDefinition.config)) return preferredDefinition;
+const fallbackDefinition = getCasinoAppDefinition(
+  preferredDefinition.key === PRIMARY_CASINO_TARGET ? BACKUP_CASINO_TARGET : PRIMARY_CASINO_TARGET
+);
+return isFirebaseConfigReady(fallbackDefinition.config) ? fallbackDefinition : preferredDefinition;
+}
+
+function getInactiveCasinoTargetKey() {
+return getActiveCasinoAppDefinition().key === PRIMARY_CASINO_TARGET ? BACKUP_CASINO_TARGET : PRIMARY_CASINO_TARGET;
+}
+
+function scheduleCasinoFailoverReload() {
+if (typeof window === 'undefined' || !window.location || typeof window.setTimeout !== 'function') return;
+let lastReloadAt = 0;
+try {
+  lastReloadAt = Number(localStorage.getItem(CASINO_FAILOVER_RELOAD_STORAGE_KEY) || 0);
+} catch (_) {}
+const now = Date.now();
+if (now - lastReloadAt < CASINO_FAILOVER_RELOAD_COOLDOWN_MS) return;
+try {
+  localStorage.setItem(CASINO_FAILOVER_RELOAD_STORAGE_KEY, String(now));
+} catch (_) {}
+window.setTimeout(() => {
+  try {
+    window.location.reload();
+  } catch (_) {}
+}, 50);
+}
+
+function isCasinoQuotaExceededError(error) {
+const code = String(error && (error.code || error.status) || '').toLowerCase();
+if (code.includes('resource-exhausted')) return true;
+const message = String(error && (error.message || error.details) || '').toLowerCase();
+if (!message) return false;
+return message.includes('quota') || message.includes('resource exhausted');
+}
+
+function maybeActivateBackupCasino(error, options = {}) {
+if (!isCasinoQuotaExceededError(error)) return false;
+const activeDefinition = getActiveCasinoAppDefinition();
+if (activeDefinition.key === BACKUP_CASINO_TARGET) return false;
+const backupDefinition = getCasinoAppDefinition(BACKUP_CASINO_TARGET);
+if (!isFirebaseConfigReady(backupDefinition.config)) return false;
+setStoredCasinoTargetKey(BACKUP_CASINO_TARGET);
+console.warn('Casino quota reached, switching to backup Firebase project.', error);
+if (typeof renderAdminCasinoFailoverState === 'function') renderAdminCasinoFailoverState();
+if (typeof renderAdminProjectStatus === 'function') renderAdminProjectStatus();
+if (options.reload !== false) scheduleCasinoFailoverReload();
+return true;
+}
+
+function getCasinoDbForTarget(targetKey) {
+const definition = getCasinoAppDefinition(targetKey);
+const casinoApp = ensureFirebaseApp(definition.config, definition.appName);
+return casinoApp ? configureFirestoreTransport(casinoApp.firestore()) : null;
+}
+
 function getCasinoDb() {
-const casinoApp = ensureFirebaseApp(casinoFirebaseConfig, CASINO_APP_NAME);
-const db = casinoApp ? casinoApp.firestore() : getPrimaryDb();
-return configureFirestoreTransport(db);
+const activeDefinition = getActiveCasinoAppDefinition();
+let db = getCasinoDbForTarget(activeDefinition.key);
+if (!db) {
+  const fallbackDefinition = getCasinoAppDefinition(getInactiveCasinoTargetKey());
+  db = getCasinoDbForTarget(fallbackDefinition.key);
+  if (db) setStoredCasinoTargetKey(fallbackDefinition.key);
+}
+return db || getPrimaryDb();
+}
+
+window.getActiveCasinoTarget = function() {
+return getActiveCasinoAppDefinition().key;
+};
+
+window.setActiveCasinoTarget = function(targetKey, reload = false) {
+const nextKey = setStoredCasinoTargetKey(targetKey);
+if (typeof renderAdminCasinoFailoverState === 'function') renderAdminCasinoFailoverState();
+if (typeof renderAdminProjectStatus === 'function') renderAdminProjectStatus();
+if (reload) scheduleCasinoFailoverReload();
+return nextKey;
+};
+
+window.handleCasinoQuotaError = function(error, options = {}) {
+return maybeActivateBackupCasino(error, options);
+};
+
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event && 'reason' in event ? event.reason : null;
+  maybeActivateBackupCasino(reason);
+});
+
+window.addEventListener('storage', (event) => {
+  if (!event || event.key !== ACTIVE_CASINO_TARGET_STORAGE_KEY) return;
+  if (event.oldValue === event.newValue || !event.newValue) return;
+  if (typeof renderAdminCasinoFailoverState === 'function') renderAdminCasinoFailoverState();
+  if (typeof renderAdminProjectStatus === 'function') renderAdminProjectStatus();
+  scheduleCasinoFailoverReload();
+});
 }
 
 function isRealtimeDbConfigReady(config) {
@@ -16867,14 +17231,256 @@ const mainReady = isFirebaseConfigReady(firebaseConfig);
 const realtimeReady = isRealtimeDbConfigReady(firebaseConfig);
 const adminReady = isFirebaseConfigReady(adminFirebaseConfig);
 const archiveReady = isFirebaseConfigReady(archiveFirebaseConfig);
+const casinoPrimaryReady = isFirebaseConfigReady(casinoFirebaseConfig);
+const casinoBackupReady = isFirebaseConfigReady(casinoBackupFirebaseConfig);
+const activeCasinoDefinition = getActiveCasinoAppDefinition();
 
 el.innerHTML = [
 `<div><strong>Main Chat Project:</strong> ${mainReady ? firebaseConfig.projectId : 'Not configured'}</div>`,
 `<div><strong>Realtime DB:</strong> ${realtimeReady ? 'Configured' : 'Not configured (typing and online presence will stay on Firestore until databaseURL is added)'}</div>`,
 `<div><strong>Admin Project:</strong> ${adminReady ? adminFirebaseConfig.projectId : 'Not configured'}${adminReady ? '' : ' (falling back to main project)'}</div>`,
-`<div><strong>Archive Project:</strong> ${archiveReady ? archiveFirebaseConfig.projectId : 'Not configured'}${archiveReady ? '' : ' (archive backup disabled)'}</div>`
+`<div><strong>Archive Project:</strong> ${archiveReady ? archiveFirebaseConfig.projectId : 'Not configured'}${archiveReady ? '' : ' (archive backup disabled)'}</div>`,
+`<div><strong>Casino Primary:</strong> ${casinoPrimaryReady ? casinoFirebaseConfig.projectId : 'Not configured'}</div>`,
+`<div><strong>Casino Backup:</strong> ${casinoBackupReady ? casinoBackupFirebaseConfig.projectId : 'Not configured'}${casinoBackupReady ? '' : ' (backup failover disabled)'}</div>`,
+`<div><strong>Live Casino Target:</strong> ${activeCasinoDefinition.key === BACKUP_CASINO_TARGET ? 'Backup' : 'Primary'}${activeCasinoDefinition.config && activeCasinoDefinition.config.projectId ? ` (${escapeHtml(activeCasinoDefinition.config.projectId)})` : ''}</div>`
 ].join('');
 }
+
+function setAdminCasinoFailoverStatus(message = '', tone = 'neutral') {
+setAdminToolStatus('admin-casino-failover-status', message, tone);
+}
+
+function getCasinoBackupSyncCollectionNames() {
+return [
+  'casino_balances',
+  CASINO_ACTIVITY_COLLECTION,
+  CASINO_COIN_FLIP_COLLECTION,
+  CASINO_CONFIG_COLLECTION,
+  CASINO_INVENTORY_HISTORY_COLLECTION,
+  GENERAL_SHOP_COLLECTION,
+  GENERAL_SHOP_TRADES_COLLECTION,
+  GENERAL_SHOP_MARKET_COLLECTION,
+  PROFILE_BACKGROUND_SHOP_COLLECTION,
+  POKER_ROOMS_COLLECTION
+];
+}
+
+function renderAdminCasinoFailoverState() {
+const summaryNode = document.getElementById('admin-casino-failover-summary');
+if (!summaryNode) return;
+const primaryReady = isFirebaseConfigReady(casinoFirebaseConfig);
+const backupReady = isFirebaseConfigReady(casinoBackupFirebaseConfig);
+const activeDefinition = getActiveCasinoAppDefinition();
+const primaryButton = document.getElementById('admin-casino-primary-btn');
+const backupButton = document.getElementById('admin-casino-backup-btn');
+const syncButton = document.getElementById('admin-casino-sync-btn');
+const syncPrimaryButton = document.getElementById('admin-casino-sync-primary-btn');
+const returnPrimaryButton = document.getElementById('admin-casino-return-primary-btn');
+summaryNode.innerHTML = [
+  `<div><strong>Active:</strong> ${activeDefinition.key === BACKUP_CASINO_TARGET ? 'Backup' : 'Primary'}${activeDefinition.config && activeDefinition.config.projectId ? ` (${escapeHtml(activeDefinition.config.projectId)})` : ''}</div>`,
+  `<div><strong>Primary Project:</strong> ${primaryReady ? escapeHtml(casinoFirebaseConfig.projectId) : 'Not configured'}</div>`,
+  `<div><strong>Backup Project:</strong> ${backupReady ? escapeHtml(casinoBackupFirebaseConfig.projectId) : 'Not configured'}</div>`,
+  `<div><strong>Sync Paths:</strong> Primary to backup for standby refresh, or backup to primary before moving live traffic back.</div>`
+].join('');
+if (primaryButton) primaryButton.disabled = !primaryReady || activeDefinition.key === PRIMARY_CASINO_TARGET;
+if (backupButton) backupButton.disabled = !backupReady || activeDefinition.key === BACKUP_CASINO_TARGET;
+if (syncButton) syncButton.disabled = !primaryReady || !backupReady;
+if (syncPrimaryButton) syncPrimaryButton.disabled = !primaryReady || !backupReady;
+if (returnPrimaryButton) returnPrimaryButton.disabled = !primaryReady || !backupReady || activeDefinition.key === PRIMARY_CASINO_TARGET;
+}
+
+function setAdminCasinoFailoverButtonsDisabled(disabled) {
+const buttonIds = [
+  'admin-casino-primary-btn',
+  'admin-casino-backup-btn',
+  'admin-casino-sync-btn',
+  'admin-casino-sync-primary-btn',
+  'admin-casino-return-primary-btn'
+];
+buttonIds.forEach((id) => {
+  const node = document.getElementById(id);
+  if (node) node.disabled = !!disabled;
+});
+}
+
+async function mirrorCasinoCollection(sourceDb, targetDb, collectionName) {
+const sourceSnapshot = await sourceDb.collection(collectionName).get();
+const targetSnapshot = await targetDb.collection(collectionName).get();
+const targetCollection = targetDb.collection(collectionName);
+const sourceIds = new Set();
+const maxWritesPerBatch = 200;
+let batch = targetDb.batch();
+let pendingWrites = 0;
+let upserts = 0;
+let deletions = 0;
+
+const commitBatch = async () => {
+  if (!pendingWrites) return;
+  await batch.commit();
+  batch = targetDb.batch();
+  pendingWrites = 0;
+};
+
+for (const doc of sourceSnapshot.docs) {
+  sourceIds.add(doc.id);
+  batch.set(targetCollection.doc(doc.id), doc.data());
+  pendingWrites += 1;
+  upserts += 1;
+  if (pendingWrites >= maxWritesPerBatch) await commitBatch();
+}
+
+for (const doc of targetSnapshot.docs) {
+  if (sourceIds.has(doc.id)) continue;
+  batch.delete(targetCollection.doc(doc.id));
+  pendingWrites += 1;
+  deletions += 1;
+  if (pendingWrites >= maxWritesPerBatch) await commitBatch();
+}
+
+await commitBatch();
+return {
+  sourceCount: sourceSnapshot.size,
+  targetCount: targetSnapshot.size,
+  upserts,
+  deletions
+};
+}
+
+function getCasinoTargetLabel(targetKey) {
+return normalizeCasinoTargetKey(targetKey) === BACKUP_CASINO_TARGET ? 'backup' : 'primary';
+}
+
+function getCasinoProjectIdForTarget(targetKey) {
+const definition = getCasinoAppDefinition(targetKey);
+return sanitizeNullableText(definition && definition.config && definition.config.projectId, getCasinoTargetLabel(targetKey));
+}
+
+async function syncCasinoBetweenTargets(sourceTargetKey, targetTargetKey, options = {}) {
+const normalizedSourceKey = normalizeCasinoTargetKey(sourceTargetKey);
+const normalizedTargetKey = normalizeCasinoTargetKey(targetTargetKey);
+const sourceDb = getCasinoDbForTarget(normalizedSourceKey);
+const targetDb = getCasinoDbForTarget(normalizedTargetKey);
+if (!sourceDb) {
+  throw new Error(`${getCasinoTargetLabel(normalizedSourceKey)} casino project is not configured.`);
+}
+if (!targetDb) {
+  throw new Error(`${getCasinoTargetLabel(normalizedTargetKey)} casino project is not configured.`);
+}
+const collectionNames = getCasinoBackupSyncCollectionNames();
+let totalUpserts = 0;
+let totalDeletions = 0;
+for (let index = 0; index < collectionNames.length; index += 1) {
+  const collectionName = collectionNames[index];
+  if (typeof options.onProgress === 'function') {
+    options.onProgress(collectionName, index, collectionNames.length, normalizedSourceKey, normalizedTargetKey);
+  }
+  const result = await mirrorCasinoCollection(sourceDb, targetDb, collectionName);
+  totalUpserts += result.upserts;
+  totalDeletions += result.deletions;
+}
+return {
+  sourceKey: normalizedSourceKey,
+  targetKey: normalizedTargetKey,
+  totalUpserts,
+  totalDeletions,
+  collectionCount: collectionNames.length
+};
+}
+
+function formatCasinoSyncResultMessage(result, verb = 'finished') {
+const sourceProjectId = getCasinoProjectIdForTarget(result.sourceKey);
+const targetProjectId = getCasinoProjectIdForTarget(result.targetKey);
+return `${verb}. Copied ${result.totalUpserts} document${result.totalUpserts === 1 ? '' : 's'} from ${sourceProjectId} to ${targetProjectId} and removed ${result.totalDeletions} stale document${result.totalDeletions === 1 ? '' : 's'}.`;
+}
+
+window.adminSetCasinoTarget = async function(targetKey) {
+if (normalizeUsername(getUserRole(currentChatUser)) !== 'owner') {
+  setAdminCasinoFailoverStatus('Only the owner can switch the live casino target.', 'error');
+  return;
+}
+const normalizedKey = normalizeCasinoTargetKey(targetKey);
+const definition = getCasinoAppDefinition(normalizedKey);
+if (!isFirebaseConfigReady(definition.config)) {
+  setAdminCasinoFailoverStatus(`${normalizedKey === BACKUP_CASINO_TARGET ? 'Backup' : 'Primary'} casino project is not configured.`, 'error');
+  return;
+}
+setAdminCasinoFailoverStatus(`Switching live casino to ${normalizedKey} and reloading...`, 'neutral');
+window.setActiveCasinoTarget(normalizedKey, true);
+};
+
+window.adminSyncCasinoBackup = async function() {
+if (normalizeUsername(getUserRole(currentChatUser)) !== 'owner') {
+  setAdminCasinoFailoverStatus('Only the owner can sync the backup casino.', 'error');
+  return;
+}
+setAdminCasinoFailoverButtonsDisabled(true);
+try {
+  const result = await syncCasinoBetweenTargets(PRIMARY_CASINO_TARGET, BACKUP_CASINO_TARGET, {
+    onProgress(collectionName, index, total) {
+      setAdminCasinoFailoverStatus(`Syncing ${collectionName} (${index + 1}/${total}) from primary to backup...`, 'neutral');
+    }
+  });
+  setAdminCasinoFailoverStatus(formatCasinoSyncResultMessage(result, 'Backup sync finished'), 'success');
+} catch (err) {
+  console.error('Failed to sync casino backup:', err);
+  setAdminCasinoFailoverStatus(err && err.message ? err.message : 'Failed to sync the backup casino.', 'error');
+} finally {
+  setAdminCasinoFailoverButtonsDisabled(false);
+  renderAdminCasinoFailoverState();
+  renderAdminProjectStatus();
+}
+};
+
+window.adminSyncCasinoPrimary = async function() {
+if (normalizeUsername(getUserRole(currentChatUser)) !== 'owner') {
+  setAdminCasinoFailoverStatus('Only the owner can sync data back to the primary casino.', 'error');
+  return;
+}
+setAdminCasinoFailoverButtonsDisabled(true);
+try {
+  const result = await syncCasinoBetweenTargets(BACKUP_CASINO_TARGET, PRIMARY_CASINO_TARGET, {
+    onProgress(collectionName, index, total) {
+      setAdminCasinoFailoverStatus(`Syncing ${collectionName} (${index + 1}/${total}) from backup to primary...`, 'neutral');
+    }
+  });
+  setAdminCasinoFailoverStatus(formatCasinoSyncResultMessage(result, 'Primary sync finished'), 'success');
+} catch (err) {
+  console.error('Failed to sync casino primary:', err);
+  setAdminCasinoFailoverStatus(err && err.message ? err.message : 'Failed to sync data back to the primary casino.', 'error');
+} finally {
+  setAdminCasinoFailoverButtonsDisabled(false);
+  renderAdminCasinoFailoverState();
+  renderAdminProjectStatus();
+}
+};
+
+window.adminReturnCasinoToPrimary = async function() {
+if (normalizeUsername(getUserRole(currentChatUser)) !== 'owner') {
+  setAdminCasinoFailoverStatus('Only the owner can move the live casino back to primary.', 'error');
+  return;
+}
+const activeDefinition = getActiveCasinoAppDefinition();
+if (activeDefinition.key === PRIMARY_CASINO_TARGET) {
+  setAdminCasinoFailoverStatus('Primary is already the live casino target.', 'neutral');
+  return;
+}
+setAdminCasinoFailoverButtonsDisabled(true);
+try {
+  const result = await syncCasinoBetweenTargets(BACKUP_CASINO_TARGET, PRIMARY_CASINO_TARGET, {
+    onProgress(collectionName, index, total) {
+      setAdminCasinoFailoverStatus(`Syncing ${collectionName} (${index + 1}/${total}) from backup to primary before cutback...`, 'neutral');
+    }
+  });
+  setAdminCasinoFailoverStatus(`${formatCasinoSyncResultMessage(result, 'Primary cutback sync finished')} Switching live casino to primary...`, 'success');
+  window.setActiveCasinoTarget(PRIMARY_CASINO_TARGET, true);
+} catch (err) {
+  console.error('Failed to move live casino back to primary:', err);
+  setAdminCasinoFailoverStatus(err && err.message ? err.message : 'Failed to move the live casino back to primary.', 'error');
+  setAdminCasinoFailoverButtonsDisabled(false);
+  renderAdminCasinoFailoverState();
+  renderAdminProjectStatus();
+}
+};
 
 const OWNER_ROLE_GRADIENT_SECONDARY_STORAGE_KEY = 'ownerRoleGradientSecondaryColor';
 let ownerRoleGradientSecondaryColor = normalizeRoleNameEffectColor(localStorage.getItem(OWNER_ROLE_GRADIENT_SECONDARY_STORAGE_KEY) || '#ffd54f', '#ffd54f');
@@ -18658,6 +19264,7 @@ async function openGeneralShopInventoryModal() {
 if (getCasinoPlayerKey()) {
   await loadCasinoBalance().catch(() => {});
 }
+await loadGeneralShopMarketListings().catch(() => []);
 setGeneralShopInventoryStatus('', 'neutral');
 renderGeneralShopInventoryModal();
 openModalById('general-shop-inventory-modal');
@@ -19360,7 +19967,6 @@ const btn = document.getElementById('admin-menu-btn');
 if (!btn) return;
 btn.style.display = (siteLoginPassed && canOpenAdminMenuForUser(currentChatUser)) ? 'block' : 'none';
 updateReviewQueueBadges();
-ensureGeneralShopCsCatalogAutoCreated();
 }
 
 async function loadRoleCache() {
@@ -19468,7 +20074,6 @@ try {
       if (document.getElementById('general-shop-inventory-modal')?.style.display === 'flex') {
         renderGeneralShopInventoryModal();
       }
-      ensureGeneralShopCsCatalogAutoCreated();
     });
 } catch (err) {
   generalShopCache = [];
