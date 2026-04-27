@@ -4395,6 +4395,98 @@ gap: 0.32rem;
 max-width: 100%;
 }
 
+.staff-wall-list {
+display: grid;
+gap: 0.9rem;
+}
+
+.leaderboard-entry.leaderboard-entry-staff-wall {
+grid-template-columns: minmax(1.2rem, auto) minmax(0, 1fr) auto auto;
+padding: 0.82rem 0.92rem;
+border-radius: 0.7rem;
+min-height: 5rem;
+}
+
+.leaderboard-entry.leaderboard-entry-staff-wall .leaderboard-entry-banner {
+filter: saturate(1.03) brightness(0.98);
+}
+
+.leaderboard-entry.leaderboard-entry-staff-wall .leaderboard-entry-banner::after {
+background: linear-gradient(90deg, rgba(137, 188, 255, 0.11) 0%, rgba(83, 103, 132, 0.08) 40%, rgba(83, 103, 132, 0.06) 100%);
+}
+
+.leaderboard-entry.leaderboard-entry-staff-wall .leaderboard-username {
+align-items: flex-start;
+white-space: normal;
+overflow: visible;
+}
+
+.leaderboard-entry.leaderboard-entry-staff-wall .leaderboard-identity {
+align-items: flex-start;
+row-gap: 0.32rem;
+overflow: visible;
+}
+
+.leaderboard-entry.leaderboard-entry-staff-wall .leaderboard-identity-copy {
+gap: 0.32rem;
+}
+
+.leaderboard-entry.leaderboard-entry-staff-wall .leaderboard-name-copy {
+max-width: 100%;
+}
+
+.staff-wall-rank {
+color: rgba(255, 202, 40, 0.55);
+font-size: 0.8rem;
+align-self: center;
+}
+
+.staff-wall-role-pill {
+justify-self: start;
+align-self: center;
+padding: 0.38rem 0.82rem;
+border-radius: 0.42rem;
+font-size: 0.92rem;
+line-height: 1;
+min-width: 6.2rem;
+}
+
+.staff-wall-points {
+display: grid;
+gap: 0.42rem;
+align-content: center;
+min-width: 8.5rem;
+}
+
+.staff-wall-note-text {
+color: #dce7f5;
+font-size: 0.8rem;
+line-height: 1.3;
+text-align: right;
+white-space: pre-wrap;
+word-break: break-word;
+}
+
+.staff-wall-inline-actions {
+display: flex;
+justify-content: flex-end;
+}
+
+.staff-wall-edit-btn {
+padding: 0.34rem 0.72rem;
+border: none;
+border-radius: 999px;
+background: #3d628a;
+color: #fff;
+font-size: 0.76rem;
+font-weight: 700;
+cursor: pointer;
+}
+
+.staff-wall-edit-btn:hover {
+background: #4f78a4;
+}
+
 .owner-tag {
 display: inline-block;
 background: #ff3333;
@@ -4422,7 +4514,8 @@ letter-spacing: 0.5px;
 
 @media (max-width: 760px) {
 .leaderboard-entry,
-.leaderboard-entry.leaderboard-entry-chud-wall {
+.leaderboard-entry.leaderboard-entry-chud-wall,
+.leaderboard-entry.leaderboard-entry-staff-wall {
 grid-template-columns: minmax(2.5rem, auto) minmax(0, 1fr);
 grid-template-areas:
   'rank user'
@@ -4450,6 +4543,23 @@ margin-top: 0.15rem;
 grid-area: points;
 text-align: left;
 margin-top: 0.1rem;
+}
+
+.staff-wall-note-text {
+text-align: left;
+}
+
+.staff-wall-inline-actions {
+justify-content: flex-start;
+}
+
+.admin-staff-wall-role-tag-grid {
+grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.staff-wall-role-pill {
+font-size: 0.86rem;
+min-width: 5.7rem;
 }
 }
 
@@ -5290,6 +5400,45 @@ background: rgba(255,255,255,0.04);
 font-size: 0.76rem;
 color: #9fb0c2;
 margin-bottom: 0.45rem;
+}
+
+.admin-staff-wall-role-tag-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+gap: 0.65rem;
+margin-top: 0.55rem;
+}
+
+.admin-staff-wall-role-tag-control {
+display: grid;
+gap: 0.35rem;
+color: #dce7f5;
+font-size: 0.78rem;
+text-align: left;
+}
+
+.admin-staff-wall-role-tag-control.is-disabled {
+opacity: 0.55;
+}
+
+.admin-staff-wall-role-tag-control input {
+width: 100%;
+height: 2.25rem;
+border: none;
+background: transparent;
+padding: 0;
+cursor: pointer;
+}
+
+.admin-staff-wall-role-tag-control.is-disabled input {
+cursor: not-allowed;
+}
+
+.admin-staff-wall-role-tag-preview {
+display: flex;
+flex-wrap: wrap;
+gap: 0.5rem;
+align-items: center;
 }
 
 .admin-event-background-preview {

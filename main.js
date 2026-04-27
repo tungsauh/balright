@@ -53,9 +53,12 @@ const CASINO_BACKUP_APP_NAME = 'balright-casino2';
 const PRIMARY_CASINO_TARGET = 'primary';
 const BACKUP_CASINO_TARGET = 'backup';
 const ACTIVE_CASINO_TARGET_STORAGE_KEY = 'activeCasinoTarget';
+const ACTIVE_CASINO_TARGET_OVERRIDE_STORAGE_KEY = 'activeCasinoTargetOverride';
 const CASINO_FAILOVER_RELOAD_STORAGE_KEY = 'casinoFailoverReloadAt';
 const CASINO_FAILOVER_RELOAD_COOLDOWN_MS = 15000;
 const configuredFirestoreDbs = new WeakSet();
+let sharedCasinoTargetKey = PRIMARY_CASINO_TARGET;
+let sharedCasinoTargetHydrated = false;
 
 let chatInitialized = false;
 let currentChatUser = '';
@@ -68,7 +71,7 @@ const TYRONE_RELEASE_VOTE_START_HOUR = 7;
 const TYRONE_RELEASE_VOTE_START_MINUTE = 30;
 const TYRONE_RELEASE_VOTE_END_HOUR = 13;
 const TYRONE_RELEASE_VOTE_END_MINUTE = 50;
-const TYRONE_RELEASE_DEFAULT_TITLE = 'Shitty Tyrone Souls and/or Tyrone vs Cops';
+const TYRONE_RELEASE_DEFAULT_TITLE = 'Tyrone vs Cops';
 const TYRONE_RELEASE_VOTE_OPTIONS = Object.freeze([
   { id: 'tyrone-souls', label: 'Tyrone Souls' },
   { id: 'cuck-simulator', label: 'Cuck Simulator' },
@@ -348,8 +351,8 @@ function updateTyroneReleaseCountdown() {
   const parts = formatReleaseCountdownParts(remainingMs);
   countdownNode.textContent = `${parts.days}d ${String(parts.hours).padStart(2, '0')}h ${String(parts.minutes).padStart(2, '0')}m ${String(parts.seconds).padStart(2, '0')}s`;
   if (remainingMs <= 0) {
-    countdownNode.textContent = 'Release window is here';
-    statusNode.textContent = 'Shitty Tyrone Souls and/or Tyrone vs. Cops still are not guaranteed because this might be impossible.';
+    countdownNode.textContent = 'Release is here!';
+    statusNode.textContent = 'Tyrone vs Cops is still not guaranteed because this might be impossible.';
     if (tyroneReleaseCountdownInterval) {
       clearInterval(tyroneReleaseCountdownInterval);
       tyroneReleaseCountdownInterval = null;
@@ -641,6 +644,7 @@ const CASINO_DAILY_BONUS_STREAK_CAP = 7;
 const CASINO_RESET_STARTING_BALANCE = 1000;
 const CASINO_SEASON_STATE_DOC_ID = 'weekly_season_state';
 const CHUD_WALL_DOC_ID = 'chud_wall';
+const STAFF_WALL_DOC_ID = 'staff_wall';
 const CASINO_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const CASINO_WEEKLY_RESET_LOCK_MS = 5 * 60 * 1000;
 const CASINO_SEASON_TIME_ZONE = 'America/New_York';
@@ -648,6 +652,7 @@ const CASINO_SEASON_OPEN_WEEKDAY = 1;
 const CASINO_SEASON_CLOSE_WEEKDAY = 5;
 const CASINO_SEASON_CLOSE_HOUR = 14;
 const CASINO_SEASON_CLOSE_MINUTE = 9;
+const CASINO_BALANCE_COMPACT_SUFFIXES = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
 const GLOBAL_ALERT_DEFAULT_ACTIVE_MINUTES = 30;
 const PROFILE_BADGE_SHOWCASE_LIMIT = 3;
 const IFRAME_RECENT_HISTORY_KEY = 'iframeRecentHistoryV1';
@@ -662,9 +667,40 @@ function getChudWallDoc() {
   return getCasinoConfigCollection().doc(CHUD_WALL_DOC_ID);
 }
 
+function getStaffWallDoc() {
+  return getCasinoConfigCollection().doc(STAFF_WALL_DOC_ID);
+}
+
+function normalizeStaffWallEntryData(entry = {}) {
+  const username = normalizeUsername(entry.username || entry.user || '');
+  return {
+    username,
+    note: sanitizeNullableText(entry.note, '').slice(0, 180),
+    updatedAtMs: Math.max(0, Number(entry.updatedAtMs || 0)),
+    updatedBy: normalizeUsername(entry.updatedBy || '')
+  };
+}
+
+function normalizeStaffWallData(data = {}) {
+  const entries = [];
+  const seen = new Set();
+  (Array.isArray(data.entries) ? data.entries : []).forEach((entry) => {
+    const normalizedEntry = normalizeStaffWallEntryData(entry);
+    if (!normalizedEntry.username || seen.has(normalizedEntry.username)) return;
+    seen.add(normalizedEntry.username);
+    entries.push(normalizedEntry);
+  });
+  entries.sort((a, b) => {
+    if (b.updatedAtMs !== a.updatedAtMs) return b.updatedAtMs - a.updatedAtMs;
+    return a.username.localeCompare(b.username);
+  });
+  return { entries };
+}
+
 function normalizeChudWallEntryData(entry = {}) {
   const username = normalizeUsername(entry.username || entry.user || '');
   const addedAtMs = Math.max(0, Number(entry.addedAtMs || 0));
+  const rawSeasonWeekStartMs = Math.max(0, Number(entry.seasonWeekStartMs || 0));
   return {
     id: sanitizeNullableText(entry.id, `${username || 'chud'}-${addedAtMs || Date.now()}`).slice(0, 96),
     username,
@@ -673,7 +709,7 @@ function normalizeChudWallEntryData(entry = {}) {
     source: sanitizeNullableText(entry.source, 'manual').slice(0, 32),
     note: sanitizeNullableText(entry.note, '').slice(0, 120),
     recordedBalance: Math.max(0, Math.floor(Number(entry.recordedBalance || 0))),
-    seasonWeekStartMs: Math.max(0, Number(entry.seasonWeekStartMs || 0))
+    seasonWeekStartMs: normalizeCasinoSeasonWeekStartMs(rawSeasonWeekStartMs)
   };
 }
 
@@ -808,10 +844,16 @@ function formatCasinoBalanceSummary(value, options = {}) {
   const amount = Math.max(0, Math.floor(Number(value || 0)));
   const compact = !!options.compact;
   if (!compact) return `$${amount.toLocaleString()}`;
-  return `$${new Intl.NumberFormat('en-US', {
-    notation: 'compact',
-    maximumFractionDigits: amount >= 1000000 ? 1 : 0
-  }).format(amount)}`;
+  if (!amount) return '$0';
+  let scaled = amount;
+  let suffixIndex = 0;
+  while (scaled >= 1000 && suffixIndex < CASINO_BALANCE_COMPACT_SUFFIXES.length - 1) {
+    scaled /= 1000;
+    suffixIndex += 1;
+  }
+  const decimals = scaled >= 100 ? 0 : 1;
+  const formatted = scaled.toFixed(decimals).replace(/\.0$/, '');
+  return `$${formatted}${CASINO_BALANCE_COMPACT_SUFFIXES[suffixIndex]}`;
 }
 
 function getLatestWeeklyWinnerChudWallEntry(entries = normalizeChudWallData(chudWallCache || {}).entries || []) {
@@ -874,6 +916,60 @@ function renderChudWallSeasonWinsMarkup(username, entries = normalizeChudWallDat
   return `<span class="${containerClass}">${wins.map((entry) => `<span class="leaderboard-chud-season-chip">${escapeHtml(formatCasinoSeasonLabel(entry.seasonWeekStartMs))} ${escapeHtml(formatCasinoBalanceSummary(entry.recordedBalance, { compact: useCompact }))}</span>`).join('')}</span>`;
 }
 
+function renderChudWallEntrySeasonMarkup(entry = {}) {
+  const seasonWeekStartMs = Math.max(0, Number(entry.seasonWeekStartMs || 0));
+  if (!seasonWeekStartMs) return '';
+  return `<span class="leaderboard-chud-season-summary"><span class="leaderboard-chud-season-chip">${escapeHtml(formatCasinoSeasonLabel(seasonWeekStartMs))} • ${escapeHtml(formatCasinoBalanceSummary(entry.recordedBalance, { compact: true }))}</span></span>`;
+}
+
+function buildGroupedChudWallEntries(entries = []) {
+  const groups = new Map();
+  (Array.isArray(entries) ? entries : []).forEach((entry) => {
+    const normalizedEntry = normalizeChudWallEntryData(entry);
+    const key = normalizedEntry.username;
+    if (!key) return;
+    const existing = groups.get(key) || {
+      username: key,
+      displayName: normalizedEntry.displayName || key,
+      entries: [],
+      latestEntry: normalizedEntry
+    };
+    existing.entries.push(normalizedEntry);
+    if (Math.max(0, Number(normalizedEntry.addedAtMs || 0)) >= Math.max(0, Number(existing.latestEntry && existing.latestEntry.addedAtMs || 0))) {
+      existing.latestEntry = normalizedEntry;
+      existing.displayName = normalizedEntry.displayName || existing.displayName || key;
+    }
+    groups.set(key, existing);
+  });
+  return Array.from(groups.values()).map((group) => ({
+    ...group,
+    wins: getChudWallSeasonWinsForUsername(group.username, group.entries)
+  })).sort((a, b) => {
+    const aLatestSeasonMs = a.wins[0] ? Math.max(0, Number(a.wins[0].seasonWeekStartMs || 0)) : 0;
+    const bLatestSeasonMs = b.wins[0] ? Math.max(0, Number(b.wins[0].seasonWeekStartMs || 0)) : 0;
+    if (bLatestSeasonMs !== aLatestSeasonMs) return bLatestSeasonMs - aLatestSeasonMs;
+    const latestAddedDelta = Math.max(0, Number(b.latestEntry && b.latestEntry.addedAtMs || 0)) - Math.max(0, Number(a.latestEntry && a.latestEntry.addedAtMs || 0));
+    if (latestAddedDelta !== 0) return latestAddedDelta;
+    return a.username.localeCompare(b.username);
+  });
+}
+
+function renderGroupedChudWallActions(group, ownerCanManage) {
+  if (!ownerCanManage || !group || !Array.isArray(group.entries) || !group.entries.length) return '';
+  const buttons = group.entries
+    .slice()
+    .sort((a, b) => Math.max(0, Number(b.addedAtMs || 0)) - Math.max(0, Number(a.addedAtMs || 0)))
+    .map((entry) => {
+      const label = entry.source === 'weekly-winner' && entry.seasonWeekStartMs
+        ? `Remove ${formatCasinoSeasonLabel(entry.seasonWeekStartMs)}`
+        : group.entries.length > 1
+          ? `Remove ${formatChudWallEntryDate(entry)}`
+          : 'Remove';
+      return `<button type="button" onclick="removeChudWallEntry('${encodeURIComponent(entry.id)}')" style="padding:0.26rem 0.55rem; border:none; border-radius:0.45rem; background:#5d4037; color:#fff; font-size:0.72rem; font-weight:700; cursor:pointer;">${escapeHtml(label)}</button>`;
+    });
+  return `<div style="display:flex; gap:0.28rem; flex-wrap:wrap; justify-content:flex-end;">${buttons.join('')}</div>`;
+}
+
 function getCasinoSeasonSchedule(referenceMs = Date.now()) {
   const nowParts = getTimeZoneCalendarParts(referenceMs);
   const diffFromMonday = (nowParts.weekday + 7 - CASINO_SEASON_OPEN_WEEKDAY) % 7;
@@ -928,6 +1024,13 @@ function assertCasinoOpen(referenceMs = Date.now()) {
 
 function getCasinoWeekStartMs(referenceMs = Date.now()) {
   return getCasinoSeasonSchedule(referenceMs).currentWeekStartMs;
+}
+
+function normalizeCasinoSeasonWeekStartMs(value) {
+  const referenceMs = Math.max(0, Number(value || 0));
+  if (!referenceMs) return 0;
+  const schedule = getCasinoSeasonSchedule(referenceMs);
+  return schedule.isOpen ? schedule.currentWeekStartMs : schedule.lastCompletedWeekStartMs;
 }
 
 function getCasinoNextWeekStartMs(referenceMs = Date.now()) {
@@ -2355,6 +2458,10 @@ function canManageChudWall(username = currentChatUser) {
   return getUserRole(username) === 'owner';
 }
 
+function canManageStaffWall(username = currentChatUser) {
+  return getUserRole(username) === 'owner';
+}
+
 async function loadChudWall(force = false) {
   if (!force && chudWallCache && Array.isArray(chudWallCache.entries)) {
     return normalizeChudWallData(chudWallCache);
@@ -2377,6 +2484,28 @@ async function loadChudWall(force = false) {
   return chudWallLoadPromise;
 }
 
+async function loadStaffWall(force = false) {
+  if (!force && staffWallCache && Array.isArray(staffWallCache.entries)) {
+    return normalizeStaffWallData(staffWallCache);
+  }
+  if (!force && staffWallLoadPromise) return staffWallLoadPromise;
+  staffWallLoadPromise = (async () => {
+    try {
+      const doc = await getStaffWallDoc().get();
+      staffWallCache = normalizeStaffWallData(doc.exists ? (doc.data() || {}) : {});
+      if (!doc.exists) {
+        await getStaffWallDoc().set({ entries: [] }, { merge: true });
+      }
+    } catch (_) {
+      staffWallCache = normalizeStaffWallData({});
+    }
+    return normalizeStaffWallData(staffWallCache);
+  })().finally(() => {
+    staffWallLoadPromise = null;
+  });
+  return staffWallLoadPromise;
+}
+
 function listenForChudWall() {
   if (chudWallUnsub) return;
   try {
@@ -2391,6 +2520,157 @@ function listenForChudWall() {
       }
     });
   } catch (_) {}
+}
+
+function listenForStaffWall() {
+  if (staffWallUnsub) return;
+  try {
+    staffWallUnsub = getStaffWallDoc().onSnapshot((doc) => {
+      staffWallCache = normalizeStaffWallData(doc.exists ? (doc.data() || {}) : {});
+      if (document.getElementById('casino-leaderboard-modal')?.style.display === 'flex' && casinoLeaderboardModalMode === 'staff-wall') {
+        loadCasinoLeaderboard().catch(() => {});
+      }
+    });
+  } catch (_) {}
+}
+
+function isStaffWallRole(role) {
+  const normalizedRole = normalizeUsername(role);
+  return normalizedRole === 'owner'
+    || normalizedRole === 'hivise'
+    || normalizedRole === 'admin'
+    || normalizedRole === 'moderator'
+    || normalizedRole === 'trialmod'
+    || normalizedRole === 'reviewer';
+}
+
+const STAFF_WALL_ROLE_TAG_DEFAULT_COLOR = '#66bb6a';
+const STAFF_WALL_ROLE_TAG_ROLES = ['owner', 'hivise', 'admin', 'moderator', 'trialmod', 'reviewer'];
+
+function createDefaultStaffWallRoleTagColors(baseColor = STAFF_WALL_ROLE_TAG_DEFAULT_COLOR) {
+  const resolvedColor = normalizeRoleNameEffectColor(baseColor || STAFF_WALL_ROLE_TAG_DEFAULT_COLOR, STAFF_WALL_ROLE_TAG_DEFAULT_COLOR);
+  return STAFF_WALL_ROLE_TAG_ROLES.reduce((colors, role) => {
+    colors[role] = resolvedColor;
+    return colors;
+  }, {});
+}
+
+function normalizeStaffWallRoleTagColors(value, legacyColor = STAFF_WALL_ROLE_TAG_DEFAULT_COLOR) {
+  const defaults = createDefaultStaffWallRoleTagColors(legacyColor);
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return defaults;
+  }
+  STAFF_WALL_ROLE_TAG_ROLES.forEach((role) => {
+    defaults[role] = normalizeRoleNameEffectColor(value[role] || defaults[role], defaults[role]);
+  });
+  return defaults;
+}
+
+function getStaffWallRoleRank(role) {
+  const normalizedRole = normalizeUsername(role);
+  if (normalizedRole === 'owner') return 6;
+  if (normalizedRole === 'hivise') return 5;
+  if (normalizedRole === 'admin') return 4;
+  if (normalizedRole === 'moderator') return 3;
+  if (normalizedRole === 'trialmod') return 2;
+  if (normalizedRole === 'reviewer') return 1;
+  return 0;
+}
+
+function getStaffWallUsers() {
+  const usernames = new Set();
+  const excludedUsers = new Set(['kaide']);
+  OWNER_USERS.forEach((username) => usernames.add(normalizeUsername(username)));
+  ADMIN_USERS.forEach((username) => usernames.add(normalizeUsername(username)));
+  Object.keys(roleCache || {}).forEach((username) => usernames.add(normalizeUsername(username)));
+  return Array.from(usernames)
+    .filter((username) => {
+      if (!username) return false;
+      if (excludedUsers.has(username)) return false;
+      return isStaffWallRole(getUserRole(username));
+    })
+    .sort((a, b) => {
+      const roleDelta = getStaffWallRoleRank(getUserRole(b)) - getStaffWallRoleRank(getUserRole(a));
+      if (roleDelta !== 0) return roleDelta;
+      return a.localeCompare(b);
+    });
+}
+
+function getStaffWallEntryMeta(username, staffWall = staffWallCache) {
+  const key = normalizeUsername(username);
+  const entries = Array.isArray(staffWall && staffWall.entries) ? staffWall.entries : [];
+  return entries.find((entry) => entry.username === key) || null;
+}
+
+function getStaffWallTagsHtml(username) {
+  const ownerTagHtml = getOwnerTagHtml(username);
+  const tagKey = getUserProfileTagKey(username);
+  const tags = getAllProfileTags();
+  if (!tagKey || !tags[tagKey]) return ownerTagHtml;
+  const tagData = tags[tagKey];
+  const inlineStyle = tagData.isCustom
+    ? ` style="background:${escapeHtml(tagData.background)}; color:${escapeHtml(tagData.color)}; border-color:${escapeHtml(tagData.border)};"`
+    : '';
+  return `${ownerTagHtml}<span class="custom-tag ${tagData.className || ''}"${inlineStyle}>${escapeHtml(tagData.label)}</span>`;
+}
+
+function renderStaffWallEntry(username, role, note = '', options = {}) {
+  const encodedUser = encodeURIComponent(username);
+  const trimmedNote = sanitizeNullableText(note, '');
+  const ownerCanManage = !!options.ownerCanManage;
+  const roleLabel = getRoleDisplayName(role);
+  const bannerStyle = getCasinoLeaderboardBannerStyle(username);
+  const identityHtml = buildLeaderboardIdentityHtml(username, username, {
+    forceGoldPlate: role === 'owner' || role === 'hivise'
+  });
+  const roleTagStyle = getStaffWallRoleTagStyle(role);
+  return `<div class="leaderboard-entry leaderboard-entry-staff-wall">
+  <div class="leaderboard-entry-banner" style="${escapeHtml(bannerStyle)}"></div>
+  <div class="leaderboard-rank staff-wall-rank">•</div>
+  <div class="leaderboard-username" onclick="openUserProfileFromChat('${encodedUser}', event)"><span class="leaderboard-identity">${identityHtml}</span></div>
+  <div class="leaderboard-level staff-wall-role-pill"${roleTagStyle ? ` style="${roleTagStyle}"` : ''}>${escapeHtml(roleLabel)}</div>
+  <div class="leaderboard-points staff-wall-points">${trimmedNote ? `<div class="staff-wall-note-text">${escapeHtml(trimmedNote)}</div>` : ''}${ownerCanManage ? `<div class="staff-wall-inline-actions"><button type="button" onclick="promptEditStaffWallEntry('${encodedUser}')" class="staff-wall-edit-btn">${trimmedNote ? 'Edit Note' : 'Add Note'}</button></div>` : ''}</div>
+</div>`;
+}
+
+async function saveStaffWallEntryNote(username, note) {
+  const key = normalizeUsername(username);
+  if (!key) throw new Error('Choose a valid staff user.');
+  const current = await loadStaffWall(true);
+  const nextEntries = (current.entries || []).filter((entry) => entry.username !== key);
+  const safeNote = sanitizeNullableText(note, '').slice(0, 180);
+  if (safeNote) {
+    nextEntries.unshift({
+      username: key,
+      note: safeNote,
+      updatedAtMs: Date.now(),
+      updatedBy: currentChatUser || getUserName() || 'owner'
+    });
+  }
+  const normalized = normalizeStaffWallData({ entries: nextEntries });
+  await getStaffWallDoc().set({
+    entries: normalized.entries,
+    updatedAtMs: Date.now(),
+    updatedBy: currentChatUser || getUserName() || 'owner'
+  }, { merge: true });
+  staffWallCache = normalized;
+  return normalized;
+}
+
+async function promptEditStaffWallEntry(encodedUsername) {
+  if (!canManageStaffWall()) return;
+  const username = normalizeUsername(decodeURIComponent(encodedUsername || ''));
+  if (!username || !isStaffWallRole(getUserRole(username))) return;
+  const existing = getStaffWallEntryMeta(username, await loadStaffWall(true));
+  const nextNote = prompt(`Set the Staff Wall note for ${username}. Leave blank to clear it.`, existing ? existing.note : '');
+  if (nextNote === null) return;
+  try {
+    await saveStaffWallEntryNote(username, nextNote);
+    await writeAuditLog('edit_staff_wall', username, sanitizeNullableText(nextNote, '').trim() ? 'Updated staff wall note' : 'Cleared staff wall note');
+    await loadCasinoLeaderboard();
+  } catch (err) {
+    alert(err && err.message ? err.message : 'Could not update the Staff Wall note.');
+  }
 }
 
 async function appendChudWallEntry(entry = {}) {
@@ -2445,9 +2725,7 @@ async function resolveChudWallDisplayName(username) {
 
 function formatChudWallEntryMeta(entry) {
   if (entry.source === 'weekly-winner') {
-    return entry.recordedBalance > 0
-      ? `Weekly winner • $${entry.recordedBalance.toLocaleString()}`
-      : 'Weekly winner';
+    return 'Weekly winner';
   }
   return entry.note || 'Owner added';
 }
@@ -2516,6 +2794,9 @@ function getCasinoLeaderboardSubtitleText() {
   if (casinoLeaderboardModalMode === 'chud-wall') {
     return 'The Chud Wall stays empty until a weekly reset adds the money winner. Owners can manually add or remove names here.';
   }
+  if (casinoLeaderboardModalMode === 'staff-wall') {
+    return 'The Staff Wall shows the current staff roster.';
+  }
   return casinoLeaderboardView === 'drops'
     ? 'Each player is ranked by the highest-value case drop they have ever pulled.'
     : casinoLeaderboardView === 'inventory'
@@ -2524,7 +2805,8 @@ function getCasinoLeaderboardSubtitleText() {
 }
 
 function openCasinoLeaderboardModal(mode = 'casino') {
-  casinoLeaderboardModalMode = String(mode || '').trim().toLowerCase() === 'chud-wall' ? 'chud-wall' : 'casino';
+  const normalizedMode = String(mode || '').trim().toLowerCase();
+  casinoLeaderboardModalMode = normalizedMode === 'chud-wall' || normalizedMode === 'staff-wall' ? normalizedMode : 'casino';
   let modal = document.getElementById('casino-leaderboard-modal');
   if (!modal) {
     modal = document.createElement('div');
@@ -2558,15 +2840,17 @@ function openCasinoLeaderboardModal(mode = 'casino') {
     });
     document.body.appendChild(modal);
   }
-  if (casinoLeaderboardModalMode === 'chud-wall') {
+  if (casinoLeaderboardModalMode !== 'casino') {
     casinoLeaderboardView = 'balance';
   }
   modal.style.display = 'flex';
   syncCasinoModalOverflow();
   listenForCasinoSeasonState();
   listenForChudWall();
+  listenForStaffWall();
   loadCasinoSeasonState().catch(() => {});
   loadChudWall().catch(() => {});
+  loadStaffWall().catch(() => {});
   ensureCasinoWeeklyReset().catch(() => {});
   updateCasinoLeaderboardViewButtons();
   loadCasinoLeaderboard();
@@ -2580,6 +2864,10 @@ function closeCasinoLeaderboardModal() {
 
 function openChudWallModal() {
   openCasinoLeaderboardModal('chud-wall');
+}
+
+function openStaffWallModal() {
+  openCasinoLeaderboardModal('staff-wall');
 }
 
 function setCasinoLeaderboardView(view) {
@@ -2599,10 +2887,14 @@ function updateCasinoLeaderboardViewButtons() {
   const activeButtonStyle = { background: '#223041', color: '#fff', borderColor: 'rgba(104,138,179,0.5)' };
   const inactiveButtonStyle = { background: '#121a24', color: '#9fb0c2', borderColor: 'rgba(104,138,179,0.35)' };
   if (title) {
-    title.textContent = casinoLeaderboardModalMode === 'chud-wall' ? 'Chud Wall' : 'Casino Leaderboard';
+    title.textContent = casinoLeaderboardModalMode === 'chud-wall'
+      ? 'Chud Wall'
+      : casinoLeaderboardModalMode === 'staff-wall'
+        ? 'Staff Wall'
+        : 'Casino Leaderboard';
   }
   if (tabs) {
-    tabs.style.display = casinoLeaderboardModalMode === 'chud-wall' ? 'none' : 'flex';
+    tabs.style.display = casinoLeaderboardModalMode === 'casino' ? 'flex' : 'none';
   }
   if (balanceTab) {
     const style = casinoLeaderboardView === 'balance' ? activeButtonStyle : inactiveButtonStyle;
@@ -2990,6 +3282,41 @@ dynamicLeaderboardBannedUsersLoadPromise = (async () => {
 return dynamicLeaderboardBannedUsersLoadPromise;
 }
 
+async function loadLeaderboardApprovedUsers(force = false) {
+const nowMs = Date.now();
+if (!force && leaderboardApprovedUsersCache && (nowMs - leaderboardApprovedUsersCache.loadedAtMs) < DYNAMIC_LEADERBOARD_TAG_REFRESH_MIN_INTERVAL_MS) {
+  return leaderboardApprovedUsersCache.usernames;
+}
+if (!force && leaderboardApprovedUsersLoadPromise) return leaderboardApprovedUsersLoadPromise;
+leaderboardApprovedUsersLoadPromise = (async () => {
+  const usernames = new Set();
+  const addUser = (value) => {
+    const key = normalizeUsername(value);
+    if (key) usernames.add(key);
+  };
+  (loginRequestsCache || []).forEach((item) => {
+    if (normalizeReviewStatus(item && item.status) === 'approved') addUser(item && item.username);
+  });
+  (adminAccountManagerCache || []).forEach((entry) => addUser(entry && entry.username));
+  try {
+    const snapshot = await getAdminDb().collection(LOGIN_REQUESTS_COLLECTION).where('status', '==', 'approved').get();
+    snapshot.forEach((doc) => addUser(doc.id || ((doc.data() || {}).username)));
+  } catch (err) {
+    if (!usernames.size && leaderboardApprovedUsersCache) return leaderboardApprovedUsersCache.usernames;
+    if (!usernames.size) throw err;
+  }
+  const nextUsernames = Array.from(usernames).filter(Boolean).sort();
+  leaderboardApprovedUsersCache = {
+    usernames: nextUsernames,
+    loadedAtMs: Date.now()
+  };
+  return nextUsernames;
+})().finally(() => {
+  leaderboardApprovedUsersLoadPromise = null;
+});
+return leaderboardApprovedUsersLoadPromise;
+}
+
 async function loadCasinoLeaderboard() {
   const list = document.getElementById('casino-leaderboard-list');
   if (!list) return;
@@ -3004,18 +3331,39 @@ async function loadCasinoLeaderboard() {
         return;
       }
       const ownerCanManage = canManageChudWall();
-      list.innerHTML = chudWallEntries.map((entry, index) => renderCasinoLeaderboardEntry({
-        username: entry.username,
-        displayName: entry.displayName || entry.username,
+      const groupedEntries = buildGroupedChudWallEntries(chudWallEntries);
+      list.innerHTML = groupedEntries.map((group, index) => renderCasinoLeaderboardEntry({
+        username: group.username,
+        displayName: group.displayName || group.username,
         rank: index + 1,
-        levelMarkup: escapeHtml(formatChudWallEntryMeta(entry)),
-        pointsLabel: formatChudWallEntryDate(entry),
-        pointsSubLabel: entry.source === 'weekly-winner' ? 'Added by reset' : 'Manual entry',
-        actionsHtml: ownerCanManage ? `<button type="button" onclick="removeChudWallEntry('${encodeURIComponent(entry.id)}')" style="padding:0.26rem 0.55rem; border:none; border-radius:0.45rem; background:#5d4037; color:#fff; font-size:0.72rem; font-weight:700; cursor:pointer;">Remove</button>` : '',
+        levelMarkup: escapeHtml(group.wins.length > 1 ? `${group.wins.length} season wins` : formatChudWallEntryMeta(group.latestEntry)),
+        pointsLabel: group.wins.length
+          ? `Latest win ${formatChudWallEntryDate(group.wins[0])}`
+          : formatChudWallEntryDate(group.latestEntry),
+        pointsSubLabel: group.wins.length
+          ? `${group.wins.length} recorded season win${group.wins.length === 1 ? '' : 's'}`
+          : (group.latestEntry.source === 'weekly-winner' ? 'Added by reset' : 'Manual entry'),
+        actionsHtml: renderGroupedChudWallActions(group, ownerCanManage),
         forceGoldPlate: true,
         entryClassName: 'leaderboard-entry-chud-wall',
-        nameSupplementHtml: renderChudWallSeasonWinsMarkup(entry.username, chudWallEntries)
+        nameSupplementHtml: renderChudWallSeasonWinsMarkup(group.username, group.entries)
       })).join('');
+      return;
+    }
+    if (casinoLeaderboardModalMode === 'staff-wall') {
+      const staffWall = await loadStaffWall().catch(() => normalizeStaffWallData({}));
+      const staffUsers = getStaffWallUsers();
+      if (!staffUsers.length) {
+        list.innerHTML = '<div style="color:#8ea0bc;">No staff users are available yet.</div>';
+        return;
+      }
+      const ownerCanManage = canManageStaffWall();
+      list.innerHTML = `<div class="staff-wall-list">${staffUsers.map((username) => {
+        const role = getUserRole(username);
+        const meta = getStaffWallEntryMeta(username, staffWall);
+        const note = sanitizeNullableText(meta && meta.note, '');
+        return renderStaffWallEntry(username, role, note, { ownerCanManage });
+      }).join('')}</div>`;
       return;
     }
     await loadCasinoSeasonState().catch(() => {});
@@ -5909,6 +6257,8 @@ const AUDIT_LOG_COLLECTION = 'admin_audit_logs';
 const MESSAGE_REPORTS_COLLECTION = 'message_reports';
 const APPEALS_COLLECTION = 'ban_appeals';
 const MOD_APPLICATIONS_COLLECTION = 'mod_applications';
+const OWNER_NOTES_COLLECTION = 'admin_owner_notes';
+const MAINTENANCE_TASKS_COLLECTION = 'admin_maintenance_tasks';
 const DM_EDIT_WINDOW_MS = 60000;
 const MUTE_STATUS_REFRESH_MS = 1000;
 const OWNER_TAG_USERNAME = 'kaiden';
@@ -6239,6 +6589,8 @@ let dynamicLeaderboardStatsCache = null;
 let dynamicLeaderboardStatsLoadPromise = null;
 let dynamicLeaderboardBannedUsersCache = null;
 let dynamicLeaderboardBannedUsersLoadPromise = null;
+let leaderboardApprovedUsersCache = null;
+let leaderboardApprovedUsersLoadPromise = null;
 
 function getDynamicUserTagHtml(username) {
 const key = normalizeUsername(username);
@@ -6578,7 +6930,11 @@ const targetIds = [
 'admin-timeline-username',
 'admin-profile-cleanup-username',
 'admin-casino-rollback-username',
-'admin-reward-grant-username'
+'admin-reward-grant-username',
+'admin-permission-sim-username',
+'admin-export-username',
+'admin-owner-notes-username',
+'admin-maintenance-target-username'
 ];
 targetIds.forEach((id) => {
 const el = document.getElementById(id);
@@ -6601,6 +6957,40 @@ const selected = getSelectedAdminUser();
 const input = document.getElementById('admin-history-username');
 if (input) input.value = selected;
 if (selected) loadAdminUserHistory(selected);
+}
+
+function adminPermissionSimulatorUseSelectedUser() {
+const username = getSelectedAdminUser();
+const input = document.getElementById('admin-permission-sim-username');
+const roleSelect = document.getElementById('admin-permission-sim-role');
+if (input) input.value = username;
+if (roleSelect) roleSelect.value = '';
+if (username) renderAdminPermissionSimulator();
+}
+
+function adminExportUseSelectedUser() {
+const username = getSelectedAdminUser();
+const input = document.getElementById('admin-export-username');
+if (input) input.value = username;
+setAdminToolStatus('admin-export-status', username ? `Selected ${username} for export.` : 'Select a user first.', username ? 'success' : 'error');
+}
+
+function adminOwnerNotesUseSelectedUser() {
+const username = getSelectedAdminUser();
+const input = document.getElementById('admin-owner-notes-username');
+if (input) input.value = username;
+if (username) {
+loadAdminOwnerNotes(username);
+return;
+}
+setAdminToolStatus('admin-owner-notes-status', 'Select a user first.', 'error');
+}
+
+function adminMaintenanceUseSelectedUser() {
+const username = getSelectedAdminUser();
+const input = document.getElementById('admin-maintenance-target-username');
+if (input) input.value = username;
+setAdminToolStatus('admin-maintenance-status', username ? `Selected ${username} as the maintenance target.` : 'Select a user first.', username ? 'success' : 'error');
 }
 
 function setAdminToolStatus(nodeId, message = '', tone = 'neutral') {
@@ -6837,9 +7227,11 @@ migrateLegacyUserBansToFirestore().catch((err) => console.error('Legacy ban migr
 renderAdminProjectStatus();
 renderAdminCasinoFailoverState();
 renderAdminRolePermissions();
+renderAdminPermissionSimulator();
 updateAdminSectionVisibility();
 updateAdminOwnerToolState();
 renderAdminSlowModeBypassState();
+renderAdminStaffWallRoleTagColorState();
 renderAdminUserEffectManager();
 renderAdminCustomTagManager();
 syncAdminSectionCardStates();
@@ -6872,6 +7264,9 @@ loadAdminCasinoSeasonRepair();
 loadAdminCasinoRollbackTool();
 loadAdminRewardGrantTool();
 loadAdminUserTimeline();
+loadAdminOwnerNotes();
+loadAdminMaintenanceTasks();
+ensureAdminMaintenanceMonitor();
 loadAdminImpersonationVisibility();
 loadAdminCasinoGameSettings();
 document.getElementById('admin-menu').style.display = 'flex';
@@ -7875,6 +8270,7 @@ let adminArchiveMessagesCache = {};
 let adminAccountManagerCache = [];
 let adminAccountManagerWarnings = [];
 let adminRewardGrantCatalogCache = [];
+let adminMaintenanceTaskMonitorInterval = null;
 let activeRoomModerationId = '';
 let siteActivityUnsub = null;
 let siteActivityCache = [];
@@ -7901,6 +8297,9 @@ let casinoWeeklyResetCheckInterval = null;
 let chudWallCache = normalizeChudWallData({});
 let chudWallLoadPromise = null;
 let chudWallUnsub = null;
+let staffWallCache = normalizeStaffWallData({});
+let staffWallLoadPromise = null;
+let staffWallUnsub = null;
 let generalShopCache = [];
 let generalShopUnsub = null;
 let generalShopStatus = { message: '', tone: 'neutral' };
@@ -12220,6 +12619,7 @@ try {
       submittedAtMs: data.submittedAt && typeof data.submittedAt.toDate === 'function' ? data.submittedAt.toDate().getTime() : (data.submittedAtMs || 0)
     };
   });
+  leaderboardApprovedUsersCache = null;
   loginRequestsLoaded = true;
   updateReviewQueueBadges();
   renderLoginRequestQueue();
@@ -12289,6 +12689,7 @@ try {
           submittedAtMs: data.submittedAt && typeof data.submittedAt.toDate === 'function' ? data.submittedAt.toDate().getTime() : (data.submittedAtMs || 0)
         };
       });
+      leaderboardApprovedUsersCache = null;
       loginRequestsLoaded = true;
       updateReviewQueueBadges();
       renderLoginRequestQueue();
@@ -12999,6 +13400,7 @@ try {
       };
     })
     .sort((a, b) => a.username.localeCompare(b.username));
+  leaderboardApprovedUsersCache = null;
   adminAccountManagerWarnings = [loginResult.warning, statsResult.warning, activityResult.warning].filter(Boolean);
   renderAdminAccountManager();
 } catch (err) {
@@ -17102,8 +17504,57 @@ try {
 return normalizedKey;
 }
 
+function getLocalCasinoTargetOverrideKey() {
+try {
+  const rawValue = localStorage.getItem(ACTIVE_CASINO_TARGET_OVERRIDE_STORAGE_KEY);
+  if (rawValue !== PRIMARY_CASINO_TARGET && rawValue !== BACKUP_CASINO_TARGET) return '';
+  return normalizeCasinoTargetKey(rawValue);
+} catch (_) {
+  return '';
+}
+}
+
+function setLocalCasinoTargetOverrideKey(targetKey) {
+const normalizedKey = normalizeCasinoTargetKey(targetKey);
+try {
+  localStorage.setItem(ACTIVE_CASINO_TARGET_OVERRIDE_STORAGE_KEY, normalizedKey);
+} catch (_) {}
+return normalizedKey;
+}
+
+function clearLocalCasinoTargetOverrideKey() {
+try {
+  localStorage.removeItem(ACTIVE_CASINO_TARGET_OVERRIDE_STORAGE_KEY);
+} catch (_) {}
+}
+
+function getSharedCasinoTargetKey() {
+return sharedCasinoTargetHydrated
+  ? normalizeCasinoTargetKey(sharedCasinoTargetKey)
+  : getStoredCasinoTargetKey();
+}
+
+function applySharedCasinoTarget(targetKey, options = {}) {
+const normalizedKey = normalizeCasinoTargetKey(targetKey);
+const previousKey = getSharedCasinoTargetKey();
+sharedCasinoTargetKey = normalizedKey;
+sharedCasinoTargetHydrated = true;
+setStoredCasinoTargetKey(normalizedKey);
+const changed = previousKey !== normalizedKey;
+if (changed && options.clearLocalOverride !== false) clearLocalCasinoTargetOverrideKey();
+if (typeof renderAdminCasinoFailoverState === 'function') renderAdminCasinoFailoverState();
+if (typeof renderAdminProjectStatus === 'function') renderAdminProjectStatus();
+if (changed && options.reload) scheduleCasinoFailoverReload();
+return normalizedKey;
+}
+
+function getPreferredCasinoTargetKey() {
+const localOverrideKey = getLocalCasinoTargetOverrideKey();
+return localOverrideKey || getSharedCasinoTargetKey();
+}
+
 function getActiveCasinoAppDefinition() {
-const preferredDefinition = getCasinoAppDefinition(getStoredCasinoTargetKey());
+const preferredDefinition = getCasinoAppDefinition(getPreferredCasinoTargetKey());
 if (isFirebaseConfigReady(preferredDefinition.config)) return preferredDefinition;
 const fallbackDefinition = getCasinoAppDefinition(
   preferredDefinition.key === PRIMARY_CASINO_TARGET ? BACKUP_CASINO_TARGET : PRIMARY_CASINO_TARGET
@@ -17147,7 +17598,7 @@ const activeDefinition = getActiveCasinoAppDefinition();
 if (activeDefinition.key === BACKUP_CASINO_TARGET) return false;
 const backupDefinition = getCasinoAppDefinition(BACKUP_CASINO_TARGET);
 if (!isFirebaseConfigReady(backupDefinition.config)) return false;
-setStoredCasinoTargetKey(BACKUP_CASINO_TARGET);
+setLocalCasinoTargetOverrideKey(BACKUP_CASINO_TARGET);
 console.warn('Casino quota reached, switching to backup Firebase project.', error);
 if (typeof renderAdminCasinoFailoverState === 'function') renderAdminCasinoFailoverState();
 if (typeof renderAdminProjectStatus === 'function') renderAdminProjectStatus();
@@ -17167,7 +17618,7 @@ let db = getCasinoDbForTarget(activeDefinition.key);
 if (!db) {
   const fallbackDefinition = getCasinoAppDefinition(getInactiveCasinoTargetKey());
   db = getCasinoDbForTarget(fallbackDefinition.key);
-  if (db) setStoredCasinoTargetKey(fallbackDefinition.key);
+  if (db) setLocalCasinoTargetOverrideKey(fallbackDefinition.key);
 }
 return db || getPrimaryDb();
 }
@@ -17177,7 +17628,12 @@ return getActiveCasinoAppDefinition().key;
 };
 
 window.setActiveCasinoTarget = function(targetKey, reload = false) {
-const nextKey = setStoredCasinoTargetKey(targetKey);
+const nextKey = normalizeCasinoTargetKey(targetKey);
+if (nextKey === getSharedCasinoTargetKey()) {
+  clearLocalCasinoTargetOverrideKey();
+} else {
+  setLocalCasinoTargetOverrideKey(nextKey);
+}
 if (typeof renderAdminCasinoFailoverState === 'function') renderAdminCasinoFailoverState();
 if (typeof renderAdminProjectStatus === 'function') renderAdminProjectStatus();
 if (reload) scheduleCasinoFailoverReload();
@@ -17248,7 +17704,9 @@ const adminReady = isFirebaseConfigReady(adminFirebaseConfig);
 const archiveReady = isFirebaseConfigReady(archiveFirebaseConfig);
 const casinoPrimaryReady = isFirebaseConfigReady(casinoFirebaseConfig);
 const casinoBackupReady = isFirebaseConfigReady(casinoBackupFirebaseConfig);
+const sharedCasinoDefinition = getCasinoAppDefinition(getSharedCasinoTargetKey());
 const activeCasinoDefinition = getActiveCasinoAppDefinition();
+const localCasinoOverrideKey = getLocalCasinoTargetOverrideKey();
 
 el.innerHTML = [
 `<div><strong>Main Chat Project:</strong> ${mainReady ? firebaseConfig.projectId : 'Not configured'}</div>`,
@@ -17257,7 +17715,8 @@ el.innerHTML = [
 `<div><strong>Archive Project:</strong> ${archiveReady ? archiveFirebaseConfig.projectId : 'Not configured'}${archiveReady ? '' : ' (archive backup disabled)'}</div>`,
 `<div><strong>Casino Primary:</strong> ${casinoPrimaryReady ? casinoFirebaseConfig.projectId : 'Not configured'}</div>`,
 `<div><strong>Casino Backup:</strong> ${casinoBackupReady ? casinoBackupFirebaseConfig.projectId : 'Not configured'}${casinoBackupReady ? '' : ' (backup failover disabled)'}</div>`,
-`<div><strong>Live Casino Target:</strong> ${activeCasinoDefinition.key === BACKUP_CASINO_TARGET ? 'Backup' : 'Primary'}${activeCasinoDefinition.config && activeCasinoDefinition.config.projectId ? ` (${escapeHtml(activeCasinoDefinition.config.projectId)})` : ''}</div>`
+`<div><strong>Shared Live Casino Target:</strong> ${sharedCasinoDefinition.key === BACKUP_CASINO_TARGET ? 'Backup' : 'Primary'}${sharedCasinoDefinition.config && sharedCasinoDefinition.config.projectId ? ` (${escapeHtml(sharedCasinoDefinition.config.projectId)})` : ''}</div>`,
+`<div><strong>This Browser Target:</strong> ${activeCasinoDefinition.key === BACKUP_CASINO_TARGET ? 'Backup' : 'Primary'}${activeCasinoDefinition.config && activeCasinoDefinition.config.projectId ? ` (${escapeHtml(activeCasinoDefinition.config.projectId)})` : ''}${localCasinoOverrideKey ? ' via local override' : ''}</div>`
 ].join('');
 }
 
@@ -17285,23 +17744,26 @@ const summaryNode = document.getElementById('admin-casino-failover-summary');
 if (!summaryNode) return;
 const primaryReady = isFirebaseConfigReady(casinoFirebaseConfig);
 const backupReady = isFirebaseConfigReady(casinoBackupFirebaseConfig);
+const sharedDefinition = getCasinoAppDefinition(getSharedCasinoTargetKey());
 const activeDefinition = getActiveCasinoAppDefinition();
+const localOverrideKey = getLocalCasinoTargetOverrideKey();
 const primaryButton = document.getElementById('admin-casino-primary-btn');
 const backupButton = document.getElementById('admin-casino-backup-btn');
 const syncButton = document.getElementById('admin-casino-sync-btn');
 const syncPrimaryButton = document.getElementById('admin-casino-sync-primary-btn');
 const returnPrimaryButton = document.getElementById('admin-casino-return-primary-btn');
 summaryNode.innerHTML = [
-  `<div><strong>Active:</strong> ${activeDefinition.key === BACKUP_CASINO_TARGET ? 'Backup' : 'Primary'}${activeDefinition.config && activeDefinition.config.projectId ? ` (${escapeHtml(activeDefinition.config.projectId)})` : ''}</div>`,
+  `<div><strong>Shared Live Target:</strong> ${sharedDefinition.key === BACKUP_CASINO_TARGET ? 'Backup' : 'Primary'}${sharedDefinition.config && sharedDefinition.config.projectId ? ` (${escapeHtml(sharedDefinition.config.projectId)})` : ''}</div>`,
+  `<div><strong>This Browser:</strong> ${activeDefinition.key === BACKUP_CASINO_TARGET ? 'Backup' : 'Primary'}${activeDefinition.config && activeDefinition.config.projectId ? ` (${escapeHtml(activeDefinition.config.projectId)})` : ''}${localOverrideKey ? ' via local override' : ''}</div>`,
   `<div><strong>Primary Project:</strong> ${primaryReady ? escapeHtml(casinoFirebaseConfig.projectId) : 'Not configured'}</div>`,
   `<div><strong>Backup Project:</strong> ${backupReady ? escapeHtml(casinoBackupFirebaseConfig.projectId) : 'Not configured'}</div>`,
   `<div><strong>Sync Paths:</strong> Primary to backup for standby refresh, or backup to primary before moving live traffic back.</div>`
 ].join('');
-if (primaryButton) primaryButton.disabled = !primaryReady || activeDefinition.key === PRIMARY_CASINO_TARGET;
-if (backupButton) backupButton.disabled = !backupReady || activeDefinition.key === BACKUP_CASINO_TARGET;
+if (primaryButton) primaryButton.disabled = !primaryReady || sharedDefinition.key === PRIMARY_CASINO_TARGET;
+if (backupButton) backupButton.disabled = !backupReady || sharedDefinition.key === BACKUP_CASINO_TARGET;
 if (syncButton) syncButton.disabled = !primaryReady || !backupReady;
 if (syncPrimaryButton) syncPrimaryButton.disabled = !primaryReady || !backupReady;
-if (returnPrimaryButton) returnPrimaryButton.disabled = !primaryReady || !backupReady || activeDefinition.key === PRIMARY_CASINO_TARGET;
+if (returnPrimaryButton) returnPrimaryButton.disabled = !primaryReady || !backupReady || sharedDefinition.key === PRIMARY_CASINO_TARGET;
 }
 
 function setAdminCasinoFailoverButtonsDisabled(disabled) {
@@ -17408,6 +17870,21 @@ const targetProjectId = getCasinoProjectIdForTarget(result.targetKey);
 return `${verb}. Copied ${result.totalUpserts} document${result.totalUpserts === 1 ? '' : 's'} from ${sourceProjectId} to ${targetProjectId} and removed ${result.totalDeletions} stale document${result.totalDeletions === 1 ? '' : 's'}.`;
 }
 
+async function saveSharedCasinoTargetSetting(targetKey) {
+if (normalizeUsername(getUserRole(currentChatUser)) !== 'owner') {
+  throw new Error('Only the owner can switch the shared live casino target.');
+}
+const normalizedKey = normalizeCasinoTargetKey(targetKey);
+await getAdminDb().collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).set({
+  liveCasinoTarget: normalizedKey,
+  liveCasinoTargetUpdatedBy: currentChatUser || '',
+  liveCasinoTargetUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  updatedBy: currentChatUser || '',
+  updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+return normalizedKey;
+}
+
 window.adminSetCasinoTarget = async function(targetKey) {
 if (normalizeUsername(getUserRole(currentChatUser)) !== 'owner') {
   setAdminCasinoFailoverStatus('Only the owner can switch the live casino target.', 'error');
@@ -17419,8 +17896,18 @@ if (!isFirebaseConfigReady(definition.config)) {
   setAdminCasinoFailoverStatus(`${normalizedKey === BACKUP_CASINO_TARGET ? 'Backup' : 'Primary'} casino project is not configured.`, 'error');
   return;
 }
-setAdminCasinoFailoverStatus(`Switching live casino to ${normalizedKey} and reloading...`, 'neutral');
-window.setActiveCasinoTarget(normalizedKey, true);
+setAdminCasinoFailoverButtonsDisabled(true);
+setAdminCasinoFailoverStatus(`Switching the shared live casino to ${normalizedKey}...`, 'neutral');
+try {
+  await saveSharedCasinoTargetSetting(normalizedKey);
+  applySharedCasinoTarget(normalizedKey);
+  setAdminCasinoFailoverStatus(`Shared live casino switched to ${normalizedKey}. Reloading clients...`, 'success');
+  scheduleCasinoFailoverReload();
+} catch (err) {
+  console.error('Failed to switch shared live casino target:', err);
+  setAdminCasinoFailoverStatus(err && err.message ? err.message : 'Failed to switch the live casino target.', 'error');
+  setAdminCasinoFailoverButtonsDisabled(false);
+}
 };
 
 window.adminSyncCasinoBackup = async function() {
@@ -17474,8 +17961,8 @@ if (normalizeUsername(getUserRole(currentChatUser)) !== 'owner') {
   setAdminCasinoFailoverStatus('Only the owner can move the live casino back to primary.', 'error');
   return;
 }
-const activeDefinition = getActiveCasinoAppDefinition();
-if (activeDefinition.key === PRIMARY_CASINO_TARGET) {
+const sharedDefinition = getCasinoAppDefinition(getSharedCasinoTargetKey());
+if (sharedDefinition.key === PRIMARY_CASINO_TARGET) {
   setAdminCasinoFailoverStatus('Primary is already the live casino target.', 'neutral');
   return;
 }
@@ -17487,7 +17974,9 @@ try {
     }
   });
   setAdminCasinoFailoverStatus(`${formatCasinoSyncResultMessage(result, 'Primary cutback sync finished')} Switching live casino to primary...`, 'success');
-  window.setActiveCasinoTarget(PRIMARY_CASINO_TARGET, true);
+  await saveSharedCasinoTargetSetting(PRIMARY_CASINO_TARGET);
+  applySharedCasinoTarget(PRIMARY_CASINO_TARGET);
+  scheduleCasinoFailoverReload();
 } catch (err) {
   console.error('Failed to move live casino back to primary:', err);
   setAdminCasinoFailoverStatus(err && err.message ? err.message : 'Failed to move the live casino back to primary.', 'error');
@@ -17566,6 +18055,7 @@ announcementText: '',
 announcementEndsAt: null,
 slowModeSeconds: DEFAULT_SLOW_MODE_SECONDS,
 adminBypassSlowMode: DEFAULT_ADMIN_BYPASS_SLOW_MODE,
+staffWallRoleTagColors: createDefaultStaffWallRoleTagColors(),
 customProfileTags: [],
 rolePermissions: JSON.parse(JSON.stringify(DEFAULT_ROLE_PERMISSIONS))
 };
@@ -18645,6 +19135,87 @@ status.textContent = enabled
 }
 }
 
+function getStaffWallRoleTagColor(role) {
+const normalizedRole = normalizeUsername(role);
+const colors = normalizeStaffWallRoleTagColors(moderationSettings.staffWallRoleTagColors, STAFF_WALL_ROLE_TAG_DEFAULT_COLOR);
+return colors[normalizedRole] || colors.owner || STAFF_WALL_ROLE_TAG_DEFAULT_COLOR;
+}
+
+function getStaffWallRoleTagStyle(role) {
+const color = getStaffWallRoleTagColor(role);
+if (color === STAFF_WALL_ROLE_TAG_DEFAULT_COLOR) return '';
+const darker = adjustRoleNameEffectColor(color, -28);
+return `background:linear-gradient(135deg, ${color} 0%, ${darker} 100%); color:#fff;`;
+}
+
+function collectAdminStaffWallRoleTagColors() {
+const colors = normalizeStaffWallRoleTagColors(moderationSettings.staffWallRoleTagColors, STAFF_WALL_ROLE_TAG_DEFAULT_COLOR);
+const inputs = document.querySelectorAll('#admin-staff-wall-role-tag-controls input[data-staff-wall-role-tag-role]');
+inputs.forEach((input) => {
+  const role = normalizeUsername(input.getAttribute('data-staff-wall-role-tag-role'));
+  if (!role) return;
+  colors[role] = normalizeRoleNameEffectColor(input.value || colors[role], colors[role]);
+});
+return colors;
+}
+
+function renderAdminStaffWallRoleTagColorPreview(colors = null) {
+const preview = document.getElementById('admin-staff-wall-role-tag-preview');
+if (!preview) return;
+const resolvedColors = normalizeStaffWallRoleTagColors(colors || collectAdminStaffWallRoleTagColors(), STAFF_WALL_ROLE_TAG_DEFAULT_COLOR);
+preview.innerHTML = STAFF_WALL_ROLE_TAG_ROLES.map((role) => {
+  const color = resolvedColors[role] || STAFF_WALL_ROLE_TAG_DEFAULT_COLOR;
+  const appliedStyle = color === STAFF_WALL_ROLE_TAG_DEFAULT_COLOR
+    ? ''
+    : `background:linear-gradient(135deg, ${color} 0%, ${adjustRoleNameEffectColor(color, -28)} 100%); color:#fff;`;
+  return `<span class="leaderboard-level staff-wall-role-pill"${appliedStyle ? ` style="${appliedStyle}"` : ''}>${escapeHtml(getRoleDisplayName(role))}</span>`;
+}).join('');
+}
+
+function renderAdminStaffWallRoleTagColorState() {
+const controls = document.getElementById('admin-staff-wall-role-tag-controls');
+const status = document.getElementById('admin-staff-wall-role-tag-status');
+const colors = normalizeStaffWallRoleTagColors(moderationSettings.staffWallRoleTagColors, STAFF_WALL_ROLE_TAG_DEFAULT_COLOR);
+const isOwner = getUserRole(currentChatUser) === 'owner';
+if (controls) {
+  controls.innerHTML = STAFF_WALL_ROLE_TAG_ROLES.map((role) => {
+    const color = colors[role] || STAFF_WALL_ROLE_TAG_DEFAULT_COLOR;
+    const disabledAttr = isOwner ? '' : ' disabled';
+    return `<label class="admin-staff-wall-role-tag-control${isOwner ? '' : ' is-disabled'}"><span>${escapeHtml(getRoleDisplayName(role))}</span><input type="color" value="${escapeHtml(color)}" data-staff-wall-role-tag-role="${escapeHtml(role)}" oninput="renderAdminStaffWallRoleTagColorPreview()"${disabledAttr} /></label>`;
+  }).join('');
+}
+renderAdminStaffWallRoleTagColorPreview(colors);
+if (status) {
+  status.textContent = isOwner
+    ? 'Change each Staff Wall role tag color here.'
+    : 'Owner can change each Staff Wall role tag color.';
+}
+}
+
+async function adminSaveStaffWallRoleTagColor() {
+if (getUserRole(currentChatUser) !== 'owner') return;
+const controls = document.getElementById('admin-staff-wall-role-tag-controls');
+if (!controls) return;
+const colors = collectAdminStaffWallRoleTagColors();
+try {
+  const db = getAdminDb();
+  await db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).set({
+    staffWallRoleTagColors: colors,
+    updatedBy: currentChatUser,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+  moderationSettings.staffWallRoleTagColors = colors;
+  renderAdminStaffWallRoleTagColorState();
+  if (document.getElementById('casino-leaderboard-modal')?.style.display === 'flex' && casinoLeaderboardModalMode === 'staff-wall') {
+    loadCasinoLeaderboard().catch(() => {});
+  }
+  await writeAuditLog('set_staff_wall_role_tag_colors', 'staff_wall', 'Updated Staff Wall role tag colors');
+} catch (err) {
+  const statusDiv = document.getElementById('admin-staff-wall-role-tag-status');
+  if (statusDiv) statusDiv.textContent = 'Failed to save the Staff Wall role tag colors.';
+}
+}
+
 async function writeAuditLog(action, target = '', details = '') {
 try {
 const db = getAdminDb();
@@ -18741,6 +19312,198 @@ const store = getArchiveStatsRecoveryStore();
 if (!Object.prototype.hasOwnProperty.call(store, key)) return;
 delete store[key];
 saveArchiveStatsRecoveryStore(store);
+}
+
+function countUserReactionUsesInMessageData(data, userKey) {
+const normalizedUserKey = normalizeUsername(userKey);
+if (!normalizedUserKey || !data || typeof data !== 'object') return 0;
+let count = 0;
+const reactions = data.reactions && typeof data.reactions === 'object' ? data.reactions : {};
+Object.values(reactions).forEach((users) => {
+  if (!Array.isArray(users)) return;
+  if (users.some((entry) => normalizeUsername(entry) === normalizedUserKey)) count += 1;
+});
+const reactionImages = Array.isArray(data.reactionImages) ? data.reactionImages : [];
+reactionImages.forEach((entry) => {
+  const users = Array.isArray(entry && entry.users) ? entry.users : [];
+  if (users.some((value) => normalizeUsername(value) === normalizedUserKey)) count += 1;
+});
+return count;
+}
+
+async function getUserAccountStartMs(userKey, adminDb = getAdminDb()) {
+const normalizedUserKey = normalizeUsername(userKey);
+if (!normalizedUserKey) return 0;
+try {
+  const accountDoc = await adminDb.collection(LOGIN_REQUESTS_COLLECTION).doc(normalizedUserKey).get();
+  if (!accountDoc.exists) return 0;
+  const accountData = accountDoc.data() || {};
+  return Number(accountData.createdAtMs)
+    || getTimestampMs(accountData.createdAt)
+    || getTimestampMs(accountData.approvedAt)
+    || Number(accountData.approvedAtMs)
+    || getTimestampMs(accountData.submittedAt)
+    || Number(accountData.submittedAtMs)
+    || 0;
+} catch (_) {
+  return 0;
+}
+}
+
+async function collectLiveUserChatStats(userKey, accountStartMs = 0, db = getPrimaryDb()) {
+const normalizedUserKey = normalizeUsername(userKey);
+const snapshot = await db.collection('site_messages').get();
+let messageCount = 0;
+let mediaCount = 0;
+let totalMessageCount = 0;
+let totalMediaCount = 0;
+let reactionCount = 0;
+const liveMessageIds = new Set();
+
+snapshot.forEach((doc) => {
+  const data = doc.data() || {};
+  const timestampMs = getTimestampMs(data.timestamp);
+  const author = normalizeUsername(data.authoredBy || data.profileUser || data.user || '');
+  if (timestampMs && (!accountStartMs || timestampMs >= accountStartMs)) {
+    reactionCount += countUserReactionUsesInMessageData(data, normalizedUserKey);
+  }
+  if (!author || author !== normalizedUserKey || data.system) return;
+  liveMessageIds.add(String(doc.id || ''));
+  const hasMedia = !!(data.imageData || data.gifUrl || data.type === 'gif');
+  const hasTextMessage = !!sanitizeNullableText(data.message, '');
+  if (hasTextMessage && !hasMedia) {
+    totalMessageCount += 1;
+  }
+  if (hasMedia) {
+    totalMediaCount += 1;
+  }
+  if (accountStartMs && timestampMs && timestampMs < accountStartMs) return;
+  if (hasTextMessage && !hasMedia) {
+    messageCount += 1;
+  }
+  if (hasMedia) {
+    mediaCount += 1;
+  }
+});
+
+if (totalMessageCount > messageCount && (messageCount <= 1 || totalMessageCount >= messageCount * 2)) {
+  messageCount = totalMessageCount;
+  mediaCount = totalMediaCount;
+}
+
+return {
+  messageCount,
+  mediaCount,
+  reactionCount,
+  liveMessageIds
+};
+}
+
+async function getRecoveredGameLaunchCountForUser(userKey, accountStartMs = 0) {
+const normalizedUserKey = normalizeUsername(userKey);
+if (!normalizedUserKey) return 0;
+let recoveredCount = 0;
+try {
+  const snapshot = await getAdminDb().collection(SITE_ACTIVITY_COLLECTION).where('by', '==', normalizedUserKey).get();
+  snapshot.forEach((doc) => {
+    const data = doc.data() || {};
+    if (sanitizeNullableText(data.type, '') !== 'game_launch') return;
+    const atMs = Number(data.atMs) || getTimestampMs(data.createdAt) || 0;
+    if (accountStartMs && atMs && atMs < accountStartMs) return;
+    recoveredCount += 1;
+  });
+} catch (_) {}
+if (normalizedUserKey === getStatsUserKey()) {
+  const localGameCount = Object.values(getGameOpenCounts()).reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0);
+  recoveredCount = Math.max(recoveredCount, localGameCount);
+}
+return recoveredCount;
+}
+
+async function repairUserPointsStats(userKey, options = {}) {
+const normalizedUserKey = normalizeUsername(userKey);
+if (!normalizedUserKey) return null;
+
+const forceArchiveRefresh = !!options.forceArchiveRefresh;
+const usernameCandidates = Array.isArray(options.usernameCandidates) ? options.usernameCandidates : [];
+const db = getPrimaryDb();
+const adminDb = getAdminDb();
+const store = getStatsStore();
+let firestoreStats = {};
+
+try {
+  const fsDoc = await db.collection(USER_STATS_COLLECTION).doc(normalizedUserKey).get();
+  if (fsDoc.exists) firestoreStats = fsDoc.data() || {};
+} catch (_) {}
+
+const existingStats = mergeUserStats(store[normalizedUserKey] || {}, firestoreStats);
+const accountStartMs = await getUserAccountStartMs(normalizedUserKey, adminDb);
+const liveStats = await collectLiveUserChatStats(normalizedUserKey, accountStartMs, db);
+
+if (forceArchiveRefresh) {
+  clearArchiveRecoveryCacheEntry(normalizedUserKey);
+}
+
+const recoveryStore = getArchiveStatsRecoveryStore();
+let archivedMessageCount = Math.max(0, Number(recoveryStore[normalizedUserKey] && recoveryStore[normalizedUserKey].messagesSent) || 0);
+let archivedMediaCount = Math.max(0, Number(recoveryStore[normalizedUserKey] && recoveryStore[normalizedUserKey].mediaShared) || 0);
+if (!recoveryStore[normalizedUserKey]) {
+  try {
+    const archiveStats = await getArchivedMessageStatsForUser(
+      normalizedUserKey,
+      usernameCandidates[0] || normalizedUserKey,
+      accountStartMs,
+      liveStats.liveMessageIds
+    );
+    if (archiveStats.recovered) {
+      archivedMessageCount = Math.max(0, Number(archiveStats.messagesSent) || 0);
+      archivedMediaCount = Math.max(0, Number(archiveStats.mediaShared) || 0);
+      recoveryStore[normalizedUserKey] = {
+        recoveredAtMs: Date.now(),
+        messagesSent: archivedMessageCount,
+        mediaShared: archivedMediaCount
+      };
+      saveArchiveStatsRecoveryStore(recoveryStore);
+    }
+  } catch (archiveErr) {
+    console.error('Failed to recover archived message stats:', archiveErr);
+  }
+}
+
+const recoveredGameLaunchCount = await getRecoveredGameLaunchCountForUser(normalizedUserKey, accountStartMs);
+const repairedStats = mergeUserStats(existingStats, {
+  gamesOpened: recoveredGameLaunchCount,
+  messagesSent: liveStats.messageCount + archivedMessageCount,
+  mediaShared: liveStats.mediaCount + archivedMediaCount,
+  reactionsUsed: liveStats.reactionCount
+});
+
+const changed = ['gamesOpened', 'messagesSent', 'mediaShared', 'reactionsUsed'].some((field) => (existingStats[field] || 0) !== (repairedStats[field] || 0));
+store[normalizedUserKey] = repairedStats;
+saveStatsStore(store);
+pushUserStatsToFirestore(normalizedUserKey, repairedStats);
+
+const notes = [];
+if (!recoveredGameLaunchCount && !(existingStats.gamesOpened || 0)) {
+  notes.push('game opens only repair from retained activity history');
+}
+if (!liveStats.reactionCount && !(existingStats.reactionsUsed || 0)) {
+  notes.push('reaction history cannot be fully rebuilt after old stat loss');
+}
+
+return {
+  userKey: normalizedUserKey,
+  stats: repairedStats,
+  changed,
+  archiveRecovered: archivedMessageCount > 0 || archivedMediaCount > 0,
+  archivedMessageCount,
+  archivedMediaCount,
+  liveMessageCount: liveStats.messageCount,
+  liveMediaCount: liveStats.mediaCount,
+  liveReactionCount: liveStats.reactionCount,
+  recoveredGameLaunchCount,
+  notes
+};
 }
 
 async function getArchivedMessageStatsForUser(userKey, currentUsername = '', accountStartMs = 0, liveMessageIds = new Set()) {
@@ -19995,6 +20758,11 @@ if (role) next[normalizeUsername(doc.id)] = role;
 });
 roleCache = next;
 updateAdminMenuButtonVisibility();
+renderAdminPermissionSimulator();
+ensureAdminMaintenanceMonitor();
+if (document.getElementById('casino-leaderboard-modal')?.style.display === 'flex' && casinoLeaderboardModalMode === 'staff-wall') {
+  loadCasinoLeaderboard().catch(() => {});
+}
 renderProfileModal(currentProfileViewUser || getStatsUserKey());
 applyReadOnlyUiState();
 updateChatSendAsUi();
@@ -20173,6 +20941,10 @@ try {
 const db = getAdminDb();
 db.collection('chat_meta').doc(MOD_SETTINGS_DOC_ID).onSnapshot(doc => {
 const data = doc.exists ? (doc.data() || {}) : {};
+applySharedCasinoTarget(data.liveCasinoTarget, {
+  clearLocalOverride: sharedCasinoTargetHydrated,
+  reload: sharedCasinoTargetHydrated
+});
 moderationSettings.readOnlyMode = !!data.readOnlyMode;
 moderationSettings.blockedWords = parseBlockedWords(data.blockedWords || []);
 moderationSettings.announcementText = data.announcementText ? String(data.announcementText).trim() : '';
@@ -20213,15 +20985,20 @@ DEFAULT_SLOW_MODE_SECONDS
 moderationSettings.adminBypassSlowMode = data.adminBypassSlowMode !== undefined
 ? !!data.adminBypassSlowMode
 : DEFAULT_ADMIN_BYPASS_SLOW_MODE;
+moderationSettings.staffWallRoleTagColors = normalizeStaffWallRoleTagColors(data.staffWallRoleTagColors, data.staffWallRoleTagColor || STAFF_WALL_ROLE_TAG_DEFAULT_COLOR);
 moderationSettings.customProfileTags = normalizeCustomProfileTagDefinitions(data.customProfileTags);
 moderationSettings.rolePermissions = normalizeRolePermissions(data.rolePermissions);
 markSlowModeFromSettings();
 renderAdminRolePermissions();
 renderAdminSlowModeBypassState();
+renderAdminStaffWallRoleTagColorState();
 renderAdminCustomTagManager();
 refreshTagDependentUi();
 renderAnnouncementBanner();
 applyReadOnlyUiState();
+if (document.getElementById('casino-leaderboard-modal')?.style.display === 'flex' && casinoLeaderboardModalMode === 'staff-wall') {
+  loadCasinoLeaderboard().catch(() => {});
+}
 });
 } catch (err) {
 console.error('Failed to load moderation settings:', err);
@@ -20963,21 +21740,82 @@ alert('Failed to update admin slow mode bypass.');
 }
 
 // === ROLE PERMISSIONS ADMIN ===
+const ADMIN_PERMISSION_ROLES = ['owner', 'hivise', 'admin', 'mod', 'moderator', 'trialmod', 'reviewer', 'helper', 'chud', 'cameronsbitch', 'member'];
+const ADMIN_PERMISSION_KEYS = ['ban', 'mute', 'kick', 'warn', 'tempBan', 'manageSettings', 'assignRoles', 'manageRolePermissions', 'deleteMessage', 'reviewSubmissions', 'manageLoginRequests', 'viewReports', 'viewUserHistory', 'viewUserTimeline', 'viewArchives', 'manageAccounts', 'manageProfileCleanup', 'manageCasino', 'manageSeasonRepair', 'manageCasinoRollback', 'manageRewardGrants', 'manageProfileBackgrounds', 'manageGeneralShop', 'manageGameBios', 'manageLeaderboard', 'useOwnerTool', 'viewAppeals', 'viewAuditLog', 'viewAnalytics', 'manageRooms', 'manageLiveRooms', 'viewImpersonation', 'manageCustomTags'];
+const ADMIN_PERMISSION_LABELS = { ban: 'Ban', mute: 'Mute', kick: 'Kick', warn: 'Warn', tempBan: 'Temp Ban', manageSettings: 'Core Settings', assignRoles: 'Assign Roles', manageRolePermissions: 'Role Perms', deleteMessage: 'Delete Msg', reviewSubmissions: 'Game/Case Reviews', manageLoginRequests: 'Login Requests', viewReports: 'Message Reports', viewUserHistory: 'User History', viewUserTimeline: 'Moderation Timeline', viewArchives: 'Archived Chats', manageAccounts: 'Accounts', manageProfileCleanup: 'Profile Cleanup', manageCasino: 'Casino Controls', manageSeasonRepair: 'Season Repair', manageCasinoRollback: 'Casino Rollback', manageRewardGrants: 'Reward Grants', manageProfileBackgrounds: 'Profile BG Shop', manageGeneralShop: 'General Shop', manageGameBios: 'Game Bios', manageLeaderboard: 'Reset Leaderboard', useOwnerTool: 'Owner Tool', viewAppeals: 'Appeals', viewAuditLog: 'Audit Log', viewAnalytics: 'Analytics', manageRooms: 'Rooms', manageLiveRooms: 'Live Rooms', viewImpersonation: 'Impersonation', manageCustomTags: 'Custom Tags' };
+
+function getAdminPermissionSimulatorRole() {
+const usernameInput = document.getElementById('admin-permission-sim-username');
+const roleSelect = document.getElementById('admin-permission-sim-role');
+const username = normalizeUsername(usernameInput ? usernameInput.value : '');
+const selectedRole = normalizeUsername(roleSelect ? roleSelect.value : '');
+if (selectedRole) {
+return {
+  role: selectedRole,
+  username,
+  source: 'role'
+};
+}
+return {
+  role: username ? getUserRole(username) : 'member',
+  username,
+  source: username ? 'user' : 'default'
+};
+}
+
+function renderAdminPermissionSimulator() {
+const container = document.getElementById('admin-permission-sim-results');
+if (!container) return;
+if (!canUseAdminPermission('manageRolePermissions')) {
+container.textContent = 'Insufficient permissions.';
+return;
+}
+const simulation = getAdminPermissionSimulatorRole();
+const role = simulation.role || 'member';
+const allowed = ADMIN_PERMISSION_KEYS.filter((perm) => roleHasPermission(role, perm));
+const blocked = ADMIN_PERMISSION_KEYS.filter((perm) => !roleHasPermission(role, perm));
+const usernameText = simulation.username ? `<div style="color:#dce7f5; font-size:0.8rem;">User: <strong>${escapeHtml(simulation.username)}</strong></div>` : '';
+const sourceText = simulation.source === 'role'
+  ? `Simulating the ${getRoleDisplayName(role)} role directly.`
+  : simulation.source === 'user'
+    ? `Resolved from the current role assigned to ${simulation.username}.`
+    : 'No username or role selected, using the default member permissions.';
+  const allowedHtml = allowed.length
+    ? allowed.map((perm) => `<span style="padding:0.22rem 0.45rem; border-radius:999px; background:#163b1e; border:1px solid #2a6f37; color:#b9f6ca; font-size:0.74rem;">${escapeHtml(ADMIN_PERMISSION_LABELS[perm] || perm)}</span>`).join('')
+    : '<span style="color:#7d8a96; font-size:0.78rem;">No allowed permissions.</span>';
+  const blockedHtml = blocked.length
+    ? blocked.slice(0, 12).map((perm) => `<span style="padding:0.22rem 0.45rem; border-radius:999px; background:#311919; border:1px solid #6c2c2c; color:#ffccbc; font-size:0.74rem;">${escapeHtml(ADMIN_PERMISSION_LABELS[perm] || perm)}</span>`).join('')
+    : '<span style="color:#7d8a96; font-size:0.78rem;">Nothing blocked.</span>';
+container.innerHTML = `
+<div style="display:grid; gap:0.55rem;">
+<div style="padding:0.55rem; background:#151515; border:1px solid #2f2f2f; border-radius:0.4rem; display:grid; gap:0.2rem;">
+<div style="display:flex; justify-content:space-between; gap:0.6rem; flex-wrap:wrap; align-items:center;"><div style="color:#90caf9; font-weight:700;">Effective role: ${escapeHtml(getRoleDisplayName(role))}</div><div style="color:#8aa0b5; font-size:0.76rem;">Allowed ${allowed.length}/${ADMIN_PERMISSION_KEYS.length}</div></div>
+${usernameText}
+<div style="color:#9fb0c2; font-size:0.78rem;">${escapeHtml(sourceText)}</div>
+</div>
+<div>
+<div style="color:#9fe3a5; font-size:0.76rem; font-weight:700; margin-bottom:0.25rem;">Allowed</div>
+<div style="display:flex; flex-wrap:wrap; gap:0.35rem;">${allowedHtml}</div>
+</div>
+<div>
+<div style="color:#ffb4a8; font-size:0.76rem; font-weight:700; margin-bottom:0.25rem;">Blocked</div>
+<div style="display:flex; flex-wrap:wrap; gap:0.35rem;">${blockedHtml}</div>
+</div>
+</div>`;
+}
+
 function renderAdminRolePermissions() {
 const container = document.getElementById('admin-role-permissions');
 if (!container) return;
-const roles = ['owner', 'hivise', 'admin', 'mod', 'moderator', 'trialmod', 'reviewer', 'helper', 'chud', 'cameronsbitch', 'member'];
-const permissions = ['ban', 'mute', 'kick', 'warn', 'tempBan', 'manageSettings', 'assignRoles', 'manageRolePermissions', 'deleteMessage', 'reviewSubmissions', 'manageLoginRequests', 'viewReports', 'viewUserHistory', 'viewUserTimeline', 'viewArchives', 'manageAccounts', 'manageProfileCleanup', 'manageCasino', 'manageSeasonRepair', 'manageCasinoRollback', 'manageRewardGrants', 'manageProfileBackgrounds', 'manageGeneralShop', 'manageGameBios', 'manageLeaderboard', 'useOwnerTool', 'viewAppeals', 'viewAuditLog', 'viewAnalytics', 'manageRooms', 'manageLiveRooms', 'viewImpersonation', 'manageCustomTags'];
-const permLabels = { ban: 'Ban', mute: 'Mute', kick: 'Kick', warn: 'Warn', tempBan: 'Temp Ban', manageSettings: 'Core Settings', assignRoles: 'Assign Roles', manageRolePermissions: 'Role Perms', deleteMessage: 'Delete Msg', reviewSubmissions: 'Game/Case Reviews', manageLoginRequests: 'Login Requests', viewReports: 'Message Reports', viewUserHistory: 'User History', viewUserTimeline: 'User Timeline', viewArchives: 'Archived Chats', manageAccounts: 'Accounts', manageProfileCleanup: 'Profile Cleanup', manageCasino: 'Casino Controls', manageSeasonRepair: 'Season Repair', manageCasinoRollback: 'Casino Rollback', manageRewardGrants: 'Reward Grants', manageProfileBackgrounds: 'Profile BG Shop', manageGeneralShop: 'General Shop', manageGameBios: 'Game Bios', manageLeaderboard: 'Reset Leaderboard', useOwnerTool: 'Owner Tool', viewAppeals: 'Appeals', viewAuditLog: 'Audit Log', viewAnalytics: 'Analytics', manageRooms: 'Rooms', manageLiveRooms: 'Live Rooms', viewImpersonation: 'Impersonation', manageCustomTags: 'Custom Tags' };
 const perms = moderationSettings.rolePermissions || DEFAULT_ROLE_PERMISSIONS;
-container.innerHTML = roles.map(role => {
+container.innerHTML = ADMIN_PERMISSION_ROLES.map(role => {
 const isOwner = role === 'owner';
 return `<div style="margin-bottom:0.5rem;">
 <div style="font-weight:bold; color:#90caf9; margin-bottom:0.2rem;">${escapeHtml(getRoleDisplayName(role))}</div>
-<div style="display:flex; flex-wrap:wrap; gap:0.4rem;">${permissions.map(perm => {
+<div style="display:flex; flex-wrap:wrap; gap:0.4rem;">${ADMIN_PERMISSION_KEYS.map(perm => {
 const checked = isOwner ? true : (perms[role] ? !!perms[role][perm] : false);
 const dis = isOwner ? 'disabled' : '';
-return `<label style="font-size:0.78rem; color:#ddd; display:flex; align-items:center; gap:0.2rem; cursor:pointer;"><input type="checkbox" class="role-perm-check" data-role="${role}" data-perm="${perm}" ${checked ? 'checked' : ''} ${dis} style="cursor:pointer;" />${permLabels[perm]}</label>`;
+return `<label style="font-size:0.78rem; color:#ddd; display:flex; align-items:center; gap:0.2rem; cursor:pointer;"><input type="checkbox" class="role-perm-check" data-role="${role}" data-perm="${perm}" ${checked ? 'checked' : ''} ${dis} style="cursor:pointer;" />${ADMIN_PERMISSION_LABELS[perm]}</label>`;
 }).join('')}</div>
 </div>`;
 }).join('');
@@ -21234,6 +22072,211 @@ container.textContent = 'Failed to load analytics.';
 }
 }
 
+function toSerializableAdminExportValue(value) {
+if (value == null) return value ?? null;
+if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value.toISOString();
+if (value && typeof value.toDate === 'function') {
+  const date = value.toDate();
+  return date instanceof Date && !Number.isNaN(date.getTime()) ? date.toISOString() : null;
+}
+if (Array.isArray(value)) return value.map((item) => toSerializableAdminExportValue(item));
+if (typeof value === 'object') {
+  const next = {};
+  Object.keys(value).forEach((key) => {
+    next[key] = toSerializableAdminExportValue(value[key]);
+  });
+  return next;
+}
+return value;
+}
+
+function downloadAdminExportFile(filename, contents) {
+const blob = new Blob([contents], { type: 'application/json;charset=utf-8' });
+const objectUrl = URL.createObjectURL(blob);
+const link = document.createElement('a');
+link.href = objectUrl;
+link.download = filename;
+document.body.appendChild(link);
+link.click();
+document.body.removeChild(link);
+setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+}
+
+function renderAdminExportPreview(bundle) {
+const container = document.getElementById('admin-export-preview');
+if (!container) return;
+if (!bundle) {
+container.innerHTML = '<div class="submission-empty">No export generated yet.</div>';
+return;
+}
+container.innerHTML = `
+<div style="display:grid; gap:0.45rem;">
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:0.45rem;">
+<div style="padding:0.45rem; background:#151515; border:1px solid #2f2f2f; border-radius:0.35rem;"><div style="color:#92a4b8; font-size:0.72rem;">Role</div><div style="color:#f5f7fa; font-weight:700; margin-top:0.12rem;">${escapeHtml(getRoleDisplayName(bundle.role || 'member'))}</div></div>
+<div style="padding:0.45rem; background:#151515; border:1px solid #2f2f2f; border-radius:0.35rem;"><div style="color:#92a4b8; font-size:0.72rem;">Recent Messages</div><div style="color:#f5f7fa; font-weight:700; margin-top:0.12rem;">${escapeHtml(String((bundle.recentMessages || []).length))}</div></div>
+<div style="padding:0.45rem; background:#151515; border:1px solid #2f2f2f; border-radius:0.35rem;"><div style="color:#92a4b8; font-size:0.72rem;">Reports</div><div style="color:#f5f7fa; font-weight:700; margin-top:0.12rem;">${escapeHtml(String(((bundle.reportsAbout || []).length + (bundle.reportsBy || []).length)))}</div></div>
+<div style="padding:0.45rem; background:#151515; border:1px solid #2f2f2f; border-radius:0.35rem;"><div style="color:#92a4b8; font-size:0.72rem;">Audit Entries</div><div style="color:#f5f7fa; font-weight:700; margin-top:0.12rem;">${escapeHtml(String((bundle.auditEntries || []).length))}</div></div>
+</div>
+<div style="color:#9fb0c2; font-size:0.78rem;">Includes account, profile, stats, moderation docs, owner notes, recent reports, appeals, audit entries, and recent messages.</div>
+</div>`;
+}
+
+async function buildAdminUserExportBundle(username) {
+const key = normalizeUsername(username);
+if (!key) throw new Error('Enter a username to export.');
+const db = getAdminDb();
+const primaryDb = getPrimaryDb();
+const [
+  loginDoc,
+  profileDoc,
+  flagsDoc,
+  warningsDoc,
+  strikesDoc,
+  timedBanDoc,
+  muteDoc,
+  activityDoc,
+  ownerNotesDoc,
+  stats,
+  reportsSnapshot,
+  appealsSnapshot,
+  auditSnapshot,
+  messagesSnapshot
+] = await Promise.all([
+  db.collection(LOGIN_REQUESTS_COLLECTION).doc(key).get(),
+  db.collection(USER_PROFILES_COLLECTION).doc(key).get(),
+  db.collection(USER_FLAGS_COLLECTION).doc(key).get(),
+  db.collection(USER_WARNINGS_COLLECTION).doc(key).get(),
+  db.collection(USER_STRIKES_COLLECTION).doc(key).get(),
+  db.collection(TIMED_BANS_COLLECTION).doc(key).get(),
+  db.collection('muted_users').doc(key).get(),
+  db.collection(USER_ACTIVITY_COLLECTION).doc(key).get(),
+  db.collection(OWNER_NOTES_COLLECTION).doc(key).get(),
+  fetchStatsFromFirestore(key),
+  db.collection(MESSAGE_REPORTS_COLLECTION).orderBy('reportedAt', 'desc').limit(180).get(),
+  db.collection(APPEALS_COLLECTION).orderBy('submittedAt', 'desc').limit(100).get(),
+  db.collection(AUDIT_LOG_COLLECTION).orderBy('at', 'desc').limit(240).get(),
+  primaryDb.collection('site_messages').orderBy('timestamp', 'desc').limit(400).get()
+]);
+const reports = reportsSnapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() || {}) }));
+const appeals = appealsSnapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() || {}) }));
+const auditEntries = auditSnapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() || {}) }));
+const recentMessages = messagesSnapshot.docs
+  .map((doc) => ({ id: doc.id, ...(doc.data() || {}) }))
+  .filter((item) => normalizeUsername(item.user || item.authoredBy || item.profileUser || '') === key || normalizeUsername(item.impersonatedUser || '') === key)
+  .slice(0, 40);
+return {
+  exportedAt: new Date().toISOString(),
+  exportedBy: currentChatUser || '',
+  username: key,
+  role: getUserRole(key),
+  account: loginDoc.exists ? { id: loginDoc.id, ...(loginDoc.data() || {}) } : null,
+  profile: profileDoc.exists ? { id: profileDoc.id, ...(profileDoc.data() || {}) } : null,
+  flags: flagsDoc.exists ? { id: flagsDoc.id, ...(flagsDoc.data() || {}) } : null,
+  warnings: warningsDoc.exists ? { id: warningsDoc.id, ...(warningsDoc.data() || {}) } : null,
+  strikes: strikesDoc.exists ? { id: strikesDoc.id, ...(strikesDoc.data() || {}) } : null,
+  timedBan: timedBanDoc.exists ? { id: timedBanDoc.id, ...(timedBanDoc.data() || {}) } : null,
+  mute: muteDoc.exists ? { id: muteDoc.id, ...(muteDoc.data() || {}) } : null,
+  activity: activityDoc.exists ? { id: activityDoc.id, ...(activityDoc.data() || {}) } : null,
+  ownerNote: ownerNotesDoc.exists ? { id: ownerNotesDoc.id, ...(ownerNotesDoc.data() || {}) } : null,
+  stats,
+  reportsAbout: reports.filter((item) => normalizeUsername(item.reportedUser || '') === key).slice(0, 24),
+  reportsBy: reports.filter((item) => normalizeUsername(item.reportedBy || '') === key).slice(0, 24),
+  appeals: appeals.filter((item) => normalizeUsername(item.username || '') === key).slice(0, 16),
+  auditEntries: auditEntries.filter((item) => normalizeUsername(item.target || '') === key || normalizeUsername(item.by || '') === key).slice(0, 40),
+  recentMessages
+};
+}
+
+async function adminExportSelectedUserData() {
+if (!canUseAdminPermission('manageAccounts')) return;
+const username = normalizeUsername(resolveAdminTargetUsername('admin-export-username'));
+if (!username) {
+setAdminToolStatus('admin-export-status', 'Enter a username to export.', 'error');
+return;
+}
+setAdminToolStatus('admin-export-status', `Preparing export for ${username}...`, 'neutral');
+try {
+const bundle = await buildAdminUserExportBundle(username);
+const safeName = username.replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '') || 'user';
+const json = JSON.stringify(toSerializableAdminExportValue(bundle), null, 2);
+downloadAdminExportFile(`${safeName}-admin-export.json`, json);
+renderAdminExportPreview(bundle);
+setAdminToolStatus('admin-export-status', `Exported ${username} as JSON.`, 'success');
+await writeAuditLog('export_user_data', username, 'Admin user data export downloaded');
+} catch (err) {
+console.error('Failed to export admin user data:', err);
+setAdminToolStatus('admin-export-status', err && err.message ? err.message : 'Failed to export user data.', 'error');
+}
+}
+
+async function loadAdminOwnerNotes(targetUsername = '') {
+const input = document.getElementById('admin-owner-notes-username');
+const textarea = document.getElementById('admin-owner-notes-text');
+if (!input || !textarea) return;
+if (getUserRole(currentChatUser) !== 'owner') {
+textarea.value = '';
+setAdminToolStatus('admin-owner-notes-status', 'Insufficient permissions.', 'error');
+return;
+}
+const username = normalizeUsername(targetUsername || input.value || getSelectedAdminUser());
+if (!username) {
+textarea.value = '';
+setAdminToolStatus('admin-owner-notes-status', 'Enter a username to load owner notes.', 'neutral');
+return;
+}
+input.value = username;
+textarea.value = 'Loading owner notes...';
+try {
+const db = getAdminDb();
+const doc = await db.collection(OWNER_NOTES_COLLECTION).doc(username).get();
+const data = doc.exists ? (doc.data() || {}) : {};
+const note = sanitizeNullableText(data.note, '');
+textarea.value = note;
+const updatedAtMs = getTimestampMs(data.updatedAt);
+const updatedText = updatedAtMs ? new Date(updatedAtMs).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'never';
+setAdminToolStatus('admin-owner-notes-status', doc.exists ? `Loaded owner note for ${username}. Updated ${updatedText}.` : `No owner note saved for ${username}.`, doc.exists ? 'success' : 'neutral');
+} catch (err) {
+console.error('Failed to load owner notes:', err);
+textarea.value = '';
+setAdminToolStatus('admin-owner-notes-status', 'Failed to load owner notes.', 'error');
+}
+}
+
+async function saveAdminOwnerNotes() {
+if (getUserRole(currentChatUser) !== 'owner') return;
+const input = document.getElementById('admin-owner-notes-username');
+const textarea = document.getElementById('admin-owner-notes-text');
+if (!input || !textarea) return;
+const username = normalizeUsername(input.value);
+if (!username) {
+setAdminToolStatus('admin-owner-notes-status', 'Enter a username to save owner notes.', 'error');
+return;
+}
+const note = sanitizeNullableText(textarea.value, '').slice(0, 4000);
+setAdminToolStatus('admin-owner-notes-status', note ? `Saving owner note for ${username}...` : `Clearing owner note for ${username}...`, 'neutral');
+try {
+const db = getAdminDb();
+if (note) {
+  await db.collection(OWNER_NOTES_COLLECTION).doc(username).set({
+    username,
+    note,
+    updatedBy: currentChatUser,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+} else {
+  await db.collection(OWNER_NOTES_COLLECTION).doc(username).delete();
+}
+setAdminToolStatus('admin-owner-notes-status', note ? `Saved owner note for ${username}.` : `Cleared owner note for ${username}.`, 'success');
+await writeAuditLog(note ? 'save_owner_note' : 'clear_owner_note', username, note ? 'Owner note updated' : 'Owner note cleared');
+if (normalizeUsername((document.getElementById('admin-history-username') || {}).value || '') === username) {
+  loadAdminUserHistory(username);
+}
+} catch (err) {
+console.error('Failed to save owner note:', err);
+setAdminToolStatus('admin-owner-notes-status', 'Failed to save owner note.', 'error');
+}
+}
+
 async function loadAdminUserHistory(targetUsername = '') {
 const container = document.getElementById('admin-user-history');
 if (!container) return;
@@ -21260,6 +22303,7 @@ auditSnapshot,
 warningsDoc,
 strikesDoc,
 flagsDoc,
+ownerNoteDoc,
 stats,
 muteInfo,
 timedBanInfo
@@ -21271,6 +22315,7 @@ db.collection(AUDIT_LOG_COLLECTION).orderBy('at', 'desc').limit(160).get(),
 db.collection(USER_WARNINGS_COLLECTION).doc(username).get(),
 db.collection(USER_STRIKES_COLLECTION).doc(username).get(),
 db.collection(USER_FLAGS_COLLECTION).doc(username).get(),
+db.collection(OWNER_NOTES_COLLECTION).doc(username).get(),
 fetchStatsFromFirestore(username),
 getActiveMuteInfo(username),
 getActiveTimedBan(username)
@@ -21306,6 +22351,8 @@ const strikeCount = parseInt(strikeData.count, 10) || 0;
 const trusted = !!flagData.trusted;
 const offender = !!flagData.offender;
 const adminNote = sanitizeNullableText(flagData.note, '');
+const ownerNoteData = ownerNoteDoc.exists ? (ownerNoteDoc.data() || {}) : {};
+const ownerNote = sanitizeNullableText(ownerNoteData.note, '');
 const tagKey = getUserProfileTagKey(username);
 const tagDefinition = tagKey ? getAllProfileTags()[tagKey] : null;
 const tagLabel = tagDefinition ? tagDefinition.label : '';
@@ -21331,7 +22378,8 @@ container.innerHTML = `
   <div style="font-size:0.78rem; color:#9fb0c2; max-width:22rem;">Upload an image to chat.</div>
 <div style="margin-top:0.18rem; color:#bbb;">Mute: ${escapeHtml(muteLabel)}</div>
 <div style="margin-top:0.18rem; color:#bbb;">Temp ban: ${escapeHtml(tempBanLabel)}</div>
-${adminNote ? `<div style="margin-top:0.3rem; color:#ddd;">Note: ${escapeHtml(adminNote.slice(0, 180))}</div>` : ''}
+${adminNote ? `<div style="margin-top:0.3rem; color:#ddd;">Flag note: ${escapeHtml(adminNote.slice(0, 180))}</div>` : ''}
+${ownerNote ? `<div style="margin-top:0.3rem; color:#fff3cd;">Owner note: ${escapeHtml(ownerNote.slice(0, 220))}</div>` : ''}
 </div>
 <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
 <button onclick="openUserProfileFromChat('${encodeURIComponent(username)}', event)" style="padding:0.3rem 0.6rem; background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Profile</button>
@@ -21392,14 +22440,18 @@ container.textContent = 'Loading timeline...';
 try {
 const db = getAdminDb();
 const primaryDb = getPrimaryDb();
-const [messagesSnapshot, reportsSnapshot, appealsSnapshot, auditSnapshot, activityDoc, warningsDoc, strikesDoc] = await Promise.all([
+const [messagesSnapshot, reportsSnapshot, appealsSnapshot, auditSnapshot, activityDoc, warningsDoc, strikesDoc, flagsDoc, mutedDoc, kickedDoc, timedBanDoc] = await Promise.all([
   primaryDb.collection('site_messages').orderBy('timestamp', 'desc').limit(320).get(),
   db.collection(MESSAGE_REPORTS_COLLECTION).orderBy('reportedAt', 'desc').limit(180).get(),
   db.collection(APPEALS_COLLECTION).orderBy('submittedAt', 'desc').limit(80).get(),
   db.collection(AUDIT_LOG_COLLECTION).orderBy('at', 'desc').limit(220).get(),
   db.collection(USER_ACTIVITY_COLLECTION).doc(username).get(),
   db.collection(USER_WARNINGS_COLLECTION).doc(username).get(),
-  db.collection(USER_STRIKES_COLLECTION).doc(username).get()
+  db.collection(USER_STRIKES_COLLECTION).doc(username).get(),
+  db.collection(USER_FLAGS_COLLECTION).doc(username).get(),
+  db.collection('muted_users').doc(username).get(),
+  db.collection('kicked_users').doc(username).get(),
+  db.collection(TIMED_BANS_COLLECTION).doc(username).get()
 ]);
 const events = [];
 messagesSnapshot.forEach((doc) => {
@@ -21469,6 +22521,15 @@ if (activityUpdatedAtMs) {
 }
 const warningData = warningsDoc.exists ? (warningsDoc.data() || {}) : {};
 const strikeData = strikesDoc.exists ? (strikesDoc.data() || {}) : {};
+const flagData = flagsDoc.exists ? (flagsDoc.data() || {}) : {};
+(Array.isArray(flagData.history) ? flagData.history : []).slice(-10).forEach((entry) => {
+  events.push({
+    timeMs: entry && entry.at ? Date.parse(entry.at) : 0,
+    tone: '#c5e1a5',
+    label: 'Flag update',
+    detail: `${sanitizeNullableText(entry && entry.label, 'Flag changed')} • ${sanitizeNullableText(entry && entry.by, 'system')}`
+  });
+});
 (Array.isArray(warningData.history) ? warningData.history : []).slice(-12).forEach((entry) => {
   events.push({
     timeMs: entry && entry.at ? Date.parse(entry.at) : 0,
@@ -21485,9 +22546,38 @@ const strikeData = strikesDoc.exists ? (strikesDoc.data() || {}) : {};
     detail: `${sanitizeNullableText(entry && entry.reason, 'Rule violation')} • ${sanitizeNullableText(entry && entry.by, 'system')}`
   });
 });
+if (mutedDoc.exists) {
+  const muteData = mutedDoc.data() || {};
+  const expiresAtMs = getTimestampMs(muteData.expiresAt);
+  events.push({
+    timeMs: getTimestampMs(muteData.updatedAt) || getTimestampMs(muteData.timestamp) || expiresAtMs,
+    tone: '#ffcc80',
+    label: muteData.muted === false ? 'Unmuted' : 'Mute',
+    detail: `${sanitizeNullableText(muteData.reason, muteData.muted === false ? 'Mute cleared' : 'Muted')} • by ${sanitizeNullableText(muteData.mutedBy || muteData.updatedBy, 'system')}${expiresAtMs ? ` • expires ${new Date(expiresAtMs).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` : ''}`
+  });
+}
+if (kickedDoc.exists) {
+  const kickData = kickedDoc.data() || {};
+  events.push({
+    timeMs: getTimestampMs(kickData.timestamp) || getTimestampMs(kickData.updatedAt),
+    tone: '#f48fb1',
+    label: 'Kick',
+    detail: `Kicked by ${sanitizeNullableText(kickData.kickedBy || kickData.updatedBy, 'system')}`
+  });
+}
+if (timedBanDoc.exists) {
+  const banData = timedBanDoc.data() || {};
+  const expiresAtMs = getTimestampMs(banData.expiresAt);
+  events.push({
+    timeMs: getTimestampMs(banData.updatedAt) || getTimestampMs(banData.timestamp) || expiresAtMs,
+    tone: '#ef9a9a',
+    label: 'Temp ban',
+    detail: `${sanitizeNullableText(banData.reason, 'Temporary ban')} • by ${sanitizeNullableText(banData.bannedBy || banData.updatedBy, 'system')}${expiresAtMs ? ` • expires ${new Date(expiresAtMs).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` : ''}`
+  });
+}
 const sorted = events.sort((a, b) => Math.max(0, b.timeMs || 0) - Math.max(0, a.timeMs || 0)).slice(0, 40);
 if (!sorted.length) {
-  container.innerHTML = '<div class="submission-empty">No timeline events found in the recent admin data.</div>';
+  container.innerHTML = '<div class="submission-empty">No moderation timeline events found in the recent admin data.</div>';
   return;
 }
 container.innerHTML = sorted.map((event) => {
@@ -21495,7 +22585,7 @@ container.innerHTML = sorted.map((event) => {
   return `<div style="padding:0.5rem 0; border-bottom:1px solid #2a2a2a; display:grid; gap:0.2rem;"><div style="display:flex; justify-content:space-between; gap:0.6rem; align-items:center;"><span style="color:${escapeHtml(event.tone || '#90caf9')}; font-weight:700; font-size:0.8rem;">${escapeHtml(event.label || 'Event')}</span><span style="color:#75808b; font-size:0.72rem;">${escapeHtml(timeText)}</span></div><div style="color:#d7e1eb; font-size:0.8rem; white-space:normal; word-break:break-word;">${escapeHtml(event.detail || '')}</div></div>`;
   }).join('');
 } catch (err) {
-container.textContent = 'Failed to load the user timeline.';
+container.textContent = 'Failed to load the moderation timeline.';
 }
 }
 
@@ -21504,6 +22594,327 @@ const username = getSelectedAdminUser();
 const input = document.getElementById('admin-timeline-username');
 if (input) input.value = username;
 if (username) loadAdminUserTimeline(username);
+}
+
+const ADMIN_MAINTENANCE_ACTIONS = {
+repair_user_points: {
+  label: 'Repair User Points',
+  tone: '#90caf9',
+  requiresTarget: true
+},
+sync_primary_to_backup: {
+  label: 'Sync Primary To Backup',
+  tone: '#80cbc4',
+  requiresTarget: false
+},
+sync_backup_to_primary: {
+  label: 'Sync Backup To Primary',
+  tone: '#ffcc80',
+  requiresTarget: false
+},
+refresh_dynamic_tags: {
+  label: 'Refresh Leaderboard Tags',
+  tone: '#ce93d8',
+  requiresTarget: false
+}
+};
+
+function getAdminMaintenanceActionDefinition(action) {
+return ADMIN_MAINTENANCE_ACTIONS[action] || {
+  label: sanitizeNullableText(action, 'Unknown task'),
+  tone: '#90caf9',
+  requiresTarget: false
+};
+}
+
+function normalizeAdminMaintenanceTaskData(data = {}, id = '') {
+return {
+  id,
+  action: sanitizeNullableText(data.action, ''),
+  targetUsername: normalizeUsername(data.targetUsername || ''),
+  notes: sanitizeNullableText(data.notes, ''),
+  status: sanitizeNullableText(data.status, 'pending'),
+  createdBy: normalizeUsername(data.createdBy || ''),
+  runningBy: normalizeUsername(data.runningBy || ''),
+  completedBy: normalizeUsername(data.completedBy || ''),
+  resultSummary: sanitizeNullableText(data.resultSummary, ''),
+  errorMessage: sanitizeNullableText(data.errorMessage, ''),
+  scheduledForMs: getTimestampMs(data.scheduledForAt),
+  createdAtMs: getTimestampMs(data.createdAt),
+  runningAtMs: getTimestampMs(data.runningAt),
+  completedAtMs: getTimestampMs(data.completedAt)
+};
+}
+
+function formatAdminMaintenanceTaskTime(timeMs) {
+if (!timeMs) return 'No time set';
+return new Date(timeMs).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function renderAdminMaintenanceTasks(tasks = []) {
+const container = document.getElementById('admin-maintenance-list');
+if (!container) return;
+if (getUserRole(currentChatUser) !== 'owner') {
+container.textContent = 'Insufficient permissions.';
+return;
+}
+if (!tasks.length) {
+container.innerHTML = '<div class="submission-empty">No scheduled maintenance tasks yet.</div>';
+return;
+}
+container.innerHTML = tasks.map((task) => {
+  const definition = getAdminMaintenanceActionDefinition(task.action);
+  const statusColor = task.status === 'completed'
+    ? '#9fe3a5'
+    : task.status === 'failed'
+      ? '#ffb4a8'
+      : task.status === 'running'
+        ? '#ffecb3'
+        : task.status === 'cancelled'
+          ? '#b0bec5'
+          : '#90caf9';
+  const targetText = task.targetUsername ? ` • ${task.targetUsername}` : '';
+  const resultText = task.errorMessage || task.resultSummary;
+  const canRun = task.status === 'pending';
+  const canCancel = task.status === 'pending' || task.status === 'running';
+  return `<div style="padding:0.55rem; background:#151515; border:1px solid #2f2f2f; border-radius:0.4rem; margin-bottom:0.45rem; display:grid; gap:0.35rem;">
+<div style="display:flex; justify-content:space-between; gap:0.6rem; flex-wrap:wrap; align-items:center;"><div style="color:${escapeHtml(definition.tone)}; font-weight:700;">${escapeHtml(definition.label)}${escapeHtml(targetText)}</div><div style="color:${escapeHtml(statusColor)}; font-size:0.76rem; text-transform:uppercase; letter-spacing:0.05em;">${escapeHtml(task.status)}</div></div>
+<div style="color:#9fb0c2; font-size:0.78rem;">Scheduled ${escapeHtml(formatAdminMaintenanceTaskTime(task.scheduledForMs))} • created by ${escapeHtml(task.createdBy || '?')}</div>
+${task.notes ? `<div style="color:#dce7f5; font-size:0.78rem;">${escapeHtml(task.notes.slice(0, 220))}</div>` : ''}
+${resultText ? `<div style="color:${task.errorMessage ? '#ffccbc' : '#c5e1a5'}; font-size:0.77rem;">${escapeHtml(resultText.slice(0, 220))}</div>` : ''}
+<div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+${canRun ? `<button onclick="adminRunMaintenanceTaskNow('${encodeURIComponent(task.id)}')" style="padding:0.28rem 0.55rem; background:#1565c0; color:#fff; border:none; border-radius:0.25rem;">Run now</button>` : ''}
+${canCancel ? `<button onclick="adminCancelMaintenanceTask('${encodeURIComponent(task.id)}')" style="padding:0.28rem 0.55rem; background:#6d4c41; color:#fff; border:none; border-radius:0.25rem;">Cancel</button>` : ''}
+</div>
+</div>`;
+}).join('');
+}
+
+async function loadAdminMaintenanceTasks() {
+const container = document.getElementById('admin-maintenance-list');
+if (!container) return;
+if (getUserRole(currentChatUser) !== 'owner') {
+container.textContent = 'Insufficient permissions.';
+return;
+}
+container.textContent = 'Loading maintenance tasks...';
+try {
+const db = getAdminDb();
+const snapshot = await db.collection(MAINTENANCE_TASKS_COLLECTION).orderBy('scheduledForAt', 'desc').limit(30).get();
+const tasks = snapshot.docs.map((doc) => normalizeAdminMaintenanceTaskData(doc.data() || {}, doc.id));
+renderAdminMaintenanceTasks(tasks);
+} catch (err) {
+console.error('Failed to load maintenance tasks:', err);
+container.textContent = 'Failed to load maintenance tasks.';
+}
+}
+
+async function adminScheduleMaintenanceTask() {
+if (getUserRole(currentChatUser) !== 'owner') return;
+const actionSelect = document.getElementById('admin-maintenance-action');
+const targetInput = document.getElementById('admin-maintenance-target-username');
+const timeInput = document.getElementById('admin-maintenance-time');
+const notesInput = document.getElementById('admin-maintenance-notes');
+const action = sanitizeNullableText(actionSelect ? actionSelect.value : '', '');
+const definition = getAdminMaintenanceActionDefinition(action);
+const targetUsername = normalizeUsername(targetInput ? targetInput.value : '');
+const scheduledRaw = sanitizeNullableText(timeInput ? timeInput.value : '', '');
+const notes = sanitizeNullableText(notesInput ? notesInput.value : '', '').slice(0, 300);
+if (!action || !ADMIN_MAINTENANCE_ACTIONS[action]) {
+setAdminToolStatus('admin-maintenance-status', 'Choose a maintenance task type.', 'error');
+return;
+}
+if (definition.requiresTarget && !targetUsername) {
+setAdminToolStatus('admin-maintenance-status', 'This task needs a target username.', 'error');
+return;
+}
+if (!scheduledRaw) {
+setAdminToolStatus('admin-maintenance-status', 'Choose when the task should run.', 'error');
+return;
+}
+const scheduledDate = new Date(scheduledRaw);
+if (Number.isNaN(scheduledDate.getTime())) {
+setAdminToolStatus('admin-maintenance-status', 'Choose a valid maintenance time.', 'error');
+return;
+}
+setAdminToolStatus('admin-maintenance-status', `Scheduling ${definition.label}...`, 'neutral');
+try {
+const db = getAdminDb();
+await db.collection(MAINTENANCE_TASKS_COLLECTION).add({
+  action,
+  targetUsername,
+  notes,
+  status: 'pending',
+  createdBy: currentChatUser,
+  createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  scheduledForAt: firebase.firestore.Timestamp.fromDate(scheduledDate)
+});
+setAdminToolStatus('admin-maintenance-status', `${definition.label} scheduled for ${formatAdminMaintenanceTaskTime(scheduledDate.getTime())}.`, 'success');
+await writeAuditLog('schedule_maintenance', targetUsername || action, `${definition.label} scheduled`);
+if (notesInput) notesInput.value = '';
+loadAdminMaintenanceTasks();
+ensureAdminMaintenanceMonitor();
+} catch (err) {
+console.error('Failed to schedule maintenance task:', err);
+setAdminToolStatus('admin-maintenance-status', 'Failed to schedule maintenance task.', 'error');
+}
+}
+
+async function adminCancelMaintenanceTask(encodedTaskId) {
+if (getUserRole(currentChatUser) !== 'owner') return;
+const taskId = decodeURIComponent(encodedTaskId || '');
+if (!taskId) return;
+try {
+const db = getAdminDb();
+await db.collection(MAINTENANCE_TASKS_COLLECTION).doc(taskId).set({
+  status: 'cancelled',
+  completedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  completedBy: currentChatUser,
+  errorMessage: '',
+  resultSummary: 'Task cancelled by owner.'
+}, { merge: true });
+setAdminToolStatus('admin-maintenance-status', 'Maintenance task cancelled.', 'success');
+await writeAuditLog('cancel_maintenance', taskId, 'Scheduled maintenance cancelled');
+loadAdminMaintenanceTasks();
+} catch (err) {
+console.error('Failed to cancel maintenance task:', err);
+setAdminToolStatus('admin-maintenance-status', 'Failed to cancel maintenance task.', 'error');
+}
+}
+
+async function claimAdminMaintenanceTask(taskId) {
+const db = getAdminDb();
+const taskRef = db.collection(MAINTENANCE_TASKS_COLLECTION).doc(taskId);
+return db.runTransaction(async (transaction) => {
+  const snap = await transaction.get(taskRef);
+  if (!snap.exists) return null;
+  const data = normalizeAdminMaintenanceTaskData(snap.data() || {}, snap.id);
+  if (data.status !== 'pending') return null;
+  transaction.set(taskRef, {
+    status: 'running',
+    runningBy: currentChatUser,
+    runningAt: firebase.firestore.FieldValue.serverTimestamp(),
+    errorMessage: '',
+    resultSummary: ''
+  }, { merge: true });
+  return data;
+});
+}
+
+async function runAdminMaintenanceTaskAction(task) {
+switch (task.action) {
+case 'repair_user_points': {
+  const result = await repairUserPointsStats(task.targetUsername, { forceArchiveRefresh: true });
+  if (!result) throw new Error('Could not repair points for that user.');
+  return result.changed
+    ? `Points repaired for ${task.targetUsername}. Messages ${result.stats.messagesSent || 0}, games ${result.stats.gamesOpened || 0}, reactions ${result.stats.reactionsUsed || 0}.`
+    : `No point changes were needed for ${task.targetUsername}.`;
+}
+case 'sync_primary_to_backup': {
+  const result = await syncCasinoBetweenTargets(PRIMARY_CASINO_TARGET, BACKUP_CASINO_TARGET);
+  return formatCasinoSyncResultMessage(result, 'Primary synced to backup');
+}
+case 'sync_backup_to_primary': {
+  const result = await syncCasinoBetweenTargets(BACKUP_CASINO_TARGET, PRIMARY_CASINO_TARGET);
+  return formatCasinoSyncResultMessage(result, 'Backup synced to primary');
+}
+case 'refresh_dynamic_tags':
+  await refreshDynamicLeaderboardTags(false);
+  return 'Dynamic leaderboard tags refreshed.';
+default:
+  throw new Error('Unsupported maintenance task.');
+}
+}
+
+async function completeAdminMaintenanceTask(taskId, status, resultSummary = '', errorMessage = '') {
+const db = getAdminDb();
+await db.collection(MAINTENANCE_TASKS_COLLECTION).doc(taskId).set({
+  status,
+  resultSummary: sanitizeNullableText(resultSummary, '').slice(0, 500),
+  errorMessage: sanitizeNullableText(errorMessage, '').slice(0, 500),
+  completedBy: currentChatUser,
+  completedAt: firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
+}
+
+async function executeAdminMaintenanceTask(task, options = {}) {
+const claimedTask = options.claimed ? task : await claimAdminMaintenanceTask(task.id);
+if (!claimedTask) return false;
+const fullTask = { ...claimedTask, id: task.id };
+const definition = getAdminMaintenanceActionDefinition(fullTask.action);
+try {
+  const resultSummary = await runAdminMaintenanceTaskAction(fullTask);
+  await completeAdminMaintenanceTask(fullTask.id, 'completed', resultSummary, '');
+  await writeAuditLog('run_maintenance', fullTask.targetUsername || fullTask.action, `${definition.label} completed`);
+  return true;
+} catch (err) {
+  console.error('Maintenance task failed:', err);
+  await completeAdminMaintenanceTask(fullTask.id, 'failed', '', err && err.message ? err.message : 'Maintenance task failed.');
+  await writeAuditLog('maintenance_failed', fullTask.targetUsername || fullTask.action, `${definition.label} failed`);
+  return false;
+}
+}
+
+async function adminRunMaintenanceTaskNow(encodedTaskId) {
+if (getUserRole(currentChatUser) !== 'owner') return;
+const taskId = decodeURIComponent(encodedTaskId || '');
+if (!taskId) return;
+setAdminToolStatus('admin-maintenance-status', 'Running maintenance task...', 'neutral');
+try {
+const claimedTask = await claimAdminMaintenanceTask(taskId);
+if (!claimedTask) {
+  setAdminToolStatus('admin-maintenance-status', 'That task is no longer pending.', 'error');
+  loadAdminMaintenanceTasks();
+  return;
+}
+const completed = await executeAdminMaintenanceTask({ ...claimedTask, id: taskId }, { claimed: true });
+setAdminToolStatus('admin-maintenance-status', completed ? 'Maintenance task finished.' : 'Maintenance task failed.', completed ? 'success' : 'error');
+loadAdminMaintenanceTasks();
+} catch (err) {
+console.error('Failed to run maintenance task:', err);
+setAdminToolStatus('admin-maintenance-status', 'Failed to run maintenance task.', 'error');
+}
+}
+
+async function runDueAdminMaintenanceTasks() {
+if (getUserRole(currentChatUser) !== 'owner' || !siteLoginPassed) return;
+try {
+const db = getAdminDb();
+const snapshot = await db.collection(MAINTENANCE_TASKS_COLLECTION).orderBy('scheduledForAt', 'asc').limit(60).get();
+const nowMs = Date.now();
+let ranAny = false;
+for (const doc of snapshot.docs) {
+  const task = normalizeAdminMaintenanceTaskData(doc.data() || {}, doc.id);
+  if (task.status !== 'pending') continue;
+  if (!task.scheduledForMs || task.scheduledForMs > nowMs) continue;
+  const claimedTask = await claimAdminMaintenanceTask(task.id);
+  if (!claimedTask) continue;
+  ranAny = true;
+  await executeAdminMaintenanceTask({ ...claimedTask, id: task.id }, { claimed: true });
+}
+if (ranAny && document.getElementById('admin-menu')?.style.display === 'flex') {
+  loadAdminMaintenanceTasks();
+  setAdminToolStatus('admin-maintenance-status', 'Ran due maintenance tasks.', 'success');
+}
+} catch (err) {
+console.error('Failed to process due maintenance tasks:', err);
+}
+}
+
+function ensureAdminMaintenanceMonitor() {
+const shouldRun = siteLoginPassed && getUserRole(currentChatUser) === 'owner';
+if (!shouldRun) {
+if (adminMaintenanceTaskMonitorInterval) {
+  clearInterval(adminMaintenanceTaskMonitorInterval);
+  adminMaintenanceTaskMonitorInterval = null;
+}
+return;
+}
+if (adminMaintenanceTaskMonitorInterval) return;
+runDueAdminMaintenanceTasks().catch((err) => console.error('Initial maintenance task run failed:', err));
+adminMaintenanceTaskMonitorInterval = setInterval(() => {
+  runDueAdminMaintenanceTasks().catch((err) => console.error('Maintenance task run failed:', err));
+}, 60000);
 }
 
 async function syncCasinoWinnerStateFromChudWall() {
@@ -21712,17 +23123,18 @@ if (!username) {
   if (statusDiv) statusDiv.textContent = 'Select a username to rebuild stats.';
   return;
 }
-  if (statusDiv) statusDiv.textContent = `Rebuilding stats for ${username}...`;
-  if (historyContainer) historyContainer.textContent = 'Rebuilding user stats...';
+  if (statusDiv) statusDiv.textContent = `Repairing points for ${username}...`;
+  if (historyContainer) historyContainer.textContent = 'Repairing point sources...';
 try {
-  const result = await rebuildUserMessageStats(username, {
+  const result = await repairUserPointsStats(username, {
     forceArchiveRefresh: true,
     usernameCandidates: [username]
   });
+  const levelInfo = calculateUserLevel(result && result.stats ? result.stats : {}, username);
   await writeAuditLog(
-    'rebuild_user_stats',
+    'repair_user_points',
     username,
-    `Messages ${result && result.stats ? result.stats.messagesSent || 0 : 0}, Media ${result && result.stats ? result.stats.mediaShared || 0 : 0}`
+    `Points ${levelInfo.points || 0}, Messages ${result && result.stats ? result.stats.messagesSent || 0 : 0}, Games ${result && result.stats ? result.stats.gamesOpened || 0 : 0}, Media ${result && result.stats ? result.stats.mediaShared || 0 : 0}, Reactions ${result && result.stats ? result.stats.reactionsUsed || 0 : 0}`
   );
   if (typeof loadAdminAnalytics === 'function') loadAdminAnalytics();
   if (typeof loadAdminAccountManager === 'function') loadAdminAccountManager();
@@ -21734,13 +23146,14 @@ try {
     renderProfileModal(username);
   }
   if (statusDiv) {
-    statusDiv.textContent = `Rebuilt ${username}: ${result && result.stats ? result.stats.messagesSent || 0 : 0} messages, ${result && result.stats ? result.stats.mediaShared || 0 : 0} media.`;
+    const noteSuffix = result && Array.isArray(result.notes) && result.notes.length ? ` Note: ${result.notes.join('; ')}.` : '';
+    statusDiv.textContent = `Repaired ${username}: ${levelInfo.points || 0} pts, ${result && result.stats ? result.stats.messagesSent || 0 : 0} messages, ${result && result.stats ? result.stats.gamesOpened || 0 : 0} games, ${result && result.stats ? result.stats.mediaShared || 0 : 0} media, ${result && result.stats ? result.stats.reactionsUsed || 0 : 0} reactions.${noteSuffix}`;
   }
   await loadAdminUserHistory(username);
 } catch (err) {
-  console.error('Failed to rebuild user stats:', err);
-  if (statusDiv) statusDiv.textContent = 'Failed to rebuild user stats.';
-  if (historyContainer) historyContainer.textContent = 'Failed to rebuild user stats.';
+  console.error('Failed to repair user points:', err);
+  if (statusDiv) statusDiv.textContent = 'Failed to repair user points.';
+  if (historyContainer) historyContainer.textContent = 'Failed to repair user points.';
 }
 }
 
@@ -23806,23 +25219,27 @@ if (!entriesDiv) return;
 try {
 await loadCasinoSeasonState().catch(() => {});
 await loadChudWall().catch(() => {});
-const [bannedUsers, allStats, directorySnapshot] = await Promise.all([
+const [bannedUsers, approvedUsers, allStats, directorySnapshot] = await Promise.all([
 loadDynamicLeaderboardBannedUsers().catch(() => []),
+loadLeaderboardApprovedUsers().catch(() => null),
 loadDynamicLeaderboardStatsMap().catch(() => ({})),
 loadCasinoDirectorySnapshot().catch(() => ({ knownUsers: [] }))
 ]);
 const bannedSet = new Set((bannedUsers || []).map(u => normalizeUsername(u)));
+const approvedSet = approvedUsers ? new Set((approvedUsers || []).map((username) => normalizeUsername(username)).filter(Boolean)) : null;
 const localStats = getStatsStore();
 const knownUsers = new Set(Array.isArray(directorySnapshot.knownUsers) ? directorySnapshot.knownUsers : []);
 Object.keys(allStats || {}).forEach((username) => knownUsers.add(normalizeUsername(username)));
 Object.keys(localStats || {}).forEach((username) => knownUsers.add(normalizeUsername(username)));
 Object.keys(roleCache || {}).forEach((username) => knownUsers.add(normalizeUsername(username)));
 Object.keys(userTagCache || {}).forEach((username) => knownUsers.add(normalizeUsername(username)));
-knownUsers.add(normalizeUsername(currentChatUser || getUserName() || ''));
+const currentUserKey = normalizeUsername(currentChatUser || getUserName() || '');
+knownUsers.add(currentUserKey);
 
 const leaderboardData = Array.from(knownUsers)
 .filter(Boolean)
 .filter((username) => !bannedSet.has(username))
+.filter((username) => !approvedSet || approvedSet.has(username) || username === currentUserKey)
 .map((username) => {
 const stats = allStats[username] || localStats[username] || {
 gamesOpened: 0,

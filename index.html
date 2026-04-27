@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>chud games</title>
+<title>Google Classroom</title>
+<link rel="icon" type="image/png" href="https://ssl.gstatic.com/classroom/favicon.png">
 <link rel="stylesheet" href="style.css">
 <style>
 body {
@@ -415,6 +416,31 @@ cursor: pointer;
 <button onclick="adminSaveRolePermissions()" class="admin-btn admin-btn--teal">Save Permissions</button>
 </div>
 
+<div class="admin-section-card" data-admin-scope="owner" data-admin-permission="manageRolePermissions">
+<div class="admin-section-title">Permission Simulator</div>
+<div class="admin-helper-text admin-helper-text--flush">Preview the effective permission set for a username or a raw role.</div>
+<input type="text" id="admin-permission-sim-username" placeholder="Username to simulate" />
+<select id="admin-permission-sim-role">
+<option value="">Use username's role</option>
+<option value="owner">Owner</option>
+<option value="hivise">hivise</option>
+<option value="admin">Admin</option>
+<option value="mod">Mod</option>
+<option value="moderator">Moderator</option>
+<option value="trialmod">Trial Mod</option>
+<option value="reviewer">Reviewer</option>
+<option value="helper">Helper</option>
+<option value="chud">Chud</option>
+<option value="cameronsbitch">Camerons's Bitch</option>
+<option value="member">Member</option>
+</select>
+<div class="admin-button-row">
+<button onclick="renderAdminPermissionSimulator()" class="admin-btn admin-btn--slate">Run Simulation</button>
+<button onclick="adminPermissionSimulatorUseSelectedUser()" class="admin-btn admin-btn--neutral">Use Selected User</button>
+</div>
+<div id="admin-permission-sim-results" class="admin-scroll-panel" style="max-height:280px;"></div>
+</div>
+
 <div class="admin-section-card" data-admin-scope="owner" data-admin-permission="manageSettings">
 <div class="admin-section-title">Slow Mode Bypass</div>
 <div class="admin-helper-text admin-helper-text--flush">Choose whether admins ignore slow mode. Owner always bypasses it.</div>
@@ -422,6 +448,42 @@ cursor: pointer;
 <button id="admin-slowmode-bypass-btn" onclick="adminToggleAdminSlowModeBypass()" class="admin-btn admin-btn--slate">Toggle Admin Slow Mode Bypass</button>
 </div>
 <div id="admin-slowmode-bypass-status" class="admin-helper-text admin-helper-text--flush"></div>
+</div>
+
+<div class="admin-section-card" data-admin-scope="owner" data-admin-permission="manageSettings">
+<div class="admin-section-title">Staff Wall Role Tag</div>
+<div class="admin-helper-text admin-helper-text--flush">Change each Staff Wall role pill color. Default stays the regular green leaderboard tag.</div>
+<div id="admin-staff-wall-role-tag-controls" class="admin-staff-wall-role-tag-grid"></div>
+<div class="admin-preview-card">
+<div class="admin-preview-label">Preview</div>
+<div id="admin-staff-wall-role-tag-preview" class="admin-staff-wall-role-tag-preview"></div>
+</div>
+<div class="admin-button-row admin-button-row--single">
+<button onclick="adminSaveStaffWallRoleTagColor()" class="admin-btn admin-btn--teal">Save Role Tag Colors</button>
+</div>
+<div id="admin-staff-wall-role-tag-status" class="admin-helper-text admin-helper-text--flush"></div>
+</div>
+
+<div class="admin-section-card" data-admin-scope="owner" data-admin-permission="manageSettings">
+<div class="admin-section-title">Scheduled Maintenance</div>
+<div class="admin-helper-text admin-helper-text--flush">Queue owner-only tasks. Due jobs run automatically while an owner tab is online.</div>
+<select id="admin-maintenance-action">
+<option value="">Choose task</option>
+<option value="repair_user_points">Repair User Points</option>
+<option value="sync_primary_to_backup">Sync Primary To Backup</option>
+<option value="sync_backup_to_primary">Sync Backup To Primary</option>
+<option value="refresh_dynamic_tags">Refresh Leaderboard Tags</option>
+</select>
+<input type="text" id="admin-maintenance-target-username" placeholder="Target username if needed" />
+<input type="datetime-local" id="admin-maintenance-time" />
+<textarea id="admin-maintenance-notes" maxlength="300" placeholder="Optional note for this task" style="min-height:4.2rem;"></textarea>
+<div class="admin-button-row">
+<button onclick="adminScheduleMaintenanceTask()" class="admin-btn admin-btn--teal">Schedule Task</button>
+<button onclick="loadAdminMaintenanceTasks()" class="admin-btn admin-btn--slate">Refresh Queue</button>
+<button onclick="adminMaintenanceUseSelectedUser()" class="admin-btn admin-btn--neutral">Use Selected User</button>
+</div>
+<div id="admin-maintenance-status" class="admin-helper-text admin-helper-text--flush"></div>
+<div id="admin-maintenance-list" class="admin-scroll-panel" style="max-height:300px;"></div>
 </div>
 
 <div class="admin-section-card" data-admin-scope="moderator" data-admin-permission="viewReports">
@@ -435,17 +497,42 @@ cursor: pointer;
 <input type="text" id="admin-history-username" placeholder="Username to inspect" />
 <div class="admin-button-row">
 <button onclick="loadAdminUserHistory()" class="admin-btn admin-btn--slate">Load History</button>
-<button onclick="adminRebuildSelectedUserStats()" class="admin-btn admin-btn--teal">Rebuild Stats</button>
+<button onclick="adminRebuildSelectedUserStats()" class="admin-btn admin-btn--teal">Repair Points</button>
 <button onclick="copySelectedUserToHistory()" class="admin-btn admin-btn--neutral">Use Selected User</button>
 </div>
 <div id="admin-user-history" class="admin-scroll-panel" style="max-height:280px;"></div>
 </div>
 
+<div class="admin-section-card" data-admin-scope="admin" data-admin-permission="manageAccounts">
+<div class="admin-section-title">Data Export</div>
+<div class="admin-helper-text admin-helper-text--flush">Download a JSON bundle for the selected user, including profile, moderation, stats, and recent activity.</div>
+<input type="text" id="admin-export-username" placeholder="Username to export" />
+<div class="admin-button-row">
+<button onclick="adminExportSelectedUserData()" class="admin-btn admin-btn--teal">Export JSON</button>
+<button onclick="adminExportUseSelectedUser()" class="admin-btn admin-btn--neutral">Use Selected User</button>
+</div>
+<div id="admin-export-status" class="admin-helper-text admin-helper-text--flush"></div>
+<div id="admin-export-preview" class="admin-scroll-panel" style="max-height:220px;"></div>
+</div>
+
+<div class="admin-section-card" data-admin-scope="owner" data-admin-permission="manageAccounts">
+<div class="admin-section-title">Owner Notes</div>
+<div class="admin-helper-text admin-helper-text--flush">Private notes stored only in the admin project for internal account context.</div>
+<input type="text" id="admin-owner-notes-username" placeholder="Username for owner notes" />
+<textarea id="admin-owner-notes-text" maxlength="4000" placeholder="Private owner note" style="min-height:7rem;"></textarea>
+<div class="admin-button-row">
+<button onclick="loadAdminOwnerNotes()" class="admin-btn admin-btn--slate">Load Note</button>
+<button onclick="saveAdminOwnerNotes()" class="admin-btn admin-btn--teal">Save Note</button>
+<button onclick="adminOwnerNotesUseSelectedUser()" class="admin-btn admin-btn--neutral">Use Selected User</button>
+</div>
+<div id="admin-owner-notes-status" class="admin-helper-text admin-helper-text--flush"></div>
+</div>
+
 <div class="admin-section-card" data-admin-scope="admin" data-admin-permission="viewUserTimeline">
-<div class="admin-section-title">User Timeline</div>
+<div class="admin-section-title">Moderation Timeline</div>
 <input type="text" id="admin-timeline-username" placeholder="Username for timeline" />
 <div class="admin-button-row">
-<button onclick="loadAdminUserTimeline()" class="admin-btn admin-btn--slate">Build Timeline</button>
+<button onclick="loadAdminUserTimeline()" class="admin-btn admin-btn--slate">Load Timeline</button>
 <button onclick="adminTimelineUseSelectedUser()" class="admin-btn admin-btn--neutral">Use Selected User</button>
 </div>
 <div id="admin-user-timeline" class="admin-scroll-panel" style="max-height:300px;"></div>
@@ -897,7 +984,7 @@ cursor: pointer;
 
 <div class="admin-section-card" data-admin-scope="owner" data-admin-permission="manageSettings">
 <div class="admin-section-title">Casino Failover</div>
-<div class="admin-helper-text admin-helper-text--flush">Switch the live casino between the main and backup Firebase projects, or mirror the top-level casino collections into the backup project.</div>
+<div class="admin-helper-text admin-helper-text--flush">Owner-only shared live casino switch. Move everyone between the main and backup Firebase projects, or mirror the top-level casino collections into the backup project.</div>
 <div id="admin-casino-failover-summary" class="admin-helper-text admin-helper-text--flush" style="margin-top:0.45rem;"></div>
 <div class="admin-button-row" style="margin-top:0.55rem;">
 <button id="admin-casino-primary-btn" onclick="adminSetCasinoTarget('primary')" class="admin-btn admin-btn--slate">Use Primary Casino</button>
@@ -991,6 +1078,7 @@ cursor: pointer;
 <button onclick="openCasinoLeaderboardModal()">Casino Leaderboard</button>
 <button onclick="openLeaderboardModal()">Leaderboard</button>
 <button onclick="openChudWallModal()">Chud Wall</button>
+<button onclick="openStaffWallModal()">Staff Wall</button>
 <button onclick="openSchoolScheduleInIframe()">School Schedule</button>
 <button onclick="openCustomUrlModal()">Open URL</button>
 <button class="store-hero-button-secondary" onclick="openCreditsModal()">Credits</button>
@@ -999,7 +1087,7 @@ cursor: pointer;
 <div class="release-countdown-banner">
 <div class="release-countdown-copy">
 <div class="release-countdown-eyebrow">Release Countdown</div>
-<div id="tyrone-release-countdown-title" class="release-countdown-title">Shitty Tyrone Souls and/or Tyrone vs Cops</div>
+<div id="tyrone-release-countdown-title" class="release-countdown-title">Tyrone vs Cops</div>
 <div class="release-countdown-note">Planned for this release window</div>
 <div id="tyrone-release-vote" class="release-vote-panel">
 <div id="tyrone-release-vote-status" class="release-vote-status">Vote loading...</div>
