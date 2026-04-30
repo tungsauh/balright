@@ -6229,10 +6229,12 @@ return;
 }
 try {
 await setUserBanStatus(username, false, '', { bannedBy: currentChatUser || getUserName() || 'admin' });
+await clearTimedBanState(username);
 statusDiv.textContent = `User '${username}' has been unbanned.`;
-await writeAuditLog('unban', username, 'manual unban');
+await writeAuditLog('unban', username, 'manual unban (regular and strike temp bans cleared)');
 document.getElementById('admin-ban-username').value = '';
 document.getElementById('admin-ban-reason').value = '';
+loadActiveTempBans();
 } catch (e) {
 statusDiv.textContent = 'Failed to unban user.';
 }
@@ -6256,6 +6258,7 @@ const USER_STRIKES_COLLECTION = 'user_strikes';
 const AUDIT_LOG_COLLECTION = 'admin_audit_logs';
 const MESSAGE_REPORTS_COLLECTION = 'message_reports';
 const APPEALS_COLLECTION = 'ban_appeals';
+const SITE_CLIPS_COLLECTION = 'site_clips';
 const MOD_APPLICATIONS_COLLECTION = 'mod_applications';
 const OWNER_NOTES_COLLECTION = 'admin_owner_notes';
 const MAINTENANCE_TASKS_COLLECTION = 'admin_maintenance_tasks';
@@ -8340,6 +8343,7 @@ let localProfileCache = {};
 let userProfileCache = {};
 let casinoProfileStatsCache = {};
 let inventoryHistoryCache = [];
+let siteClipFeedCache = [];
 let generalShopTradeCache = [];
 let generalShopTradeUnsub = null;
 let generalShopTradeLiveSnapshots = { incoming: [], outgoing: [] };
@@ -8352,7 +8356,6 @@ let generalShopTradeCountdownInterval = null;
 let inventoryHistoryUnsub = null;
 let activeSiteEventCache = null;
 let activeSiteEventUnsub = null;
-let currentPlayerHubTab = 'notifications';
 let currentChatThreadRootId = '';
 let currentChatThreadRoomId = 'general';
 let currentChatThreadMessages = [];
@@ -8940,6 +8943,9 @@ const key = normalizeUsername(username);
 return {
 bio: '',
 statusQuote: '',
+showcaseHeadline: '',
+showcasePrimaryStat: 'messagesSent',
+featuredClipId: '',
 profileTitle: '',
 adminAssignedTitle: '',
 adminAssignedTitleBy: '',
@@ -9848,6 +9854,9 @@ const key = normalizeUsername(username);
 return {
   bio: sanitizeNullableText(data.bio, '').slice(0, 220),
   statusQuote: sanitizeNullableText(data.statusQuote, '').slice(0, 120),
+  showcaseHeadline: sanitizeNullableText(data.showcaseHeadline, '').slice(0, 80),
+  showcasePrimaryStat: sanitizeNullableText(data.showcasePrimaryStat, 'messagesSent').slice(0, 40) || 'messagesSent',
+  featuredClipId: sanitizeNullableText(data.featuredClipId, '').slice(0, 120),
   profileTitle: sanitizeNullableText(data.profileTitle, '').slice(0, 40),
   adminAssignedTitle: sanitizeNullableText(data.adminAssignedTitle, '').slice(0, 40),
   adminAssignedTitleBy: sanitizeNullableText(data.adminAssignedTitleBy, '').slice(0, 32),
@@ -9886,6 +9895,60 @@ if (OWNER_USERS.includes(key)) {
   merged.joinLabel = 'Feb 26, 2026';
 }
 return merged;
+}
+
+function getProfileShowcaseStatSnapshot(selection = 'messagesSent', profileUserKey = '', stats = {}, casinoStats = {}) {
+  const inventoryValue = getTotalOwnedGeneralShopInventoryValue(casinoStats);
+  const snapshotMap = {
+    messagesSent: {
+      id: 'messagesSent',
+      label: 'Messages Sent',
+      value: Math.max(0, Number(stats.messagesSent || 0)).toLocaleString(),
+      note: 'All-time chat activity'
+    },
+    gamesOpened: {
+      id: 'gamesOpened',
+      label: 'Games Opened',
+      value: Math.max(0, Number(stats.gamesOpened || 0)).toLocaleString(),
+      note: 'Sessions launched from the site'
+    },
+    mediaShared: {
+      id: 'mediaShared',
+      label: 'Media Shared',
+      value: Math.max(0, Number(stats.mediaShared || 0)).toLocaleString(),
+      note: 'Images, GIFs, and video posts'
+    },
+    reactionsUsed: {
+      id: 'reactionsUsed',
+      label: 'Reactions Used',
+      value: Math.max(0, Number(stats.reactionsUsed || 0)).toLocaleString(),
+      note: 'Quick chat reactions fired off'
+    },
+    casinoWins: {
+      id: 'casinoWins',
+      label: 'Casino Wins',
+      value: Math.max(0, Number(casinoStats.wins || 0)).toLocaleString(),
+      note: 'Wins across casino games'
+    },
+    casinoBalance: {
+      id: 'casinoBalance',
+      label: 'Casino Balance',
+      value: `$${Math.max(0, Number(casinoStats.balance || 0)).toLocaleString()}`,
+      note: 'Current cash stack'
+    },
+    inventoryValue: {
+      id: 'inventoryValue',
+      label: 'Inventory Value',
+      value: `$${Math.max(0, Number(inventoryValue.totalValue || 0)).toLocaleString()}`,
+      note: 'Cases, items, and drops combined'
+    }
+  };
+  return snapshotMap[selection] || snapshotMap.messagesSent;
+}
+
+function getProfileShowcaseStatOptions(profileUserKey = '', stats = {}, casinoStats = {}) {
+  return ['messagesSent', 'gamesOpened', 'mediaShared', 'reactionsUsed', 'casinoWins', 'casinoBalance', 'inventoryValue']
+    .map((optionId) => getProfileShowcaseStatSnapshot(optionId, profileUserKey, stats, casinoStats));
 }
 
 function renderInlineProfileAvatarHtml(username, extraClass = '') {
@@ -10247,8 +10310,6 @@ if (action.kind === 'room' && action.roomId) {
   openDMModal(action.username);
 } else if (action.kind === 'game' && action.gameId) {
   openGameById(action.gameId);
-} else if (action.kind === 'hub') {
-  openPlayerHubModal(action.tab || 'notifications');
 } else if (action.kind === 'trade' && action.tradeId) {
   openGeneralShopTradeModal(encodeURIComponent(action.tradeId));
 } else if (action.kind === 'profile' && action.username) {
@@ -11254,9 +11315,6 @@ generalShopTradeCache = generalShopTradeLiveSnapshots.incoming.concat(generalSho
     return true;
   })
   .sort((a, b) => Math.max(b.updatedAtMs, b.createdAtMs) - Math.max(a.updatedAtMs, a.createdAtMs));
-if (document.getElementById('player-hub-modal')?.style.display === 'flex') {
-  renderPlayerHubModal();
-}
 }
 
 function processGeneralShopTradeSnapshot(snapshot, direction) {
@@ -11548,11 +11606,41 @@ function renderActiveSiteEventBanner() {
   banner.textContent = `${eventData.title}${getSiteEventSummaryText(eventData) ? ` • ${getSiteEventSummaryText(eventData)}` : ''}${eventData.endsAtMs ? ` • Ends ${new Date(eventData.endsAtMs).toLocaleString()}` : ''}`;
 }
 
-function setPlayerHubTab(tab) {
-  currentPlayerHubTab = ['notifications', 'history', 'cases', 'rewards', 'events', 'threads'].includes(tab) ? tab : 'notifications';
-  renderPlayerHubModal();
+function normalizeSiteClipData(id, data = {}) {
+  const imageUrl = sanitizeProfileBanner(data.imageUrl || data.mediaUrl || '');
+  const videoUrl = normalizeChatVideoUrl(data.videoUrl || '');
+  return {
+    id: sanitizeNullableText(id, ''),
+    author: normalizeUsername(data.author || data.username || ''),
+    authorDisplayName: sanitizeNullableText(data.authorDisplayName, data.author || data.username || 'guest').slice(0, 40),
+    title: sanitizeNullableText(data.title, 'Untitled clip').slice(0, 60),
+    caption: sanitizeNullableText(data.caption, '').slice(0, 220),
+    gameId: sanitizeNullableText(data.gameId, '').slice(0, 120),
+    gameName: sanitizeNullableText(data.gameName, '').slice(0, 80),
+    imageUrl: imageUrl && isProfileBannerMedia(imageUrl) ? imageUrl : '',
+    videoUrl: videoUrl && (isDirectVideoUrl(videoUrl) || !!getStreamableEmbedUrl(videoUrl)) ? videoUrl : '',
+    createdAtMs: data.createdAt && typeof data.createdAt.toDate === 'function' ? data.createdAt.toDate().getTime() : Math.max(0, Number(data.createdAtMs || 0))
+  };
 }
 
+function getSiteClipById(clipId = '') {
+  const key = sanitizeNullableText(clipId, '');
+  return siteClipFeedCache.find((entry) => entry.id === key) || null;
+}
+
+async function loadSiteClips(force = false) {
+  if (!force && siteClipFeedCache.length) return siteClipFeedCache;
+  try {
+    const snapshot = await getAdminDb().collection(SITE_CLIPS_COLLECTION).orderBy('createdAt', 'desc').limit(30).get();
+    siteClipFeedCache = snapshot.docs
+      .map((doc) => normalizeSiteClipData(doc.id, doc.data() || {}))
+      .filter((entry) => entry.id && entry.author && (entry.imageUrl || entry.videoUrl))
+      .sort((a, b) => b.createdAtMs - a.createdAtMs);
+  } catch (_) {
+    siteClipFeedCache = [];
+  }
+  return siteClipFeedCache;
+}
 function getThreadMessagesForRoot(rootId) {
   const root = window._chatDocs && window._chatDocs[rootId] ? { id: rootId, ...(window._chatDocs[rootId] || {}) } : null;
   const docs = Object.entries(window._chatDocs || {}).map(([id, data]) => ({ id, ...(data || {}) }));
@@ -11598,7 +11686,7 @@ async function loadThreadMessagesForRoot(rootId, roomId = 'general') {
 }
 
 function renderChatThreadModal() {
-  const containers = [document.getElementById('chat-thread-content'), document.getElementById('player-hub-thread-content')].filter(Boolean);
+  const containers = [document.getElementById('chat-thread-content')].filter(Boolean);
   if (!containers.length) return;
   if (currentChatThreadLoading && !currentChatThreadMessages.length) {
     containers.forEach((container) => {
@@ -11660,76 +11748,6 @@ function renderGeneralShopTradeBoard(trade, myKey) {
     ? `<div class="submission-actions" style="margin-top:0.8rem;"><button onclick="respondToGeneralShopTradeOffer('${encodeURIComponent(trade.id)}','reject')" style="background:#7b2f2f; color:#fff;">Decline</button><button onclick="respondToGeneralShopTradeOffer('${encodeURIComponent(trade.id)}','accept')" style="background:#2e7d32; color:#fff;">Accept</button></div>`
     : '';
   return `<div class="trade-board-card"><div class="trade-board-shell"><div class="trade-board-side"><div class="trade-board-user">${escapeHtml(trade.fromUser)}</div><div class="trade-board-grid">${leftSlots}</div></div><div class="trade-board-center"><div class="trade-board-icon">⇄</div><div class="trade-board-status" data-state="${escapeHtml(state)}">${escapeHtml(state)}</div></div><div class="trade-board-side"><div class="trade-board-user">${escapeHtml(trade.toUser)}</div><div class="trade-board-grid">${rightSlots}</div></div></div><div class="trade-board-meta"><div class="trade-board-note">${escapeHtml(note)}${item ? ` • ${escapeHtml(item.title)}` : ''}</div><div>${escapeHtml(formatRelativeTime(Math.max(trade.updatedAtMs, trade.createdAtMs)))}</div></div>${actions}</div>`;
-}
-
-function renderPlayerHubModal() {
-  const container = document.getElementById('player-hub-content');
-  if (!container) return;
-  ['notifications', 'history', 'cases', 'rewards', 'events', 'threads'].forEach((tab) => {
-    const btn = document.getElementById(`player-hub-tab-${tab}`);
-    if (!btn) return;
-    btn.style.background = currentPlayerHubTab === tab ? '#1565c0' : '#263238';
-    btn.style.color = '#fff';
-  });
-  const myKey = getCasinoPlayerKey() || getMyProfileKey();
-  if (currentPlayerHubTab === 'notifications') {
-    container.innerHTML = `<div class="notification-actions"><button onclick="markAllNotificationsRead()">Mark All Read</button><button onclick="clearNotifications()">Clear</button></div><div id="notification-list" class="notification-list"></div>`;
-    renderNotificationCenter();
-    return;
-  }
-  if (currentPlayerHubTab === 'history') {
-    container.innerHTML = inventoryHistoryCache.length ? inventoryHistoryCache.map((entry) => `<div class="modal-history-item"><div class="modal-history-meta">${escapeHtml(entry.type.replace(/_/g, ' '))} • ${escapeHtml(formatRelativeTime(entry.atMs))}</div><div>${escapeHtml(entry.itemTitle || entry.caseTitle || entry.note || 'Inventory action')}</div><div style="margin-top:0.2rem; color:#9fb0c2;">${entry.value ? `$${entry.value.toLocaleString()}` : ''}${entry.note ? ` • ${escapeHtml(entry.note)}` : ''}</div></div>`).join('') : '<div class="submission-empty">No inventory history yet.</div>';
-    return;
-  }
-  if (currentPlayerHubTab === 'cases') {
-    const openings = inventoryHistoryCache.filter((entry) => entry.type === 'open_case');
-    const totalOpened = openings.length;
-    const totalRewardValue = openings.reduce((sum, entry) => sum + Math.max(0, Number(entry.value || 0)), 0);
-    const best = openings.slice().sort((a, b) => Math.max(0, Number(b.value || 0)) - Math.max(0, Number(a.value || 0)))[0] || null;
-    container.innerHTML = `<div class="profile-detail-list" style="margin-bottom:0.8rem;">${[
-      ['Cases Opened', String(totalOpened)],
-      ['Reward Value', `$${totalRewardValue.toLocaleString()}`],
-      ['Average Return', `$${totalOpened ? Math.round(totalRewardValue / totalOpened).toLocaleString() : '0'}`],
-      ['Best Pull', best ? `${best.itemTitle} ($${Math.max(0, Number(best.value || 0)).toLocaleString()})` : 'None']
-    ].map(([label, value]) => `<div class="profile-detail-card"><div class="profile-detail-label">${escapeHtml(label)}</div><div class="profile-detail-value">${escapeHtml(value)}</div></div>`).join('')}</div><div class="modal-history-list">${openings.length ? openings.map((entry) => `<div class="modal-history-item"><div class="modal-history-meta">${escapeHtml(entry.caseTitle || 'Case')} • ${escapeHtml(formatRelativeTime(entry.atMs))}</div><div>${escapeHtml(entry.itemTitle || 'Unknown drop')}</div><div style="margin-top:0.2rem; color:#9fb0c2;">$${Math.max(0, Number(entry.value || 0)).toLocaleString()} • ${escapeHtml(getGeneralShopRarityConfig(entry.rarity).label)}</div></div>`).join('') : '<div class="submission-empty">No case openings yet.</div>'}</div>`;
-    return;
-  }
-  if (currentPlayerHubTab === 'rewards') {
-    const stats = getStatsForUserKey(getMyProfileKey());
-    const casinoStats = getCachedCasinoProfileStats(getMyProfileKey());
-    const profile = getCachedProfile(getMyProfileKey());
-    const titles = getUnlockedProfileRewardTitles(stats, casinoStats);
-    const equippedTitle = getEquippedProfileRewardTitle(getMyProfileKey(), stats, casinoStats, profile);
-    const cosmetics = getUnlockedProfileRewardCosmetics(stats, casinoStats);
-    const equippedCosmetic = getEquippedProfileRewardCosmetic(getMyProfileKey(), stats, casinoStats, profile);
-    const rewardGuide = getProfileRewardGuideData(stats, casinoStats, getMyProfileKey());
-    container.innerHTML = `<div class="overlay-subtle" style="margin-bottom:0.8rem;">Rewards now show the exact unlock requirement, so you can see how to get each title and trim.</div><div style="font-weight:700; color:#d7e3f4; margin-bottom:0.45rem;">Unlocked Titles</div><div class="profile-badge-row" style="margin-bottom:1rem;">${titles.length ? titles.map((title) => `<span class="profile-badge" style="background:${title === equippedTitle ? '#1565c0' : '#263238'};">${escapeHtml(title)}</span>`).join('') : '<span style="color:#999;">No reward titles unlocked yet.</span>'}</div><div style="font-weight:700; color:#d7e3f4; margin-bottom:0.45rem;">Unlocked Trims</div><div class="reward-cosmetic-grid">${cosmetics.length ? cosmetics.map((cosmetic) => `<div class="reward-cosmetic-card ${equippedCosmetic && equippedCosmetic.id === cosmetic.id ? 'is-equipped' : ''}" style="--reward-accent-soft:${escapeHtml(cosmetic.soft)}; --reward-accent-glow:${escapeHtml(cosmetic.glow)};"><div class="reward-cosmetic-swatch" style="background:${escapeHtml(cosmetic.swatch)};"></div><div style="font-weight:800; color:${escapeHtml(cosmetic.accent)};">${escapeHtml(cosmetic.label)}</div><div class="overlay-subtle" style="margin-top:0.35rem; color:#b9cada;">${escapeHtml(cosmetic.description)}</div></div>`).join('') : '<div class="submission-empty" style="grid-column:1 / -1;">No cosmetic trims unlocked yet.</div>'}</div><div style="font-weight:700; color:#d7e3f4; margin:1rem 0 0.45rem;">How To Get Reward Titles</div><div class="profile-detail-list" style="margin-bottom:1rem;">${rewardGuide.titles.map((reward) => `<div class="profile-detail-card"><div class="profile-detail-label">${escapeHtml(reward.label)}</div><div class="profile-detail-value" style="font-size:0.95rem; color:${reward.unlocked ? '#9ee3b0' : '#dce6f7'};">${reward.unlocked ? 'Unlocked' : 'Locked'}</div><div class="overlay-subtle" style="margin-top:0.35rem;">${escapeHtml(reward.howToGet)}</div><div style="margin-top:0.35rem; color:#90a4ae; font-size:0.8rem;">${escapeHtml(reward.progress)}</div></div>`).join('')}</div><div style="font-weight:700; color:#d7e3f4; margin-bottom:0.45rem;">How To Get Reward Trims</div><div class="profile-detail-list">${rewardGuide.cosmetics.map((reward) => `<div class="profile-detail-card"><div class="profile-detail-label">${escapeHtml(reward.label)}</div><div class="profile-detail-value" style="font-size:0.95rem; color:${reward.unlocked ? '#9ee3b0' : '#dce6f7'};">${reward.unlocked ? 'Unlocked' : 'Locked'}</div><div class="overlay-subtle" style="margin-top:0.35rem;">${escapeHtml(reward.howToGet)}</div><div style="margin-top:0.35rem; color:#90a4ae; font-size:0.8rem;">${escapeHtml(reward.progress)}</div></div>`).join('')}</div>`;
-    return;
-  }
-  if (currentPlayerHubTab === 'events') {
-    const eventData = getActiveSiteEventData();
-    container.innerHTML = eventData ? `<div class="store-mini-card"><div class="store-mini-card-title">${escapeHtml(eventData.title)}</div><div class="store-mini-card-meta">${escapeHtml(getSiteEventSummaryText(eventData) || 'Limited-time event')}</div><div class="store-mini-card-meta" style="color:#9fb0c2;">${escapeHtml(getSiteEventThemeNote(eventData) || 'Special site-wide event')}</div><div class="store-mini-card-meta" style="color:#9fb0c2;">${eventData.endsAtMs ? `Ends ${new Date(eventData.endsAtMs).toLocaleString()}` : 'No end date set'}</div></div>` : '<div class="submission-empty">No active event right now.</div>';
-    return;
-  }
-  container.innerHTML = `<div id="player-hub-thread-content">${currentChatThreadRootId ? '' : '<div class="submission-empty">Open a thread from a chat message to view it here.</div>'}</div>`;
-  renderChatThreadModal();
-}
-
-async function openPlayerHubModal(defaultTab = '') {
-  if (defaultTab) currentPlayerHubTab = ['notifications', 'history', 'cases', 'rewards', 'events', 'threads'].includes(defaultTab) ? defaultTab : 'notifications';
-  listenForGeneralShopTrades(getCasinoPlayerKey());
-  await Promise.all([
-    loadInventoryHistoryForUser(getCasinoPlayerKey()).catch(() => []),
-    loadGeneralShopTradesForUser(getCasinoPlayerKey()).catch(() => []),
-    loadActiveSiteEvent().catch(() => null)
-  ]);
-  renderActiveSiteEventBanner();
-  renderPlayerHubModal();
-  openModalById('player-hub-modal');
-}
-
-function closePlayerHubModal() {
-  closeModalById('player-hub-modal');
 }
 
 function openCaseSuggestionModal() {
@@ -13244,6 +13262,9 @@ try {
   }, { merge: true });
   selectedModApplicationIds.delete(id);
   await writeAuditLog('review_mod_application', id, `${status}${reason ? ` • ${reason}` : ''}`);
+  await postSystemNotice(status === 'approved'
+    ? `${id}'s mod request was accepted. Trial Mod role assigned.`
+    : `${id}'s mod request was rejected.${reason ? ` Reason: ${reason}` : ''}`);
   loadModApplicationsOnce(true);
 } catch (err) {
   throw new Error('Failed to review mod application.');
@@ -15626,7 +15647,7 @@ try {
       body: `${item.title} added to their inventory for $${item.price.toLocaleString()}.`,
       by: user
     });
-    pushNotification({ type: 'shop', title: 'Purchase complete', body: `${item.title} added to your inventory.`, read: false, action: { kind: 'hub', tab: 'history' } });
+    pushNotification({ type: 'shop', title: 'Purchase complete', body: `${item.title} added to your inventory.`, read: false });
     setGeneralShopStatus(`${item.title} added to your inventory.`, 'success');
     setGeneralShopInventoryStatus(`${item.title} added to your inventory.`, 'success');
   } else {
@@ -15800,7 +15821,7 @@ try {
     value: rewardSaleValue,
     amount: getOwnedGeneralShopCaseCount(nextStats, caseItem.id)
   });
-  pushNotification({ type: 'case', title: 'Case opened', body: `${caseItem.title} gave you ${rewardInfo.item.title}.`, read: false, action: { kind: 'hub', tab: 'cases' } });
+  pushNotification({ type: 'case', title: 'Case opened', body: `${caseItem.title} gave you ${rewardInfo.item.title}.`, read: false });
   await publishCasinoActivity({
     type: 'shop',
     title: `${displayName} opened ${caseItem.title}`,
@@ -15889,11 +15910,13 @@ return listOwnedGeneralShopCaseDropOnMarket(encodedItemId);
 function renderProfileIdentity(profileUserKey, stats, profile) {
 const badgesEl = document.getElementById('profile-badges');
 const detailListEl = document.getElementById('profile-detail-list');
+const showcaseBoardEl = document.getElementById('profile-showcase-board');
 const featuredDropEl = document.getElementById('profile-featured-drop');
+const featuredClipEl = document.getElementById('profile-clip-showcase');
 const editPanelEl = document.getElementById('profile-edit-panel');
 const editBtn = document.getElementById('profile-edit-btn');
 const saveBtn = document.getElementById('profile-save-btn');
-if (!badgesEl || !detailListEl || !featuredDropEl || !editPanelEl || !editBtn || !saveBtn) return;
+if (!badgesEl || !detailListEl || !showcaseBoardEl || !featuredDropEl || !featuredClipEl || !editPanelEl || !editBtn || !saveBtn) return;
 const badges = getProfileBadges(profileUserKey, stats, profile);
 const showcasedBadges = getShowcasedProfileBadges(profileUserKey, stats, profile);
 const favoriteGameName = sanitizeNullableText(profile.favoriteGameName, '') || 'None set';
@@ -15913,10 +15936,15 @@ const featuredDropRarity = featuredDrop ? getGeneralShopRarityConfig(featuredDro
 const equippedRewardTitle = getEquippedProfileRewardTitle(profileUserKey, stats, casinoStats, profile);
 const equippedRewardCosmetic = getEquippedProfileRewardCosmetic(profileUserKey, stats, casinoStats, profile);
 const statusQuote = sanitizeNullableText(profile.statusQuote, '');
+const showcaseHeadline = sanitizeNullableText(profile.showcaseHeadline, '');
+const showcaseStat = getProfileShowcaseStatSnapshot(profile.showcasePrimaryStat, profileUserKey, stats, casinoStats);
+const featuredClipId = sanitizeNullableText(profile.featuredClipId, '');
+const featuredClip = getSiteClipById(featuredClipId);
 const isOwnerProfile = OWNER_USERS.includes(normalizeUsername(profileUserKey));
 badgesEl.innerHTML = badges.length ? `${showcasedBadges.length ? `<div class="profile-showcase-row">${showcasedBadges.map((badge) => `<span class="profile-badge profile-badge--showcase">${escapeHtml(badge.icon)} ${escapeHtml(badge.label)}</span>`).join('')}</div>` : ''}<div class="profile-showcase-row">${badges.map((badge) => `<span class="profile-badge">${escapeHtml(badge.icon)} ${escapeHtml(badge.label)}</span>`).join('')}</div>` : '<span style="color:#888; font-size:0.84rem;">No badges yet.</span>';
 detailListEl.innerHTML = [
   ['Title', equippedRewardTitle || 'None equipped'],
+  ['Spotlight', showcaseStat.label],
   ['Accent', equippedRewardCosmetic ? equippedRewardCosmetic.label : 'None equipped'],
   ['Bio', profile.bio || 'No bio yet'],
   ['Quote', statusQuote || 'No quote set'],
@@ -15926,6 +15954,7 @@ detailListEl.innerHTML = [
   ['Profile Background', equippedProfileBackground ? equippedProfileBackground.title : 'Default'],
   ['Background Rarity', equippedProfileBackground ? equippedProfileBackgroundRarity.label : 'Default'],
   ['Best Drop', featuredDrop ? featuredDrop.title : 'None selected'],
+  ['Featured Clip', featuredClip ? featuredClip.title : 'None selected'],
   ['Shop Items', String(sanitizeOwnedGeneralShopItemIds(casinoStats.ownedGeneralShopItemIds).length)],
   ['Shop Cases', String(Object.values(getOwnedGeneralShopCaseCounts(casinoStats)).reduce((sum, count) => sum + count, 0))],
   ['Mutual Friends', String(mutualFriends)],
@@ -15944,12 +15973,35 @@ detailListEl.innerHTML = [
   ['Relief Claims', String(Math.max(0, Number(casinoStats.reliefClaims || 0)))],
   ['Bankruptcies', String(casinoStats.bankruptcies || 0)]
 ].map(([label, value]) => `<div class="profile-detail-card"><div class="profile-detail-label">${escapeHtml(label)}</div><div class="profile-detail-value">${escapeHtml(value)}</div></div>`).join('');
+showcaseBoardEl.style.display = 'block';
+showcaseBoardEl.innerHTML = `<div class="profile-section-title">Showcase</div><div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(14rem, 1fr)); gap:0.8rem;"><div style="padding:0.9rem; border-radius:0.85rem; background:rgba(7, 11, 18, 0.56); border:1px solid rgba(255,255,255,0.08);"><div style="font-size:0.74rem; color:#8fa4bc; text-transform:uppercase; letter-spacing:0.08em;">Spotlight</div><div style="margin-top:0.35rem; color:#f5f7fb; font-size:1rem; font-weight:800; line-height:1.4;">${escapeHtml(showcaseHeadline || (profileUserKey === getMyProfileKey() ? 'Use Edit Profile to add a showcase headline.' : 'No showcase headline set.'))}</div><div style="margin-top:0.4rem; color:#9fb0c2; font-size:0.78rem;">${escapeHtml(statusQuote || 'Profile quote becomes the supporting line here.')}</div></div><div style="padding:0.9rem; border-radius:0.85rem; background:rgba(7, 11, 18, 0.56); border:1px solid rgba(255,255,255,0.08);"><div style="font-size:0.74rem; color:#8fa4bc; text-transform:uppercase; letter-spacing:0.08em;">Featured Stat</div><div style="margin-top:0.35rem; color:#f5f7fb; font-size:1.35rem; font-weight:900; line-height:1;">${escapeHtml(showcaseStat.value)}</div><div style="margin-top:0.38rem; color:#d7e3f4; font-size:0.84rem; font-weight:700;">${escapeHtml(showcaseStat.label)}</div><div style="margin-top:0.18rem; color:#90a4ae; font-size:0.76rem;">${escapeHtml(showcaseStat.note)}</div></div></div>`;
 if (featuredDrop) {
   featuredDropEl.style.display = 'block';
   featuredDropEl.innerHTML = `<div class="profile-featured-drop-card"><div class="profile-featured-drop-visual" style="${getGeneralShopVisualStyleText(featuredDrop.visualData, 'display:flex; align-items:flex-end; padding:0.85rem; box-sizing:border-box;')}"><span style="display:inline-flex; align-items:center; gap:0.35rem; font-weight:700; color:#fff; background:rgba(6,10,16,0.72); border:1px solid rgba(255,255,255,0.1); border-radius:999px; padding:0.28rem 0.65rem;">Best Drop</span></div><div class="profile-featured-drop-meta"><div class="profile-featured-drop-title">${escapeHtml(featuredDrop.title)}</div><div class="profile-featured-drop-note" style="color:${escapeHtml(featuredDropRarity ? featuredDropRarity.color : '#dce7f5')};">${escapeHtml(featuredDropRarity ? featuredDropRarity.label : 'Case Drop')}</div><div class="profile-featured-drop-note">${escapeHtml(featuredDrop.description || 'Selected from inventory case drops.')}</div></div></div>`;
 } else {
   featuredDropEl.style.display = 'none';
   featuredDropEl.innerHTML = '';
+}
+if (!featuredClip && featuredClipId && !siteClipFeedCache.length) {
+  loadSiteClips().then(() => {
+    if (currentProfileViewUser === profileUserKey && document.getElementById('profile-modal')?.style.display === 'flex') {
+      renderProfileModal(profileUserKey);
+    }
+  }).catch(() => {});
+}
+if (featuredClip) {
+  const directVideo = getRenderableChatVideoSource({ videoUrl: featuredClip.videoUrl, videoData: '' });
+  const embedVideo = directVideo ? '' : getRenderableChatVideoEmbedUrl({ videoUrl: featuredClip.videoUrl, videoData: '' });
+  const clipMediaHtml = directVideo
+    ? `<video src="${escapeHtml(directVideo)}" controls loop playsinline preload="metadata" style="display:block; width:100%; max-height:18rem; border:none; border-radius:0.9rem; background:#081018;"></video>`
+    : embedVideo
+      ? `<iframe src="${escapeHtml(embedVideo)}" allow="autoplay; fullscreen; picture-in-picture" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" style="display:block; width:100%; min-height:16rem; border:none; border-radius:0.9rem; background:#081018;"></iframe>`
+      : `<img src="${escapeHtml(featuredClip.imageUrl)}" alt="${escapeHtml(featuredClip.title)}" loading="lazy" style="display:block; width:100%; max-height:18rem; object-fit:cover; border-radius:0.9rem; background:#081018;" />`;
+  featuredClipEl.style.display = 'block';
+  featuredClipEl.innerHTML = `<div class="profile-section-title">Featured Clip</div><div style="padding:0.9rem; border-radius:0.95rem; background:rgba(7, 11, 18, 0.56); border:1px solid rgba(255,255,255,0.08);"><div style="display:flex; justify-content:space-between; gap:0.75rem; align-items:flex-start; flex-wrap:wrap;"><div><div style="font-weight:800; color:#fff;">${escapeHtml(featuredClip.title)}</div><div style="margin-top:0.2rem; color:#90a4ae; font-size:0.78rem;">${escapeHtml(featuredClip.authorDisplayName)}${featuredClip.gameName ? ` • ${escapeHtml(featuredClip.gameName)}` : ''}</div></div><div style="color:#6f859d; font-size:0.72rem;">${escapeHtml(formatRelativeTime(featuredClip.createdAtMs))}</div></div><div style="margin-top:0.7rem;">${clipMediaHtml}</div><div style="margin-top:0.45rem; color:#c9d8ec; font-size:0.8rem; line-height:1.5;">${escapeHtml(featuredClip.caption || 'No caption.')}</div></div>`;
+} else {
+  featuredClipEl.style.display = 'none';
+  featuredClipEl.innerHTML = '';
 }
 const isOwnProfile = profileUserKey && profileUserKey === getMyProfileKey();
 editBtn.style.display = isOwnProfile ? 'inline-block' : 'none';
@@ -15958,6 +16010,8 @@ editPanelEl.style.display = isOwnProfile && currentProfileEditorVisible ? 'grid'
 if (isOwnProfile && currentProfileEditorVisible) {
   const badgeOptions = getProfileBadges(profileUserKey, stats, profile);
   const showcasedLabels = getShowcasedProfileBadges(profileUserKey, stats, profile).map((badge) => badge.label);
+  const showcaseOptions = getProfileShowcaseStatOptions(profileUserKey, stats, casinoStats);
+  const ownClips = siteClipFeedCache.filter((entry) => entry.author === profileUserKey);
   pendingProfileAvatarData = pendingProfileAvatarData === null ? sanitizeProfileAvatar(profile.avatarData) : pendingProfileAvatarData;
   pendingProfileBannerData = pendingProfileBannerData === null ? sanitizeProfileBanner(profile.bannerData) : pendingProfileBannerData;
   editPanelEl.innerHTML = `
@@ -16003,6 +16057,14 @@ if (isOwnProfile && currentProfileEditorVisible) {
     </div>
     <div style="display:grid; gap:0.55rem; margin-top:0.95rem;">
       <input id="profile-edit-quote" type="text" maxlength="120" placeholder="Profile quote" value="${escapeHtml(profile.statusQuote || '')}" />
+      <input id="profile-edit-showcase-headline" type="text" maxlength="80" placeholder="Showcase headline" value="${escapeHtml(profile.showcaseHeadline || '')}" />
+      <select id="profile-edit-showcase-stat">
+        ${showcaseOptions.map((option) => `<option value="${escapeHtml(option.id)}" ${sanitizeNullableText(profile.showcasePrimaryStat, 'messagesSent') === option.id ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}
+      </select>
+      <select id="profile-edit-featured-clip">
+        <option value="">No featured clip</option>
+        ${ownClips.map((clip) => `<option value="${escapeHtml(clip.id)}" ${sanitizeNullableText(profile.featuredClipId, '') === clip.id ? 'selected' : ''}>${escapeHtml(`${clip.title}${clip.gameName ? ` • ${clip.gameName}` : ''}`)}</option>`).join('')}
+      </select>
       <select id="profile-edit-title">
         <option value="">No title</option>
         ${getUnlockedProfileRewardTitles(stats, casinoStats, profileUserKey).map((title) => `<option value="${escapeHtml(title)}" ${sanitizeNullableText(profile.profileTitle, '') === title ? 'selected' : ''}>${escapeHtml(title)}</option>`).join('')}
@@ -16015,10 +16077,18 @@ if (isOwnProfile && currentProfileEditorVisible) {
         <div style="font-size:0.78rem; color:#9fb0c2;">Badge showcase slots</div>
         ${Array.from({ length: PROFILE_BADGE_SHOWCASE_LIMIT }).map((_, index) => `<select id="profile-edit-showcase-badge-${index}"><option value="">No badge</option>${badgeOptions.map((badge) => `<option value="${escapeHtml(badge.label)}" ${showcasedLabels[index] === badge.label ? 'selected' : ''}>${escapeHtml(`${badge.icon} ${badge.label}`)}</option>`).join('')}</select>`).join('')}
       </div>
+      <div style="font-size:0.76rem; color:#8fa4bc;">${ownClips.length ? 'Pick one of your posted clips to pin on your profile.' : 'Post a clip in Player Hub to make it selectable here.'}</div>
     </div>
     <textarea id="profile-edit-bio" maxlength="220" placeholder="Short bio">${escapeHtml(profile.bio || '')}</textarea>`;
   applyProfileBannerBackground(document.getElementById('profile-edit-banner-preview'), pendingProfileBannerData, document.getElementById('profile-edit-banner-empty'));
   renderProfileGifSearchResults();
+  if (!siteClipFeedCache.length) {
+    loadSiteClips().then(() => {
+      if (currentProfileViewUser === profileUserKey && currentProfileEditorVisible && document.getElementById('profile-modal')?.style.display === 'flex') {
+        renderProfileModal(profileUserKey);
+      }
+    }).catch(() => {});
+  }
   if (!profileGifResults.length) searchProfileGifs('trending');
   return;
 }
@@ -16334,6 +16404,9 @@ const key = getMyProfileKey();
 if (!key || currentProfileViewUser !== key) return;
 const bioEl = document.getElementById('profile-edit-bio');
 const quoteEl = document.getElementById('profile-edit-quote');
+const showcaseHeadlineEl = document.getElementById('profile-edit-showcase-headline');
+const showcaseStatEl = document.getElementById('profile-edit-showcase-stat');
+const featuredClipEl = document.getElementById('profile-edit-featured-clip');
 const titleEl = document.getElementById('profile-edit-title');
 const accentEl = document.getElementById('profile-edit-accent');
 const showcasedBadgeLabels = Array.from({ length: PROFILE_BADGE_SHOWCASE_LIMIT }).map((_, index) => {
@@ -16350,6 +16423,9 @@ const nextProfile = {
   favoriteGameName: primaryFavorite ? primaryFavorite.name : '',
   bio: sanitizeNullableText(bioEl && bioEl.value, '').slice(0, 220),
   statusQuote: sanitizeNullableText(quoteEl && quoteEl.value, '').slice(0, 120),
+  showcaseHeadline: sanitizeNullableText(showcaseHeadlineEl && showcaseHeadlineEl.value, '').slice(0, 80),
+  showcasePrimaryStat: sanitizeNullableText(showcaseStatEl && showcaseStatEl.value, 'messagesSent').slice(0, 40) || 'messagesSent',
+  featuredClipId: sanitizeNullableText(featuredClipEl && featuredClipEl.value, '').slice(0, 120),
   profileTitle: sanitizeNullableText(titleEl && titleEl.value, '').slice(0, 40),
   profileAccentId: sanitizeNullableText(accentEl && accentEl.value, '').slice(0, 24),
   showcasedBadgeLabels: Array.from(new Set(showcasedBadgeLabels)).slice(0, PROFILE_BADGE_SHOWCASE_LIMIT),
@@ -17301,6 +17377,14 @@ alert('Incorrect password');
 
 function logout() {
 isLoggedIn = false;
+if (muteStatusUnsub) { muteStatusUnsub(); muteStatusUnsub = null; }
+if (timedBanStatusUnsub) { timedBanStatusUnsub(); timedBanStatusUnsub = null; }
+if (warningStatusUnsub) { warningStatusUnsub(); warningStatusUnsub = null; }
+if (strikeStatusUnsub) { strikeStatusUnsub(); strikeStatusUnsub = null; }
+currentMuteInfo = null;
+currentTimedBanInfo = null;
+currentWarningCount = null;
+currentStrikeCount = null;
 document.getElementById('admin-panel').classList.remove('show');
 document.getElementById('login-modal').classList.remove('show');
 }
@@ -17673,6 +17757,42 @@ return null;
 }
 }
 
+function getChatRealtimeDb() {
+if (!realtimeChatFeaturesEnabled) return null;
+return getPrimaryRealtimeDb();
+}
+
+function isRealtimePermissionDeniedError(error) {
+const code = String(error && error.code || '').toLowerCase();
+if (code.includes('permission_denied')) return true;
+const message = String(error && error.message || '').toLowerCase();
+return message.includes('permission_denied') || message.includes('permission denied');
+}
+
+function disableRealtimeChatFeatures(error) {
+if (!isRealtimePermissionDeniedError(error)) return false;
+realtimeChatFeaturesEnabled = false;
+if (typingUsersRealtimeRef && typingUsersRealtimeHandler) {
+typingUsersRealtimeRef.off('value', typingUsersRealtimeHandler);
+}
+typingUsersRealtimeRef = null;
+typingUsersRealtimeHandler = null;
+if (onlineUsersRealtimeRef && onlineUsersRealtimeHandler) {
+onlineUsersRealtimeRef.off('value', onlineUsersRealtimeHandler);
+}
+onlineUsersRealtimeRef = null;
+onlineUsersRealtimeHandler = null;
+if (realtimePresenceHeartbeatInterval) {
+clearInterval(realtimePresenceHeartbeatInterval);
+realtimePresenceHeartbeatInterval = null;
+}
+if (!realtimeChatFallbackLogged) {
+console.warn('Realtime Database denied chat presence/typing access, falling back to Firestore.', error);
+realtimeChatFallbackLogged = true;
+}
+return true;
+}
+
 function configureFirestoreTransport(db) {
 if (!db || configuredFirestoreDbs.has(db)) return db;
 try {
@@ -18002,6 +18122,8 @@ let typingUsersRealtimeHandler = null;
 let onlineUsersRealtimeRef = null;
 let onlineUsersRealtimeHandler = null;
 let realtimePresenceHeartbeatInterval = null;
+let realtimeChatFeaturesEnabled = true;
+let realtimeChatFallbackLogged = false;
 let currentRoomPinnedMessages = [];
 let globalPinnedMessages = [];
 let pinnedMessageGlobalUnsub = null;
@@ -18046,8 +18168,12 @@ let recentCrossRoomTypingNotifications = {};
 let timeoutStatusInterval = null;
 let currentMuteInfo = null;
 let currentTimedBanInfo = null;
+let currentWarningCount = null;
+let currentStrikeCount = null;
 let muteStatusUnsub = null;
 let timedBanStatusUnsub = null;
+let warningStatusUnsub = null;
+let strikeStatusUnsub = null;
 let moderationSettings = {
 readOnlyMode: false,
 blockedWords: [],
@@ -19281,6 +19407,67 @@ tempBanned = true;
 return { count: nextCount, muted, tempBanned };
 }
 
+async function syncAutoModerationState(username, counts = {}, db = null) {
+const key = normalizeUsername(username);
+if (!key || isProtectedUsername(key)) return;
+const adminDb = db || getAdminDb();
+const warningCount = Math.max(0, Number(counts.warningCount || 0));
+const strikeCount = Math.max(0, Number(counts.strikeCount || 0));
+
+try {
+const mutedDoc = await adminDb.collection('muted_users').doc(key).get();
+if (mutedDoc.exists) {
+  const muteReason = sanitizeNullableText((mutedDoc.data() || {}).reason, '');
+  if ((muteReason === 'Auto-mute after 3 warnings' && warningCount < 3) || (muteReason === 'Auto-mute after 3 strikes' && strikeCount < 3)) {
+    await adminDb.collection('muted_users').doc(key).delete();
+  }
+}
+} catch (_) {}
+
+if (strikeCount >= 5) return;
+
+try {
+const timedBanDoc = await adminDb.collection(TIMED_BANS_COLLECTION).doc(key).get();
+const timedBanReason = timedBanDoc.exists ? sanitizeNullableText((timedBanDoc.data() || {}).reason, '') : '';
+if (timedBanReason === 'Auto temp ban after 5 strikes') {
+  await clearTimedBanState(key, adminDb);
+}
+} catch (_) {}
+}
+
+async function removeModerationMark(username, collectionName) {
+const key = normalizeUsername(username);
+if (!key) {
+  throw new Error('invalid-user');
+}
+if (isProtectedUsername(key)) {
+  throw new Error('protected-user');
+}
+const db = getAdminDb();
+const ref = db.collection(collectionName).doc(key);
+const doc = await ref.get();
+const data = doc.exists ? (doc.data() || {}) : {};
+const currentCount = parseInt(data.count, 10) || 0;
+if (currentCount <= 0) {
+  throw new Error('no-record');
+}
+const nextCount = Math.max(0, currentCount - 1);
+const history = Array.isArray(data.history) ? data.history.slice(0, -1).slice(-19) : [];
+if (nextCount > 0) {
+  await ref.set({ count: nextCount, history, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+} else {
+  await ref.delete();
+}
+
+const otherCollection = collectionName === USER_WARNINGS_COLLECTION ? USER_STRIKES_COLLECTION : USER_WARNINGS_COLLECTION;
+const otherDoc = await db.collection(otherCollection).doc(key).get();
+const otherCount = otherDoc.exists ? (parseInt((otherDoc.data() || {}).count, 10) || 0) : 0;
+const warningCount = collectionName === USER_WARNINGS_COLLECTION ? nextCount : otherCount;
+const strikeCount = collectionName === USER_STRIKES_COLLECTION ? nextCount : otherCount;
+await syncAutoModerationState(key, { warningCount, strikeCount }, db);
+return { count: nextCount, warningCount, strikeCount };
+}
+
 function getStatsStore() {
 try {
 return JSON.parse(localStorage.getItem(USER_STATS_STORAGE_KEY) || '{}');
@@ -20123,7 +20310,7 @@ panel.innerHTML = `
   <label style="display:block; margin-top:0.45rem; color:#ddd; font-size:0.85rem;">Profile Tag</label>
   <select id="profile-flag-tag" style="width:100%; margin-top:0.25rem; background:#1d1d1d; color:#fff; border:1px solid #444; border-radius:0.35rem; padding:0.45rem;">${getProfileTagOptionsHtml(tag)}</select>
      <textarea id="profile-flag-note" placeholder="Private admin note" style="width:100%; min-height:72px; margin-top:0.4rem; background:#1d1d1d; color:#fff; border:1px solid #444; border-radius:0.35rem; padding:0.45rem;">${escapeHtml(note)}</textarea>
-     <div style="margin-top:0.5rem; display:flex; gap:0.45rem; flex-wrap:wrap;"><button onclick="saveProfileFlags()" style="padding:0.35rem 0.7rem; background:#1565c0; color:#fff; border:none; border-radius:0.25rem;">Save Flags</button><button onclick="adminAddStrikeFromProfile()" style="padding:0.35rem 0.7rem; background:#ef6c00; color:#fff; border:none; border-radius:0.25rem;">Add Strike</button></div>
+    <div style="margin-top:0.5rem; display:flex; gap:0.45rem; flex-wrap:wrap;"><button onclick="saveProfileFlags()" style="padding:0.35rem 0.7rem; background:#1565c0; color:#fff; border:none; border-radius:0.25rem;">Save Flags</button><button onclick="adminRemoveWarningFromProfile()" style="padding:0.35rem 0.7rem; background:#6d4c41; color:#fff; border:none; border-radius:0.25rem;">Remove Warning</button><button onclick="adminAddStrikeFromProfile()" style="padding:0.35rem 0.7rem; background:#ef6c00; color:#fff; border:none; border-radius:0.25rem;">Add Strike</button><button onclick="adminRemoveStrikeFromProfile()" style="padding:0.35rem 0.7rem; background:#5d4037; color:#fff; border:none; border-radius:0.25rem;">Remove Strike</button></div>
    `;
 } catch (err) {
 panel.innerHTML = '<div style="color:#f88; font-size:0.85rem;">Could not load profile flags.</div>';
@@ -20191,6 +20378,59 @@ try {
 }
 }
 
+async function adminRemoveWarningFromPanel() {
+if (!canModerate(currentChatUser)) return;
+const username = resolveAdminTargetUsername('admin-warn-username');
+const statusDiv = document.getElementById('admin-ban-status');
+if (!username) {
+  if (statusDiv) statusDiv.textContent = 'Enter a username to remove a warning.';
+  return;
+}
+try {
+  const result = await removeModerationMark(username, USER_WARNINGS_COLLECTION);
+  if (statusDiv) statusDiv.textContent = `${username} warning count: ${result.count}/3.`;
+  await writeAuditLog('remove_warning', username, `Warning removed (count ${result.count})`);
+  addSiteActivity('moderation', `${currentChatUser} removed a warning from ${username}`, `Warnings left: ${result.count}`);
+} catch (err) {
+  if (err && err.message === 'protected-user') {
+    if (statusDiv) statusDiv.textContent = 'You cannot edit kaiden warnings.';
+    return;
+  }
+  if (err && err.message === 'no-record') {
+    if (statusDiv) statusDiv.textContent = `${username} has no warnings to remove.`;
+    return;
+  }
+  if (statusDiv) statusDiv.textContent = 'Failed to remove warning.';
+}
+}
+
+async function adminRemoveStrikeFromPanel() {
+if (!canModerate(currentChatUser)) return;
+const username = resolveAdminTargetUsername('admin-warn-username');
+const statusDiv = document.getElementById('admin-ban-status');
+if (!username) {
+  if (statusDiv) statusDiv.textContent = 'Enter a username to remove a strike.';
+  return;
+}
+try {
+  const result = await removeModerationMark(username, USER_STRIKES_COLLECTION);
+  if (statusDiv) statusDiv.textContent = `${username} strike count: ${result.count}.`;
+  await writeAuditLog('remove_strike', username, `Strike removed (count ${result.count})`);
+  addSiteActivity('moderation', `${currentChatUser} removed a strike from ${username}`, `Strikes left: ${result.count}`);
+  loadActiveTempBans();
+} catch (err) {
+  if (err && err.message === 'protected-user') {
+    if (statusDiv) statusDiv.textContent = 'You cannot edit kaiden strikes.';
+    return;
+  }
+  if (err && err.message === 'no-record') {
+    if (statusDiv) statusDiv.textContent = `${username} has no strikes to remove.`;
+    return;
+  }
+  if (statusDiv) statusDiv.textContent = 'Failed to remove strike.';
+}
+}
+
 async function adminAddStrikeFromProfile() {
 if (!canModerate(currentChatUser)) return;
 const targetUser = normalizeUsername(currentProfileViewUser);
@@ -20208,6 +20448,55 @@ try {
     return;
   }
   alert('Failed to add strike.');
+}
+}
+
+async function adminRemoveWarningFromProfile() {
+if (!canModerate(currentChatUser)) return;
+const targetUser = normalizeUsername(currentProfileViewUser);
+if (!targetUser) return;
+try {
+  const result = await removeModerationMark(targetUser, USER_WARNINGS_COLLECTION);
+  await writeAuditLog('remove_warning_profile', targetUser, `Warning removed from profile (count ${result.count})`);
+  await renderProfileFlags(targetUser);
+  const statusDiv = document.getElementById('admin-ban-status');
+  if (statusDiv) statusDiv.textContent = `${targetUser} warning count: ${result.count}/3.`;
+  addSiteActivity('moderation', `${currentChatUser} removed a warning from ${targetUser}`, `Warnings left: ${result.count}`);
+} catch (err) {
+  if (err && err.message === 'protected-user') {
+    alert('You cannot edit kaiden warnings.');
+    return;
+  }
+  if (err && err.message === 'no-record') {
+    alert(`${targetUser} has no warnings to remove.`);
+    return;
+  }
+  alert('Failed to remove warning.');
+}
+}
+
+async function adminRemoveStrikeFromProfile() {
+if (!canModerate(currentChatUser)) return;
+const targetUser = normalizeUsername(currentProfileViewUser);
+if (!targetUser) return;
+try {
+  const result = await removeModerationMark(targetUser, USER_STRIKES_COLLECTION);
+  await writeAuditLog('remove_strike_profile', targetUser, `Strike removed from profile (count ${result.count})`);
+  await renderProfileFlags(targetUser);
+  const statusDiv = document.getElementById('admin-ban-status');
+  if (statusDiv) statusDiv.textContent = `${targetUser} strike count: ${result.count}.`;
+  addSiteActivity('moderation', `${currentChatUser} removed a strike from ${targetUser}`, `Strikes left: ${result.count}`);
+  loadActiveTempBans();
+} catch (err) {
+  if (err && err.message === 'protected-user') {
+    alert('You cannot edit kaiden strikes.');
+    return;
+  }
+  if (err && err.message === 'no-record') {
+    alert(`${targetUser} has no strikes to remove.`);
+    return;
+  }
+  alert('Failed to remove strike.');
 }
 }
 
@@ -21461,7 +21750,6 @@ try {
   activeSiteEventCache = draft;
   renderAnnouncementBanner();
   renderActiveSiteEventBanner();
-  renderPlayerHubModal();
   syncAdminEventModeFormFromCache();
   renderAdminEventModePreview();
   refreshRoleNameEffectUi();
@@ -21480,7 +21768,6 @@ try {
   activeSiteEventCache = null;
   renderAnnouncementBanner();
   renderActiveSiteEventBanner();
-  renderPlayerHubModal();
   syncAdminEventModeFormFromCache();
   renderAdminEventModePreview();
   refreshRoleNameEffectUi();
@@ -24901,7 +25188,7 @@ try {
   await loadActiveSiteEvent();
   renderAnnouncementBanner();
   renderActiveSiteEventBanner();
-  pushNotification({ type: 'event', title: 'New site event', body: title, read: false, action: { kind: 'hub', tab: 'events' } });
+  pushNotification({ type: 'event', title: 'New site event', body: title, read: false });
   const statusDiv = document.getElementById('admin-ban-status');
   if (statusDiv) statusDiv.textContent = 'Site event updated.';
 } catch (err) {
@@ -25210,6 +25497,40 @@ expiresAt,
 mutedBy: normalizeUsername(data.mutedBy || '')
 };
 updateChatTimeoutStatusUi();
+});
+}
+
+function listenForWarningStatus() {
+if (!chatInitialized || !currentChatUser || isProtectedUsername(currentChatUser)) return;
+const db = getAdminDb();
+if (warningStatusUnsub) warningStatusUnsub();
+warningStatusUnsub = db.collection(USER_WARNINGS_COLLECTION).doc(currentChatUser).onSnapshot((doc) => {
+const data = doc.exists ? (doc.data() || {}) : {};
+const nextCount = Math.max(0, parseInt(data.count, 10) || 0);
+const previousCount = currentWarningCount;
+currentWarningCount = nextCount;
+if (previousCount === null || nextCount <= previousCount) return;
+const history = Array.isArray(data.history) ? data.history : [];
+const latestEntry = history[history.length - 1] || {};
+const reason = sanitizeNullableText(latestEntry.reason, 'Rule violation');
+alert(`You received warning ${nextCount}/3. Reason: ${reason}`);
+});
+}
+
+function listenForStrikeStatus() {
+if (!chatInitialized || !currentChatUser || isProtectedUsername(currentChatUser)) return;
+const db = getAdminDb();
+if (strikeStatusUnsub) strikeStatusUnsub();
+strikeStatusUnsub = db.collection(USER_STRIKES_COLLECTION).doc(currentChatUser).onSnapshot((doc) => {
+const data = doc.exists ? (doc.data() || {}) : {};
+const nextCount = Math.max(0, parseInt(data.count, 10) || 0);
+const previousCount = currentStrikeCount;
+currentStrikeCount = nextCount;
+if (previousCount === null || nextCount <= previousCount) return;
+const history = Array.isArray(data.history) ? data.history : [];
+const latestEntry = history[history.length - 1] || {};
+const reason = sanitizeNullableText(latestEntry.reason, 'Rule violation');
+alert(`You received strike ${nextCount}. Reason: ${reason}`);
 });
 }
 
@@ -25923,6 +26244,8 @@ startDMInboxListeners();
 listenForKick();
 listenForTimedBan();
 listenForMuteStatus();
+listenForWarningStatus();
+listenForStrikeStatus();
 listenForPinnedMessages();
 await backfillLegacyMessageStatsForCurrentUser();
 showChatButton();
@@ -27149,7 +27472,7 @@ console.error('Error toggling image reaction:', err);
 
 async function registerOnlinePresence() {
 if (!chatInitialized || !currentChatUser) return;
-const realtimeDb = getPrimaryRealtimeDb();
+const realtimeDb = getChatRealtimeDb();
 if (realtimeDb) {
 try {
 const ref = realtimeDb.ref(`user_presence/${getSafeRealtimeKey(currentChatUser)}`);
@@ -27173,7 +27496,9 @@ ref.remove().catch(() => {});
 });
 return;
 } catch (err) {
+if (!disableRealtimeChatFeatures(err)) {
 console.error('Error registering Realtime Database presence:', err);
+}
 }
 }
 
@@ -27194,7 +27519,7 @@ console.error('Error registering presence:', err);
 
 function loadOnlineUsers() {
 if (!chatInitialized) return;
-const realtimeDb = getPrimaryRealtimeDb();
+const realtimeDb = getChatRealtimeDb();
 if (realtimeDb) {
 if (onlineUsersRealtimeRef && onlineUsersRealtimeHandler) {
 onlineUsersRealtimeRef.off('value', onlineUsersRealtimeHandler);
@@ -27218,7 +27543,13 @@ if (btn) btn.textContent = `🟢 ${onlineUsers.length}`;
 const panel = document.getElementById('online-users-panel');
 if (panel && panel.style.display !== 'none') renderOnlineUsers(onlineUsers);
 };
-onlineUsersRealtimeRef.on('value', onlineUsersRealtimeHandler);
+onlineUsersRealtimeRef.on('value', onlineUsersRealtimeHandler, (err) => {
+if (!disableRealtimeChatFeatures(err)) {
+console.error('Error loading online users from Realtime Database:', err);
+return;
+}
+loadOnlineUsers();
+});
 return;
 }
 
@@ -27522,7 +27853,7 @@ indicator.textContent = `${typers.slice(0, -1).join(', ')} and ${typers[typers.l
 
 async function writeTypingState(isTyping) {
 if (!chatInitialized || !currentChatUser) return;
-const realtimeDb = getPrimaryRealtimeDb();
+const realtimeDb = getChatRealtimeDb();
 if (realtimeDb) {
 try {
 const ref = realtimeDb.ref(`typing_status/${getSafeRealtimeKey(currentChatUser)}`);
@@ -27538,7 +27869,9 @@ await ref.remove();
 }
 return;
 } catch (err) {
+if (!disableRealtimeChatFeatures(err)) {
 console.error('Error writing typing state to Realtime Database:', err);
+}
 }
 }
 
@@ -27585,7 +27918,7 @@ typingUsersLoadedOnce = true;
 }
 renderTypingIndicator();
 };
-const realtimeDb = getPrimaryRealtimeDb();
+const realtimeDb = getChatRealtimeDb();
 if (realtimeDb) {
 if (typingUsersRealtimeRef && typingUsersRealtimeHandler) {
 typingUsersRealtimeRef.off('value', typingUsersRealtimeHandler);
@@ -27606,7 +27939,13 @@ username
 });
 applyTypingUsersSnapshot(next);
 };
-typingUsersRealtimeRef.on('value', typingUsersRealtimeHandler);
+typingUsersRealtimeRef.on('value', typingUsersRealtimeHandler, (err) => {
+if (!disableRealtimeChatFeatures(err)) {
+console.error('Error loading typing users from Realtime Database:', err);
+return;
+}
+loadTypingUsers();
+});
 return;
 }
 

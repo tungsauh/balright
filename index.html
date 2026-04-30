@@ -219,6 +219,8 @@ cursor: pointer;
 <input type="text" id="admin-warn-reason" placeholder="Warning reason" />
 <button onclick="adminWarnUser()" class="admin-btn admin-btn--pink">Warn</button>
 <button onclick="adminAddStrikeFromPanel()" class="admin-btn admin-btn--warning">Strike</button>
+<button onclick="adminRemoveWarningFromPanel()" class="admin-btn admin-btn--neutral">Remove Warning</button>
+<button onclick="adminRemoveStrikeFromPanel()" class="admin-btn admin-btn--success">Remove Strike</button>
 </div>
 
 <div class="admin-section-card" data-admin-scope="admin" data-admin-permission="tempBan">
@@ -1213,7 +1215,6 @@ cursor: pointer;
 <h3>Chat</h3>
 <div id="chat-header-actions">
 <button id="chat-friends-btn" onclick="openFriendsModal()" title="Friends">👥<span id="dm-unread-badge"></span></button>
-<button id="chat-player-hub-btn" onclick="openPlayerHubModal()" title="Player Hub">🔔<span id="notification-badge" style="display:none;"></span></button>
 <button id="chat-profile-btn" onclick="openProfileModal(event)">Profile</button>
 <button id="chat-online-btn" onclick="toggleOnlineUsers(event)">🟢 0</button>
 <button id="chat-fullscreen-btn" onclick="toggleChatFullscreen(event)" title="Fullscreen">⛶</button>
@@ -1391,7 +1392,9 @@ oninput="onChatInput()"
 <div class="profile-section-title">Identity</div>
 <div id="profile-badges" class="profile-badge-row"></div>
 <div id="profile-detail-list" class="profile-detail-list" style="margin-top:0.8rem;"></div>
+<div id="profile-showcase-board" style="display:none; margin-top:0.9rem;"></div>
 <div id="profile-featured-drop" style="display:none;"></div>
+<div id="profile-clip-showcase" style="display:none; margin-top:0.9rem;"></div>
 <div id="profile-edit-panel" class="profile-edit-grid" style="display:none; margin-top:0.8rem;"></div>
 <div class="submission-actions">
 <button id="profile-edit-btn" type="button" onclick="toggleProfileEditor()" style="display:none; padding:0.45rem 0.8rem; background:#1565c0; color:#fff; border:none; border-radius:0.35rem;">Edit Profile</button>
@@ -1871,25 +1874,6 @@ oninput="onChatInput()"
 <div class="overlay-subtle">Open cases from your inventory here. The rarity ladder is tighter now, so reds and golds stay rare.</div>
 <div id="general-shop-inventory-status" class="overlay-status"></div>
 <div id="general-shop-inventory-content"></div>
-</div>
-</div>
-
-<div id="player-hub-modal" class="overlay-modal" onclick="if(event.target===this)closePlayerHubModal()">
-<div class="overlay-panel" style="width:min(78rem, calc(100vw - 2rem)); max-height:min(92vh, 58rem);">
-<div class="overlay-header">
-<h3>Player Hub</h3>
-<button onclick="closePlayerHubModal()" style="padding:0.35rem 0.7rem;">Close</button>
-</div>
-<div class="overlay-subtle">Notifications, inventory history, case stats, profile rewards, events, and chat threads.</div>
-<div style="display:flex; gap:0.45rem; flex-wrap:wrap; margin:0.8rem 0;">
-<button id="player-hub-tab-notifications" class="inline-action-btn" onclick="setPlayerHubTab('notifications')">Notifications</button>
-<button id="player-hub-tab-history" class="inline-action-btn" onclick="setPlayerHubTab('history')">History</button>
-<button id="player-hub-tab-cases" class="inline-action-btn" onclick="setPlayerHubTab('cases')">Cases</button>
-<button id="player-hub-tab-rewards" class="inline-action-btn" onclick="setPlayerHubTab('rewards')">Rewards</button>
-<button id="player-hub-tab-events" class="inline-action-btn" onclick="setPlayerHubTab('events')">Events</button>
-<button id="player-hub-tab-threads" class="inline-action-btn" onclick="setPlayerHubTab('threads')">Threads</button>
-</div>
-<div id="player-hub-content"></div>
 </div>
 </div>
 
