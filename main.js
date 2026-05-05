@@ -624,6 +624,10 @@ function getGeneralShopMarketCollection() {
   return getCasinoDb().collection(GENERAL_SHOP_MARKET_COLLECTION);
 }
 
+function getGeneralShopMarketSalesCollection() {
+  return getCasinoDb().collection(GENERAL_SHOP_MARKET_SALES_COLLECTION);
+}
+
 function getProfileBackgroundShopCollection() {
   return getCasinoDb().collection(PROFILE_BACKGROUND_SHOP_COLLECTION);
 }
@@ -1658,8 +1662,28 @@ function getStableStringHash(value = '') {
 }
 
 function getDeterministicGeneralShopFloatValue(seed = '') {
-  const hash = getStableStringHash(seed || 'general-shop-float');
-  return Math.min(0.9999, Math.max(0.0001, (hash % 10000) / 10000));
+  const baseSeed = seed || 'general-shop-float';
+  const tierRoll = Math.min(0.999999, Math.max(0.000001, (getStableStringHash(`${baseSeed}|tier`) % 1000000) / 1000000));
+  const rangeRoll = Math.min(0.999999, Math.max(0.000001, (getStableStringHash(`${baseSeed}|range`) % 1000000) / 1000000));
+  let min = 0.45;
+  let max = 0.9999;
+  if (tierRoll <= 0.00001) {
+    min = 0.0001;
+    max = 0.001;
+  } else if (tierRoll <= 0.08001) {
+    min = 0.0011;
+    max = 0.07;
+  } else if (tierRoll <= 0.26001) {
+    min = 0.0701;
+    max = 0.15;
+  } else if (tierRoll <= 0.54001) {
+    min = 0.1501;
+    max = 0.38;
+  } else if (tierRoll <= 0.74001) {
+    min = 0.3801;
+    max = 0.45;
+  }
+  return Math.min(0.9999, Math.max(0.0001, min + ((max - min) * rangeRoll)));
 }
 
 function sanitizeOwnedGeneralShopItemInstanceIds(ids, instanceIds, saleValues = []) {
@@ -1690,17 +1714,67 @@ function createGeneralShopInventoryInstanceId(itemId = '') {
   return sanitizeOwnedGeneralShopInventoryInstanceId(`gsi-${safeItemId}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`);
 }
 
+const GENERAL_SHOP_AUTO_SELL_WEAR_OPTIONS = Object.freeze([
+  { id: 'pristine', label: 'Fresh Issue' },
+  { id: 'factory-new', label: 'Factory New' },
+  { id: 'minimal-wear', label: 'Minimal Wear' },
+  { id: 'field-tested', label: 'Field-Tested' },
+  { id: 'well-worn', label: 'Well-Worn' },
+  { id: 'battle-scarred', label: 'Battle-Scarred' }
+]);
+
+function normalizeGeneralShopAutoSellWearKey(value = '') {
+  const normalized = String(value || '').trim().toLowerCase();
+  return GENERAL_SHOP_AUTO_SELL_WEAR_OPTIONS.some((entry) => entry.id === normalized) ? normalized : '';
+}
+
+function sanitizeGeneralShopAutoSellWearKeys(values) {
+  const source = Array.isArray(values) ? values : [];
+  const seen = new Set();
+  return source.map((value) => normalizeGeneralShopAutoSellWearKey(value)).filter((value) => {
+    if (!value || seen.has(value)) return false;
+    seen.add(value);
+    return true;
+  });
+}
+
 function formatGeneralShopFloatValue(value = 0) {
   return Math.min(1, Math.max(0, Number(value) || 0)).toFixed(4);
 }
 
+function getGeneralShopFloatWearKey(value = 0) {
+  const normalized = Math.min(1, Math.max(0, Number(value) || 0));
+  if (normalized <= 0.001) return 'pristine';
+  if (normalized <= 0.07) return 'factory-new';
+  if (normalized <= 0.15) return 'minimal-wear';
+  if (normalized <= 0.38) return 'field-tested';
+  if (normalized <= 0.45) return 'well-worn';
+  return 'battle-scarred';
+}
+
 function getGeneralShopFloatWearLabel(value = 0) {
   const normalized = Math.min(1, Math.max(0, Number(value) || 0));
+  if (normalized <= 0.001) return 'Fresh Issue';
   if (normalized <= 0.07) return 'Factory New';
   if (normalized <= 0.15) return 'Minimal Wear';
   if (normalized <= 0.38) return 'Field-Tested';
   if (normalized <= 0.45) return 'Well-Worn';
   return 'Battle-Scarred';
+}
+
+function getGeneralShopFloatReferenceMultiplier(value = 0) {
+  const normalized = Math.min(1, Math.max(0, Number(value) || 0));
+  if (normalized <= 0.001) return 8;
+  if (normalized <= 0.07) return 2;
+  if (normalized <= 0.15) return 1.5;
+  if (normalized <= 0.38) return 0.9;
+  if (normalized <= 0.45) return 0.5;
+  return 0.25;
+}
+
+function getGeneralShopFloatAdjustedReferenceValue(baseValue = 0, floatValue = 0) {
+  const safeBaseValue = Math.max(0, Math.floor(Number(baseValue) || 0));
+  return Math.max(0, Math.floor(safeBaseValue * getGeneralShopFloatReferenceMultiplier(floatValue)));
 }
 
 function getOwnedGeneralShopInventoryArrays(stats) {
@@ -1744,11 +1818,197 @@ function getGeneralShopCaseDropSaleValue(caseItem, rewardItem) {
   return Math.max(0, Math.floor(casePrice * multiplier));
 }
 
+function getGeneralShopCaseDropReferenceValue(caseItem, rewardItem, floatValue = 0, fallbackBaseValue = null) {
+  const baseValue = fallbackBaseValue == null
+    ? getGeneralShopCaseDropSaleValue(caseItem, rewardItem)
+    : Math.max(0, Math.floor(Number(fallbackBaseValue) || 0));
+  return getGeneralShopFloatAdjustedReferenceValue(baseValue, floatValue);
+}
+
 function getLegacyGeneralShopCaseDropSaleValue(item) {
   if (!item || item.itemType !== 'case-drop') return 0;
   const matchingCases = getAllGeneralShopItems().filter((entry) => entry && entry.itemType === 'case' && getResolvedGeneralShopCaseRewards(entry).some((reward) => reward && reward.itemId === item.id));
   if (!matchingCases.length) return 0;
   return matchingCases.reduce((best, caseItem) => Math.max(best, getGeneralShopCaseDropSaleValue(caseItem, item)), 0);
+}
+
+function getOwnedGeneralShopCaseDropReferenceValue(entry) {
+  if (!entry || !entry.item || entry.item.itemType !== 'case-drop') return 0;
+  return getGeneralShopFloatAdjustedReferenceValue(entry.saleValue, entry.floatValue);
+}
+
+function isGeneralShopServerSellEligibleRarity(rarity) {
+  const normalized = normalizeGeneralShopRarity(rarity || '');
+  return normalized === 'mil-spec' || normalized === 'restricted';
+}
+
+function getGeneralShopServerSellValueFromReferenceValue(referenceValue = 0) {
+  return Math.max(0, Math.floor(Math.max(0, Number(referenceValue) || 0) / 2));
+}
+
+function getGeneralShopMarketFeeValue(listPrice = 0) {
+  const safeListPrice = Math.max(0, Math.floor(Number(listPrice) || 0));
+  return Math.max(0, Math.floor((safeListPrice * GENERAL_SHOP_MARKET_FEE_BPS) / 10000));
+}
+
+function getGeneralShopMarketSellerNetValue(listPrice = 0) {
+  const safeListPrice = Math.max(0, Math.floor(Number(listPrice) || 0));
+  return Math.max(0, safeListPrice - getGeneralShopMarketFeeValue(safeListPrice));
+}
+
+function getGeneralShopMarketPriceSummary(itemId = '') {
+  const normalizedItemId = normalizeOptionalGeneralShopItemId(itemId || '');
+  const listings = (Array.isArray(generalShopMarketCache) ? generalShopMarketCache : []).filter((entry) => entry && entry.itemId === normalizedItemId && Number(entry.listPrice) > 0);
+  if (!listings.length) {
+    return { count: 0, averagePrice: 0, lowestListingPrice: 0, highestListingPrice: 0 };
+  }
+  const prices = listings.map((entry) => Math.max(0, Number(entry.listPrice || 0))).filter((value) => value > 0);
+  const total = listings.reduce((sum, entry) => sum + Math.max(0, Number(entry.listPrice || 0)), 0);
+  return {
+    count: listings.length,
+    averagePrice: Math.max(0, Math.round(total / listings.length)),
+    lowestListingPrice: prices.length ? Math.min(...prices) : 0,
+    highestListingPrice: prices.length ? Math.max(...prices) : 0
+  };
+}
+
+function getGeneralShopRecentSalesSummary(itemId = '', limit = 20) {
+  const normalizedItemId = normalizeOptionalGeneralShopItemId(itemId || '');
+  const entries = (Array.isArray(generalShopMarketSalesCache) ? generalShopMarketSalesCache : [])
+    .filter((entry) => entry && entry.itemId === normalizedItemId && Number(entry.soldPrice) > 0)
+    .slice(0, Math.max(1, Math.floor(Number(limit) || 20)));
+  if (!entries.length) {
+    return { entries: [], count: 0, averagePrice: 0, lowestSalePrice: 0, highestSalePrice: 0 };
+  }
+  const prices = entries.map((entry) => Math.max(0, Number(entry.soldPrice || 0))).filter((value) => value > 0);
+  const total = prices.reduce((sum, value) => sum + value, 0);
+  return {
+    entries,
+    count: entries.length,
+    averagePrice: prices.length ? Math.max(0, Math.round(total / prices.length)) : 0,
+    lowestSalePrice: prices.length ? Math.min(...prices) : 0,
+    highestSalePrice: prices.length ? Math.max(...prices) : 0
+  };
+}
+
+function getGeneralShopSuggestedTradeMarketValue(itemId = '', fallbackValue = 0) {
+  const recentSales = getGeneralShopRecentSalesSummary(itemId, 12);
+  if (recentSales.count) return recentSales.averagePrice;
+  const listingStats = getGeneralShopMarketPriceSummary(itemId);
+  if (listingStats.count) return listingStats.averagePrice;
+  return Math.max(0, Math.floor(Number(fallbackValue) || 0));
+}
+
+function getGeneralShopFloatBadgeLabels(floatValue = 0) {
+  const normalized = Math.min(1, Math.max(0, Number(floatValue) || 0));
+  const badges = [];
+  if (normalized <= 0.001) {
+    badges.push('Fresh Issue', '1 in 100k');
+  } else if (normalized <= 0.01) {
+    badges.push('Top Float');
+  }
+  return badges;
+}
+
+function isGeneralShopItemWatched(stats, itemId = '') {
+  const normalizedItemId = normalizeOptionalGeneralShopItemId(itemId || '');
+  return !!normalizedItemId && sanitizeOwnedGeneralShopItemIds(stats && stats.generalShopWatchlistItemIds).includes(normalizedItemId);
+}
+
+function getGeneralShopFloatBadgesMarkup(floatValue = 0) {
+  const badges = getGeneralShopFloatBadgeLabels(floatValue);
+  if (!badges.length) return '';
+  return `<div class="store-chip-row">${badges.map((badge) => `<span class="store-summary-pill" style="padding:0.22rem 0.55rem; font-size:0.68rem; border-color:rgba(113, 184, 255, 0.38); background:rgba(12, 28, 48, 0.88); color:#e4f1ff;">${escapeHtml(badge)}</span>`).join('')}</div>`;
+}
+
+function renderGeneralShopMarketSalesGraphMarkup(itemId = '') {
+  const recentSales = getGeneralShopRecentSalesSummary(itemId, 12);
+  if (!recentSales.count) {
+    return '<div class="overlay-subtle">No recent sales yet.</div>';
+  }
+  const maxPrice = Math.max(1, ...recentSales.entries.map((entry) => Math.max(0, Number(entry.soldPrice || 0))));
+  return `<div style="display:grid; gap:0.35rem;"><div style="display:flex; align-items:end; gap:0.3rem; min-height:4.8rem;">${recentSales.entries.slice().reverse().map((entry) => {
+    const soldPrice = Math.max(0, Number(entry.soldPrice || 0));
+    const heightPct = Math.max(16, Math.round((soldPrice / maxPrice) * 100));
+    return `<div title="$${soldPrice.toLocaleString()} • ${escapeHtml(getGeneralShopFloatWearLabel(entry.floatValue))}" style="flex:1; min-width:0.55rem; height:${heightPct}%; border-radius:0.45rem 0.45rem 0.15rem 0.15rem; background:linear-gradient(180deg, rgba(79,131,255,0.95) 0%, rgba(37,99,235,0.82) 100%);"></div>`;
+  }).join('')}</div><div class="overlay-subtle">Recent sale bars show the last ${recentSales.count} sale${recentSales.count === 1 ? '' : 's'}.</div></div>`;
+}
+
+function getGeneralShopMarketHelperPrice(mode, ownedEntry) {
+  if (!ownedEntry) return 0;
+  const referencePrice = Math.max(1, getOwnedGeneralShopCaseDropReferenceValue(ownedEntry));
+  const listingStats = getGeneralShopMarketPriceSummary(ownedEntry.itemId);
+  if (mode === 'match-avg') {
+    return Math.max(1, listingStats.averagePrice || referencePrice);
+  }
+  if (mode === 'below-avg') {
+    return Math.max(1, Math.floor((listingStats.averagePrice || referencePrice) * 0.95));
+  }
+  if (mode === 'above-avg') {
+    return Math.max(1, Math.ceil((listingStats.averagePrice || referencePrice) * 1.1));
+  }
+  if (mode === 'match-lowest') {
+    return Math.max(1, listingStats.lowestListingPrice || listingStats.averagePrice || referencePrice);
+  }
+  return referencePrice;
+}
+
+function renderGeneralShopMarketInsightsMarkup(ownedEntry, listPriceOverride = 0) {
+  if (!ownedEntry || !ownedEntry.item) return '<div class="overlay-subtle">Pick a skin from your inventory first.</div>';
+  const listingStats = getGeneralShopMarketPriceSummary(ownedEntry.itemId);
+  const recentSales = getGeneralShopRecentSalesSummary(ownedEntry.itemId, 12);
+  const listPrice = Math.max(1, Math.trunc(Number(listPriceOverride) || getOwnedGeneralShopCaseDropReferenceValue(ownedEntry)));
+  return `<div style="display:grid; gap:0.65rem;"><div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(8.5rem, 1fr)); gap:0.5rem;"><div class="store-mini-card" style="padding:0.65rem; gap:0.22rem;"><div class="store-mini-card-meta">Live Listings</div><div class="store-mini-card-title">${listingStats.count}</div><div class="store-mini-card-meta">Low $${Math.max(0, Number(listingStats.lowestListingPrice || 0)).toLocaleString()} • High $${Math.max(0, Number(listingStats.highestListingPrice || 0)).toLocaleString()}</div></div><div class="store-mini-card" style="padding:0.65rem; gap:0.22rem;"><div class="store-mini-card-meta">Recent Sales</div><div class="store-mini-card-title">$${Math.max(0, Number(recentSales.averagePrice || 0)).toLocaleString()}</div><div class="store-mini-card-meta">${recentSales.count ? `${recentSales.count} sale${recentSales.count === 1 ? '' : 's'} tracked` : 'No recent sales'}</div></div><div class="store-mini-card" style="padding:0.65rem; gap:0.22rem;"><div class="store-mini-card-meta">Seller Net After Fee</div><div class="store-mini-card-title">$${getGeneralShopMarketSellerNetValue(listPrice).toLocaleString()}</div><div class="store-mini-card-meta">5% fee on $${listPrice.toLocaleString()} ask</div></div></div>${renderGeneralShopMarketSalesGraphMarkup(ownedEntry.itemId)}</div>`;
+}
+
+function getGeneralShopTradeEntriesValueSummary(entries) {
+  const normalizedEntries = normalizeGeneralShopTradeItemEntries(entries);
+  return normalizedEntries.reduce((summary, entry) => {
+    const referenceValue = getGeneralShopFloatAdjustedReferenceValue(entry.saleValue, entry.floatValue);
+    const marketValue = getGeneralShopSuggestedTradeMarketValue(entry.itemId, referenceValue);
+    return {
+      itemCount: summary.itemCount + 1,
+      referenceTotal: summary.referenceTotal + referenceValue,
+      marketTotal: summary.marketTotal + marketValue
+    };
+  }, { itemCount: 0, referenceTotal: 0, marketTotal: 0 });
+}
+
+function getGeneralShopAutoSellPresetWearKeys(presetId = '') {
+  const normalized = String(presetId || '').trim().toLowerCase();
+  if (normalized === 'bad-wears') return ['well-worn', 'battle-scarred'];
+  if (normalized === 'except-top') return ['minimal-wear', 'field-tested', 'well-worn', 'battle-scarred'];
+  return [];
+}
+
+function canSellOwnedGeneralShopCaseDropToServer(entry) {
+  if (!entry || !entry.item || entry.item.itemType !== 'case-drop') return false;
+  return isGeneralShopServerSellEligibleRarity(entry.item.rarity || entry.rarity || '');
+}
+
+function getOwnedGeneralShopCaseDropServerSellValue(entry) {
+  if (!canSellOwnedGeneralShopCaseDropToServer(entry)) return 0;
+  return getGeneralShopServerSellValueFromReferenceValue(getOwnedGeneralShopCaseDropReferenceValue(entry));
+}
+
+function getAutoSellOwnedGeneralShopCaseDropEntries(stats) {
+  const activeWearKeys = sanitizeGeneralShopAutoSellWearKeys(stats && stats.generalShopAutoSellServerWearKeys);
+  if (!activeWearKeys.length) return [];
+  return getOwnedGeneralShopItemEntries(stats).filter((entry) => canSellOwnedGeneralShopCaseDropToServer(entry) && activeWearKeys.includes(getGeneralShopFloatWearKey(entry.floatValue)));
+}
+
+function getAutoSellOwnedGeneralShopCaseDropSummary(stats) {
+  const entries = getAutoSellOwnedGeneralShopCaseDropEntries(stats);
+  return {
+    entries,
+    count: entries.length,
+    totalValue: entries.reduce((sum, entry) => sum + getOwnedGeneralShopCaseDropServerSellValue(entry), 0)
+  };
+}
+
+function getGeneralShopMarketListingReferenceValue(listing) {
+  if (!listing) return 0;
+  return getGeneralShopFloatAdjustedReferenceValue(listing.saleValue, listing.floatValue);
 }
 
 function sanitizeOwnedGeneralShopCaseCounts(rawCounts) {
@@ -2014,6 +2274,13 @@ function normalizeCasinoProfileStatsData(username, data = {}) {
     ownedGeneralShopItemInstanceIds: [],
     ownedGeneralShopItemFloatValues: [],
     selectedGeneralShopFeaturedItemId: '',
+    generalShopAutoSellServerWearKeys: [],
+    generalShopWatchlistItemIds: [],
+    generalShopCasesOpened: Math.max(0, Number(data.generalShopCasesOpened ?? 0)),
+    generalShopMarketGrossSales: Math.max(0, Number(data.generalShopMarketGrossSales ?? 0)),
+    generalShopMarketNetSales: Math.max(0, Number(data.generalShopMarketNetSales ?? 0)),
+    generalShopMarketPurchaseSpend: Math.max(0, Number(data.generalShopMarketPurchaseSpend ?? 0)),
+    generalShopMarketFeesPaid: Math.max(0, Number(data.generalShopMarketFeesPaid ?? 0)),
     allTimeBestGeneralShopDropItemId: '',
     allTimeBestGeneralShopDropTitle: '',
     allTimeBestGeneralShopDropRarity: 'mil-spec',
@@ -2029,6 +2296,8 @@ function normalizeCasinoProfileStatsData(username, data = {}) {
   ));
   const selectedGeneralShopFeaturedItemId = normalizeOptionalGeneralShopItemId(data.selectedGeneralShopFeaturedItemId || '');
   normalizedStats.selectedGeneralShopFeaturedItemId = normalizedStats.ownedGeneralShopItemIds.includes(selectedGeneralShopFeaturedItemId) ? selectedGeneralShopFeaturedItemId : '';
+  normalizedStats.generalShopAutoSellServerWearKeys = sanitizeGeneralShopAutoSellWearKeys(data.generalShopAutoSellServerWearKeys);
+  normalizedStats.generalShopWatchlistItemIds = sanitizeOwnedGeneralShopItemIds(data.generalShopWatchlistItemIds);
   const storedBestDropItemId = normalizeOptionalGeneralShopItemId(data.allTimeBestGeneralShopDropItemId || '');
   const storedBestDropItem = getGeneralShopItem(storedBestDropItemId);
   const storedBestDropValue = Math.max(0, Number(data.allTimeBestGeneralShopDropValue || 0));
@@ -2801,6 +3070,12 @@ function getCasinoLeaderboardSubtitleText() {
     ? 'Each player is ranked by the highest-value case drop they have ever pulled.'
     : casinoLeaderboardView === 'inventory'
       ? 'Each player is ranked by the total value of their current shop items, case drops, and cases.'
+      : casinoLeaderboardView === 'cases'
+        ? 'Each player is ranked by how many cases they have opened.'
+        : casinoLeaderboardView === 'market-profit'
+          ? 'Each player is ranked by net market profit after fees and purchases.'
+          : casinoLeaderboardView === 'float'
+            ? 'Each player is ranked by the lowest float currently in their inventory.'
       : 'Top balance across everyone.';
 }
 
@@ -2828,6 +3103,9 @@ function openCasinoLeaderboardModal(mode = 'casino') {
           <button id="casino-leaderboard-balance-tab" type="button" onclick="setCasinoLeaderboardView('balance')" style="padding:0.5rem 0.9rem; border-radius:999px; border:1px solid rgba(104,138,179,0.35); background:#223041; color:#fff; font-weight:700; cursor:pointer;">Top Balance</button>
           <button id="casino-leaderboard-drops-tab" type="button" onclick="setCasinoLeaderboardView('drops')" style="padding:0.5rem 0.9rem; border-radius:999px; border:1px solid rgba(104,138,179,0.35); background:#121a24; color:#9fb0c2; font-weight:700; cursor:pointer;">Most Expensive Drops Of All Time</button>
           <button id="casino-leaderboard-inventory-tab" type="button" onclick="setCasinoLeaderboardView('inventory')" style="padding:0.5rem 0.9rem; border-radius:999px; border:1px solid rgba(104,138,179,0.35); background:#121a24; color:#9fb0c2; font-weight:700; cursor:pointer;">Most Expensive Inventory</button>
+          <button id="casino-leaderboard-cases-tab" type="button" onclick="setCasinoLeaderboardView('cases')" style="padding:0.5rem 0.9rem; border-radius:999px; border:1px solid rgba(104,138,179,0.35); background:#121a24; color:#9fb0c2; font-weight:700; cursor:pointer;">Most Cases Opened</button>
+          <button id="casino-leaderboard-market-profit-tab" type="button" onclick="setCasinoLeaderboardView('market-profit')" style="padding:0.5rem 0.9rem; border-radius:999px; border:1px solid rgba(104,138,179,0.35); background:#121a24; color:#9fb0c2; font-weight:700; cursor:pointer;">Most Market Profit</button>
+          <button id="casino-leaderboard-float-tab" type="button" onclick="setCasinoLeaderboardView('float')" style="padding:0.5rem 0.9rem; border-radius:999px; border:1px solid rgba(104,138,179,0.35); background:#121a24; color:#9fb0c2; font-weight:700; cursor:pointer;">Lowest Float Owned</button>
         </div>
         <div id="casino-leaderboard-subtitle" style="color:#8ea0bc;font-size:0.9rem;margin-bottom:1rem;">Top balance across everyone.</div>
         <div id="casino-leaderboard-controls" style="display:none; gap:0.55rem; flex-wrap:wrap; margin-bottom:0.8rem;"></div>
@@ -2872,7 +3150,7 @@ function openStaffWallModal() {
 
 function setCasinoLeaderboardView(view) {
   const nextView = String(view || '').trim().toLowerCase();
-  casinoLeaderboardView = nextView === 'drops' || nextView === 'inventory' ? nextView : 'balance';
+  casinoLeaderboardView = ['balance', 'drops', 'inventory', 'cases', 'market-profit', 'float'].includes(nextView) ? nextView : 'balance';
   updateCasinoLeaderboardViewButtons();
   loadCasinoLeaderboard();
 }
@@ -2883,6 +3161,9 @@ function updateCasinoLeaderboardViewButtons() {
   const balanceTab = document.getElementById('casino-leaderboard-balance-tab');
   const dropsTab = document.getElementById('casino-leaderboard-drops-tab');
   const inventoryTab = document.getElementById('casino-leaderboard-inventory-tab');
+  const casesTab = document.getElementById('casino-leaderboard-cases-tab');
+  const marketProfitTab = document.getElementById('casino-leaderboard-market-profit-tab');
+  const floatTab = document.getElementById('casino-leaderboard-float-tab');
   const subtitle = document.getElementById('casino-leaderboard-subtitle');
   const activeButtonStyle = { background: '#223041', color: '#fff', borderColor: 'rgba(104,138,179,0.5)' };
   const inactiveButtonStyle = { background: '#121a24', color: '#9fb0c2', borderColor: 'rgba(104,138,179,0.35)' };
@@ -2913,6 +3194,24 @@ function updateCasinoLeaderboardViewButtons() {
     inventoryTab.style.background = style.background;
     inventoryTab.style.color = style.color;
     inventoryTab.style.borderColor = style.borderColor;
+  }
+  if (casesTab) {
+    const style = casinoLeaderboardView === 'cases' ? activeButtonStyle : inactiveButtonStyle;
+    casesTab.style.background = style.background;
+    casesTab.style.color = style.color;
+    casesTab.style.borderColor = style.borderColor;
+  }
+  if (marketProfitTab) {
+    const style = casinoLeaderboardView === 'market-profit' ? activeButtonStyle : inactiveButtonStyle;
+    marketProfitTab.style.background = style.background;
+    marketProfitTab.style.color = style.color;
+    marketProfitTab.style.borderColor = style.borderColor;
+  }
+  if (floatTab) {
+    const style = casinoLeaderboardView === 'float' ? activeButtonStyle : inactiveButtonStyle;
+    floatTab.style.background = style.background;
+    floatTab.style.color = style.color;
+    floatTab.style.borderColor = style.borderColor;
   }
   if (subtitle) {
     subtitle.textContent = getCasinoLeaderboardSubtitleText();
@@ -3468,6 +3767,103 @@ async function loadCasinoLeaderboard() {
           pointsLabel: `$${Math.max(0, Number(entry.inventory.totalValue || 0)).toLocaleString()}`
         });
       }).join('');
+      return;
+    }
+    if (casinoLeaderboardView === 'cases') {
+      const casesLeaderboardData = Array.from(knownUsers)
+        .filter(Boolean)
+        .map((username) => {
+          const balanceEntry = balanceMap[username] || null;
+          const stats = balanceEntry ? balanceEntry.stats : getDefaultCasinoProfileStats(username);
+          return {
+            username,
+            displayName: balanceEntry ? balanceEntry.displayName : username,
+            casesOpened: Math.max(0, Number(stats.generalShopCasesOpened || 0))
+          };
+        })
+        .filter((entry) => entry.casesOpened > 0)
+        .sort((a, b) => {
+          if (b.casesOpened !== a.casesOpened) return b.casesOpened - a.casesOpened;
+          return a.username.localeCompare(b.username);
+        });
+      if (!casesLeaderboardData.length) {
+        list.innerHTML = '<div style="color:#8ea0bc;">No one has opened any cases yet.</div>';
+        return;
+      }
+      list.innerHTML = casesLeaderboardData.map((entry, index) => renderCasinoLeaderboardEntry({
+        username: entry.username,
+        displayName: entry.displayName,
+        rank: index + 1,
+        levelMarkup: 'Case opener',
+        pointsLabel: `${entry.casesOpened.toLocaleString()} opened`
+      })).join('');
+      return;
+    }
+    if (casinoLeaderboardView === 'market-profit') {
+      const marketProfitData = Array.from(knownUsers)
+        .filter(Boolean)
+        .map((username) => {
+          const balanceEntry = balanceMap[username] || null;
+          const stats = balanceEntry ? balanceEntry.stats : getDefaultCasinoProfileStats(username);
+          const grossSales = Math.max(0, Number(stats.generalShopMarketGrossSales || 0));
+          const netSales = Math.max(0, Number(stats.generalShopMarketNetSales || 0));
+          const purchaseSpend = Math.max(0, Number(stats.generalShopMarketPurchaseSpend || 0));
+          const feesPaid = Math.max(0, Number(stats.generalShopMarketFeesPaid || 0));
+          return {
+            username,
+            displayName: balanceEntry ? balanceEntry.displayName : username,
+            profit: netSales - purchaseSpend,
+            grossSales,
+            feesPaid
+          };
+        })
+        .filter((entry) => entry.grossSales > 0 || entry.profit !== 0)
+        .sort((a, b) => {
+          if (b.profit !== a.profit) return b.profit - a.profit;
+          return a.username.localeCompare(b.username);
+        });
+      if (!marketProfitData.length) {
+        list.innerHTML = '<div style="color:#8ea0bc;">No market sales or purchases are tracked yet.</div>';
+        return;
+      }
+      list.innerHTML = marketProfitData.map((entry, index) => renderCasinoLeaderboardEntry({
+        username: entry.username,
+        displayName: entry.displayName,
+        rank: index + 1,
+        levelMarkup: `${escapeHtml(`Gross $${entry.grossSales.toLocaleString()}`)}<div style="font-size:0.72rem; color:#9fb0c2; margin-top:0.18rem;">Fees paid $${entry.feesPaid.toLocaleString()}</div>`,
+        pointsLabel: `${entry.profit < 0 ? '-' : ''}$${Math.abs(entry.profit).toLocaleString()}`
+      })).join('');
+      return;
+    }
+    if (casinoLeaderboardView === 'float') {
+      const floatLeaderboardData = Array.from(knownUsers)
+        .filter(Boolean)
+        .map((username) => {
+          const balanceEntry = balanceMap[username] || null;
+          const stats = balanceEntry ? balanceEntry.stats : getDefaultCasinoProfileStats(username);
+          return {
+            username,
+            displayName: balanceEntry ? balanceEntry.displayName : username,
+            entry: getLowestOwnedGeneralShopFloatEntry(stats)
+          };
+        })
+        .filter((entry) => entry.entry && entry.entry.item)
+        .sort((a, b) => {
+          const floatDelta = Math.min(1, Math.max(0, Number(a.entry.floatValue || 0))) - Math.min(1, Math.max(0, Number(b.entry.floatValue || 0)));
+          if (floatDelta !== 0) return floatDelta;
+          return a.username.localeCompare(b.username);
+        });
+      if (!floatLeaderboardData.length) {
+        list.innerHTML = '<div style="color:#8ea0bc;">No owned case drops with floats yet.</div>';
+        return;
+      }
+      list.innerHTML = floatLeaderboardData.map((entry, index) => renderCasinoLeaderboardEntry({
+        username: entry.username,
+        displayName: entry.displayName,
+        rank: index + 1,
+        levelMarkup: `${escapeHtml(entry.entry.item.title)}<div style="font-size:0.72rem; color:${escapeHtml(getGeneralShopRarityConfig(entry.entry.item.rarity).color)}; margin-top:0.18rem;">${escapeHtml(getGeneralShopFloatWearLabel(entry.entry.floatValue))}</div>`,
+        pointsLabel: formatGeneralShopFloatValue(entry.entry.floatValue)
+      })).join('');
       return;
     }
     if (!leaderboardData.length) {
@@ -8139,6 +8535,7 @@ const CASINO_INVENTORY_HISTORY_COLLECTION = 'casino_inventory_history';
 const GENERAL_SHOP_TRADES_COLLECTION = 'general_shop_trades';
 const GENERAL_SHOP_COLLECTION = 'general_shop';
 const GENERAL_SHOP_MARKET_COLLECTION = 'general_shop_market';
+const GENERAL_SHOP_MARKET_SALES_COLLECTION = 'general_shop_market_sales';
 const PROFILE_BACKGROUND_SHOP_COLLECTION = 'profile_background_shop';
 const POKER_ROOMS_COLLECTION = 'poker_rooms';
 const SITE_EVENT_DOC_ID = 'site_event_banner';
@@ -8146,6 +8543,7 @@ const MAX_LOCAL_NOTIFICATIONS = 80;
 const MAX_ACTIVITY_ITEMS = 30;
 const MAX_CASINO_ACTIVITY_ITEMS = 18;
 const MAX_INVENTORY_HISTORY_ITEMS = 60;
+const MAX_GENERAL_SHOP_MARKET_SALES_ITEMS = 240;
 const MAX_PROFILE_RECENT_PULLS = 6;
 const CASINO_GAME_SETTINGS_DOC_ID = 'game_chances';
 const CASINO_HOT_HAND_STREAK = 3;
@@ -8308,6 +8706,11 @@ let generalShopUnsub = null;
 let generalShopStatus = { message: '', tone: 'neutral' };
 let generalShopInventoryStatus = { message: '', tone: 'neutral' };
 let generalShopMarketCache = [];
+let generalShopMarketUnsub = null;
+let generalShopMarketSalesCache = [];
+let generalShopMarketSalesUnsub = null;
+let generalShopMarketWatchNotifiedIds = new Set();
+let activeGeneralShopMarketListingInventoryId = '';
 let generalShopInventoryItemSort = 'owned';
 let activeGeneralShopEditId = '';
 let generalShopCaseOpenRequestInFlight = false;
@@ -8344,7 +8747,6 @@ let userProfileCache = {};
 let casinoProfileStatsCache = {};
 let inventoryHistoryCache = [];
 let siteClipFeedCache = [];
-let generalShopTradeCache = [];
 let generalShopTradeUnsub = null;
 let generalShopTradeLiveSnapshots = { incoming: [], outgoing: [] };
 let generalShopTradeListenerState = { key: '', incomingReady: false, outgoingReady: false, statuses: {} };
@@ -8383,6 +8785,8 @@ const CHAT_READ_STORAGE_KEY = 'chatReadMarkers';
 const GAME_RATINGS_STORAGE_KEY = 'gameRatings';
 const DM_INBOX_PREFS_STORAGE_KEY = 'dmInboxPrefs';
 const GAME_REPORTS_COLLECTION = 'game_reports';
+const GENERAL_SHOP_MARKET_REASON_MAX_LENGTH = 220;
+const GENERAL_SHOP_MARKET_FEE_BPS = 500;
 const UX_WHATS_NEW_VERSION = '2026-04-03';
 const UX_WHATS_NEW_ITEMS = [
 'A persistent what\'s new panel and detailed notes view now make recent site changes easier to review.',
@@ -9454,6 +9858,10 @@ function normalizeGeneralShopItem(itemId, data = {}) {
     rarity: normalizeGeneralShopRarity(data.rarity || 'mil-spec'),
     caseRewards: normalizeGeneralShopCaseRewards(data.caseRewards || data.caseItems || data.contents || []),
     active: data.active !== false,
+    source: sanitizeNullableText(data.source, '').slice(0, 40).toLowerCase(),
+    sourceGame: sanitizeNullableText(data.sourceGame || data.game, '').slice(0, 40).toLowerCase(),
+    suggestedCaseId: sanitizeNullableText(data.suggestedCaseId, '').slice(0, 80),
+    updatedBy: normalizeUsername(data.updatedBy || ''),
     createdAtMs: data.createdAt && typeof data.createdAt.toDate === 'function' ? data.createdAt.toDate().getTime() : Math.max(0, Number(data.createdAtMs || 0)),
     updatedAtMs: data.updatedAt && typeof data.updatedAt.toDate === 'function' ? data.updatedAt.toDate().getTime() : Math.max(0, Number(data.updatedAtMs || 0))
   };
@@ -9604,6 +10012,20 @@ function getMostValuableGeneralShopInventoryAsset(stats) {
     }
   });
   return bestAsset;
+}
+
+function getLowestOwnedGeneralShopFloatEntry(stats) {
+  return getOwnedGeneralShopItemEntries(stats)
+    .filter((entry) => entry && entry.item && entry.item.itemType === 'case-drop')
+    .reduce((bestEntry, entry) => {
+      const floatValue = Math.min(1, Math.max(0, Number(entry.floatValue) || 0));
+      if (!bestEntry) return { ...entry, floatValue };
+      if (floatValue < bestEntry.floatValue) return { ...entry, floatValue };
+      if (floatValue === bestEntry.floatValue && sanitizeNullableText(entry.item && entry.item.title, '').localeCompare(sanitizeNullableText(bestEntry.item && bestEntry.item.title, '')) < 0) {
+        return { ...entry, floatValue };
+      }
+      return bestEntry;
+    }, null);
 }
 
 function getGeneralShopRaritySortValue(rarity) {
@@ -10522,21 +10944,116 @@ function normalizeGeneralShopMarketListingData(id, data = {}) {
     floatValue: Math.min(1, Math.max(0, Number(data.floatValue) || 0)),
     saleValue: Math.max(0, Math.floor(Number(data.saleValue) || 0)),
     listPrice: Math.max(0, Math.floor(Number(data.listPrice) || 0)),
+    askReason: sanitizeNullableText(data.askReason || data.priceReason, '').slice(0, GENERAL_SHOP_MARKET_REASON_MAX_LENGTH),
     createdAtMs: data.createdAt && typeof data.createdAt.toDate === 'function' ? data.createdAt.toDate().getTime() : Math.max(0, Number(data.createdAtMs || 0))
   };
+}
+
+function normalizeGeneralShopMarketSaleData(id, data = {}) {
+  return {
+    id: sanitizeNullableText(id, ''),
+    itemId: normalizeOptionalGeneralShopItemId(data.itemId || ''),
+    itemTitle: sanitizeNullableText(data.itemTitle, '').slice(0, 80),
+    rarity: normalizeGeneralShopRarity(data.rarity || 'mil-spec'),
+    floatValue: Math.min(1, Math.max(0, Number(data.floatValue) || 0)),
+    saleValue: Math.max(0, Math.floor(Number(data.saleValue) || 0)),
+    soldPrice: Math.max(0, Math.floor(Number(data.soldPrice) || 0)),
+    sellerNet: Math.max(0, Math.floor(Number(data.sellerNet) || 0)),
+    feePaid: Math.max(0, Math.floor(Number(data.feePaid) || 0)),
+    seller: normalizeUsername(data.seller || ''),
+    buyer: normalizeUsername(data.buyer || ''),
+    soldAtMs: data.soldAt && typeof data.soldAt.toDate === 'function' ? data.soldAt.toDate().getTime() : Math.max(0, Number(data.soldAtMs || 0))
+  };
+}
+
+function applyGeneralShopMarketSnapshot(snapshot) {
+  generalShopMarketCache = snapshot.docs
+    .map((doc) => normalizeGeneralShopMarketListingData(doc.id, doc.data() || {}))
+    .filter((entry) => entry && entry.id && entry.itemId && entry.inventoryId && entry.listPrice > 0)
+    .sort((a, b) => b.createdAtMs - a.createdAtMs);
+  return generalShopMarketCache;
 }
 
 async function loadGeneralShopMarketListings() {
   try {
     const snapshot = await getGeneralShopMarketCollection().limit(80).get();
-    generalShopMarketCache = snapshot.docs
-      .map((doc) => normalizeGeneralShopMarketListingData(doc.id, doc.data() || {}))
-      .filter((entry) => entry && entry.id && entry.itemId && entry.inventoryId && entry.listPrice > 0)
-      .sort((a, b) => b.createdAtMs - a.createdAtMs);
+    applyGeneralShopMarketSnapshot(snapshot);
   } catch (_) {
     generalShopMarketCache = [];
   }
   return generalShopMarketCache;
+}
+
+function applyGeneralShopMarketSalesSnapshot(snapshot) {
+  generalShopMarketSalesCache = snapshot.docs
+    .map((doc) => normalizeGeneralShopMarketSaleData(doc.id, doc.data() || {}))
+    .filter((entry) => entry && entry.id && entry.itemId && entry.soldPrice > 0)
+    .sort((a, b) => b.soldAtMs - a.soldAtMs);
+  return generalShopMarketSalesCache;
+}
+
+async function loadGeneralShopMarketSales() {
+  try {
+    const snapshot = await getGeneralShopMarketSalesCollection().orderBy('soldAt', 'desc').limit(MAX_GENERAL_SHOP_MARKET_SALES_ITEMS).get();
+    applyGeneralShopMarketSalesSnapshot(snapshot);
+  } catch (_) {
+    generalShopMarketSalesCache = [];
+  }
+  return generalShopMarketSalesCache;
+}
+
+function listenForGeneralShopMarketSales() {
+  try {
+    if (generalShopMarketSalesUnsub) generalShopMarketSalesUnsub();
+    generalShopMarketSalesUnsub = getGeneralShopMarketSalesCollection()
+      .orderBy('soldAt', 'desc')
+      .limit(MAX_GENERAL_SHOP_MARKET_SALES_ITEMS)
+      .onSnapshot((snapshot) => {
+        applyGeneralShopMarketSalesSnapshot(snapshot);
+        if (document.getElementById('general-shop-inventory-modal')?.style.display === 'flex') {
+          renderGeneralShopInventoryModal();
+        }
+      });
+  } catch (_) {
+    generalShopMarketSalesCache = [];
+  }
+}
+
+function listenForGeneralShopMarket() {
+  try {
+    if (generalShopMarketUnsub) generalShopMarketUnsub();
+    generalShopMarketUnsub = getGeneralShopMarketCollection()
+      .limit(80)
+      .onSnapshot((snapshot) => {
+        const previousListings = Array.isArray(generalShopMarketCache) ? generalShopMarketCache : [];
+        applyGeneralShopMarketSnapshot(snapshot);
+        const user = getCasinoPlayerKey();
+        if (user) {
+          const watchedItemIds = sanitizeOwnedGeneralShopItemIds(getCachedCasinoProfileStats(user).generalShopWatchlistItemIds);
+          const previousIds = new Set(previousListings.map((entry) => entry.id));
+          generalShopMarketCache.forEach((listing) => {
+            if (!listing || previousIds.has(listing.id) || generalShopMarketWatchNotifiedIds.has(listing.id)) return;
+            if (listing.seller === user) return;
+            if (!watchedItemIds.includes(listing.itemId)) return;
+            generalShopMarketWatchNotifiedIds.add(listing.id);
+            pushNotification({
+              type: 'shop',
+              title: 'Watched item listed',
+              body: `${listing.itemTitle || listing.itemId} hit the market for $${Math.max(0, Number(listing.listPrice || 0)).toLocaleString()}.`,
+              read: false
+            });
+          });
+        }
+        if (document.getElementById('general-shop-inventory-modal')?.style.display === 'flex') {
+          renderGeneralShopInventoryModal();
+        }
+      });
+  } catch (_) {
+    generalShopMarketCache = [];
+    if (document.getElementById('general-shop-inventory-modal')?.style.display === 'flex') {
+      renderGeneralShopInventoryModal();
+    }
+  }
 }
 
 function findOwnedGeneralShopEntryIndexByInventoryId(stats, inventoryId) {
@@ -10575,24 +11092,83 @@ function appendOwnedGeneralShopInventoryEntry(stats, entry) {
   return buildOwnedGeneralShopInventoryState(arrays.itemIds, arrays.saleValues, arrays.instanceIds, arrays.floatValues);
 }
 
-async function listOwnedGeneralShopCaseDropOnMarket(encodedInventoryId) {
-  const inventoryId = sanitizeOwnedGeneralShopInventoryInstanceId(decodeURIComponent(encodedInventoryId || ''));
+function getOwnedGeneralShopMarketListingEntry(inventoryId) {
   const user = getCasinoPlayerKey();
-  if (!user || !inventoryId) return;
+  const normalizedInventoryId = sanitizeOwnedGeneralShopInventoryInstanceId(inventoryId || '');
+  if (!user || !normalizedInventoryId) return null;
   const currentStats = getCachedCasinoProfileStats(user);
-  const ownedEntry = getOwnedGeneralShopItemEntries(currentStats).find((entry) => entry.inventoryId === inventoryId);
-  if (!ownedEntry || !ownedEntry.item || ownedEntry.item.itemType !== 'case-drop') {
+  const ownedEntry = getOwnedGeneralShopItemEntries(currentStats).find((entry) => entry.inventoryId === normalizedInventoryId);
+  if (!ownedEntry || !ownedEntry.item || ownedEntry.item.itemType !== 'case-drop') return null;
+  return ownedEntry;
+}
+
+function closeGeneralShopMarketListingModal() {
+  activeGeneralShopMarketListingInventoryId = '';
+  const titleNode = document.getElementById('general-shop-market-listing-title');
+  const subtleNode = document.getElementById('general-shop-market-listing-subtle');
+  const insightsNode = document.getElementById('general-shop-market-listing-insights');
+  const helpersNode = document.getElementById('general-shop-market-listing-helpers');
+  const priceInput = document.getElementById('general-shop-market-listing-price');
+  const reasonInput = document.getElementById('general-shop-market-listing-reason');
+  const statusNode = document.getElementById('general-shop-market-listing-status');
+  if (titleNode) titleNode.textContent = 'List On Market';
+  if (subtleNode) subtleNode.textContent = 'Set your ask and tell buyers why you want that amount.';
+  if (insightsNode) insightsNode.innerHTML = '';
+  if (helpersNode) helpersNode.innerHTML = '';
+  if (priceInput) priceInput.value = '';
+  if (reasonInput) reasonInput.value = '';
+  if (statusNode) statusNode.textContent = '';
+  closeModalById('general-shop-market-listing-modal');
+}
+
+function listOwnedGeneralShopCaseDropOnMarket(encodedInventoryId) {
+  const inventoryId = sanitizeOwnedGeneralShopInventoryInstanceId(decodeURIComponent(encodedInventoryId || ''));
+  if (!inventoryId) return;
+  const ownedEntry = getOwnedGeneralShopMarketListingEntry(inventoryId);
+  if (!ownedEntry) {
     setGeneralShopInventoryStatus('That skin is no longer in your inventory.', 'error');
     return;
   }
-  const suggestedPrice = Math.max(1, Math.floor(Number(ownedEntry.saleValue || 0)));
-  const priceInput = prompt(`List ${ownedEntry.item.title} on the market for what price?`, String(suggestedPrice));
-  if (priceInput === null) return;
-  const listPrice = Math.max(1, Math.min(1000000000, Math.floor(Number(priceInput) || 0)));
-  if (!listPrice) {
-    setGeneralShopInventoryStatus('Enter a valid market price.', 'error');
+  activeGeneralShopMarketListingInventoryId = inventoryId;
+  const suggestedPrice = Math.max(1, getOwnedGeneralShopCaseDropReferenceValue(ownedEntry));
+  const marketPriceSummary = getGeneralShopMarketPriceSummary(ownedEntry.itemId);
+  const recentSales = getGeneralShopRecentSalesSummary(ownedEntry.itemId, 12);
+  const titleNode = document.getElementById('general-shop-market-listing-title');
+  const subtleNode = document.getElementById('general-shop-market-listing-subtle');
+  const priceInput = document.getElementById('general-shop-market-listing-price');
+  const reasonInput = document.getElementById('general-shop-market-listing-reason');
+  const statusNode = document.getElementById('general-shop-market-listing-status');
+  if (titleNode) titleNode.textContent = `List ${ownedEntry.item.title}`;
+  if (subtleNode) subtleNode.textContent = `Ask whatever you want, then explain the price for buyers. Ref $${suggestedPrice.toLocaleString()}${marketPriceSummary.count ? ` • Market Avg $${marketPriceSummary.averagePrice.toLocaleString()}` : ' • No live market comps yet'}${recentSales.count ? ` • Recent Sale Avg $${recentSales.averagePrice.toLocaleString()}` : ''} • Seller gets $${getGeneralShopMarketSellerNetValue(suggestedPrice).toLocaleString()} after fee • ${getGeneralShopFloatWearLabel(ownedEntry.floatValue)} • Float ${formatGeneralShopFloatValue(ownedEntry.floatValue)}.`;
+  if (priceInput) priceInput.value = String(suggestedPrice);
+  if (reasonInput) reasonInput.value = '';
+  if (statusNode) statusNode.textContent = '';
+  renderActiveGeneralShopMarketListingInsights();
+  openModalById('general-shop-market-listing-modal');
+}
+
+async function submitGeneralShopMarketListing() {
+  const inventoryId = activeGeneralShopMarketListingInventoryId;
+  const user = getCasinoPlayerKey();
+  const priceInput = document.getElementById('general-shop-market-listing-price');
+  const reasonInput = document.getElementById('general-shop-market-listing-reason');
+  const statusNode = document.getElementById('general-shop-market-listing-status');
+  if (!user || !inventoryId) {
+    if (statusNode) statusNode.textContent = 'Pick a skin from your inventory first.';
     return;
   }
+  const ownedEntry = getOwnedGeneralShopMarketListingEntry(inventoryId);
+  if (!ownedEntry) {
+    if (statusNode) statusNode.textContent = 'That skin is no longer in your inventory.';
+    setGeneralShopInventoryStatus('That skin is no longer in your inventory.', 'error');
+    return;
+  }
+  const listPrice = Math.max(1, Math.min(1000000000, Math.floor(Number(priceInput && priceInput.value) || 0)));
+  if (!listPrice) {
+    if (statusNode) statusNode.textContent = 'Enter a valid market price.';
+    return;
+  }
+  const askReason = sanitizeNullableText(reasonInput && reasonInput.value, '').slice(0, GENERAL_SHOP_MARKET_REASON_MAX_LENGTH);
   const listingRef = getGeneralShopMarketCollection().doc();
   try {
     const balanceRef = getCasinoBalanceCollection().doc(user);
@@ -10626,6 +11202,7 @@ async function listOwnedGeneralShopCaseDropOnMarket(encodedInventoryId) {
         floatValue: removal.removedEntry.floatValue,
         saleValue: removal.removedEntry.saleValue,
         listPrice,
+        askReason,
         createdAtMs: Date.now(),
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -10635,12 +11212,15 @@ async function listOwnedGeneralShopCaseDropOnMarket(encodedInventoryId) {
     await loadCasinoBalance().catch(() => {});
     await refreshCasinoProfileUiForUser(user);
     await addCasinoInventoryHistory({ type: 'market_list', actor: user, itemId: ownedEntry.itemId, itemTitle: ownedEntry.item.title, itemType: ownedEntry.item.itemType, rarity: ownedEntry.item.rarity, value: listPrice, note: `${getGeneralShopFloatWearLabel(ownedEntry.floatValue)} • ${formatGeneralShopFloatValue(ownedEntry.floatValue)}` });
-    await publishCasinoActivity({ type: 'shop', title: `${getCasinoPlayerDisplayName()} listed a skin`, body: `${ownedEntry.item.title} hit the market for $${listPrice.toLocaleString()}.`, by: user });
+    await publishCasinoActivity({ type: 'shop', title: `${getCasinoPlayerDisplayName()} listed a skin`, body: `${ownedEntry.item.title} hit the market for $${listPrice.toLocaleString()} • Seller net $${getGeneralShopMarketSellerNetValue(listPrice).toLocaleString()}.`, by: user });
+    closeGeneralShopMarketListingModal();
     renderGeneralShopModal();
     renderGeneralShopInventoryModal();
-    setGeneralShopInventoryStatus(`${ownedEntry.item.title} listed for $${listPrice.toLocaleString()}.`, 'success');
+    setGeneralShopInventoryStatus(`${ownedEntry.item.title} listed for $${listPrice.toLocaleString()}${askReason ? ' with a seller note' : ''}. Seller gets $${getGeneralShopMarketSellerNetValue(listPrice).toLocaleString()} after the fee.`, 'success');
   } catch (err) {
-    setGeneralShopInventoryStatus(err && err.message ? err.message : 'Could not list that skin right now.', 'error');
+    const message = err && err.message ? err.message : 'Could not list that skin right now.';
+    if (statusNode) statusNode.textContent = message;
+    setGeneralShopInventoryStatus(message, 'error');
   }
 }
 
@@ -10685,6 +11265,7 @@ async function buyGeneralShopMarketListing(encodedListingId) {
   const buyer = getCasinoPlayerKey();
   if (!listingId || !buyer) return;
   const listingRef = getGeneralShopMarketCollection().doc(listingId);
+  const saleRef = getGeneralShopMarketSalesCollection().doc();
   try {
     const buyerRef = getCasinoBalanceCollection().doc(buyer);
     let nextBuyerStats = getDefaultCasinoProfileStats(buyer);
@@ -10702,12 +11283,15 @@ async function buyGeneralShopMarketListing(encodedListingId) {
       if (buyerStats.balance < listing.listPrice) {
         throw new Error(`You need $${(listing.listPrice - buyerStats.balance).toLocaleString()} more casino cash.`);
       }
+      const marketFeeValue = getGeneralShopMarketFeeValue(listing.listPrice);
+      const sellerNetValue = getGeneralShopMarketSellerNetValue(listing.listPrice);
       nextBuyerStats = {
         ...buyerStats,
         balance: buyerStats.balance - listing.listPrice,
+        generalShopMarketPurchaseSpend: Math.max(0, Number(buyerStats.generalShopMarketPurchaseSpend || 0)) + listing.listPrice,
         ...appendOwnedGeneralShopInventoryEntry(buyerStats, listing)
       };
-      const nextSellerBalance = sellerStats.balance + listing.listPrice;
+      const nextSellerBalance = sellerStats.balance + sellerNetValue;
       tx.set(buyerRef, {
         username: buyer,
         displayName: sanitizeNullableText((buyerSnap.exists ? (buyerSnap.data() || {}).displayName : '') || getCasinoPlayerDisplayName(), buyer),
@@ -10718,19 +11302,37 @@ async function buyGeneralShopMarketListing(encodedListingId) {
         username: listing.seller,
         displayName: sanitizeNullableText((sellerSnap.exists ? (sellerSnap.data() || {}).displayName : '') || listing.sellerDisplayName || listing.seller, listing.seller),
         ...sellerStats,
+        generalShopMarketGrossSales: Math.max(0, Number(sellerStats.generalShopMarketGrossSales || 0)) + listing.listPrice,
+        generalShopMarketNetSales: Math.max(0, Number(sellerStats.generalShopMarketNetSales || 0)) + sellerNetValue,
+        generalShopMarketFeesPaid: Math.max(0, Number(sellerStats.generalShopMarketFeesPaid || 0)) + marketFeeValue,
         balance: nextSellerBalance,
         biggestBalance: Math.max(sellerStats.biggestBalance, nextSellerBalance),
         updatedAtMs: Date.now()
       }, { merge: true });
+      tx.set(saleRef, {
+        itemId: listing.itemId,
+        itemTitle: listing.itemTitle,
+        rarity: listing.rarity,
+        floatValue: listing.floatValue,
+        saleValue: listing.saleValue,
+        soldPrice: listing.listPrice,
+        sellerNet: sellerNetValue,
+        feePaid: marketFeeValue,
+        seller: listing.seller,
+        buyer,
+        soldAtMs: Date.now(),
+        soldAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
       tx.delete(listingRef);
     });
     casinoProfileStatsCache[buyer] = nextBuyerStats;
     await loadGeneralShopMarketListings();
+    await loadGeneralShopMarketSales().catch(() => []);
     await loadCasinoBalance().catch(() => {});
     await refreshCasinoProfileUiForUser(buyer);
     if (purchasedListing) {
-      await addCasinoInventoryHistory({ type: 'market_buy', actor: buyer, targetUser: purchasedListing.seller, itemId: purchasedListing.itemId, itemTitle: purchasedListing.itemTitle || 'Market skin', itemType: 'case-drop', rarity: purchasedListing.rarity, value: purchasedListing.listPrice, note: `${getGeneralShopFloatWearLabel(purchasedListing.floatValue)} • ${formatGeneralShopFloatValue(purchasedListing.floatValue)}` });
-      await publishCasinoActivity({ type: 'shop', title: `${getCasinoPlayerDisplayName()} bought a market skin`, body: `${purchasedListing.itemTitle || 'A skin'} bought for $${purchasedListing.listPrice.toLocaleString()}.`, by: buyer });
+      await addCasinoInventoryHistory({ type: 'market_buy', actor: buyer, targetUser: purchasedListing.seller, itemId: purchasedListing.itemId, itemTitle: purchasedListing.itemTitle || 'Market skin', itemType: 'case-drop', rarity: purchasedListing.rarity, value: purchasedListing.listPrice, note: `${getGeneralShopFloatWearLabel(purchasedListing.floatValue)} • ${formatGeneralShopFloatValue(purchasedListing.floatValue)} • Seller net $${getGeneralShopMarketSellerNetValue(purchasedListing.listPrice).toLocaleString()} after fee` });
+      await publishCasinoActivity({ type: 'shop', title: `${getCasinoPlayerDisplayName()} bought a market skin`, body: `${purchasedListing.itemTitle || 'A skin'} bought for $${purchasedListing.listPrice.toLocaleString()} • Seller net $${getGeneralShopMarketSellerNetValue(purchasedListing.listPrice).toLocaleString()}.`, by: buyer });
     }
     renderGeneralShopModal();
     renderGeneralShopInventoryModal();
@@ -11216,6 +11818,10 @@ function renderGeneralShopTradeModal() {
   const canEdit = canMutateGeneralShopTrade(trade, myUser) && (trade.status !== 'countdown');
   const myAccepted = getGeneralShopTradeAcceptedState(trade, myUser);
   const otherAccepted = getGeneralShopTradeAcceptedState(trade, otherUser);
+  const myEntries = normalizeGeneralShopTradeItemEntries(mySide === 'to' ? trade.toItems : trade.fromItems);
+  const otherEntries = normalizeGeneralShopTradeItemEntries(mySide === 'to' ? trade.fromItems : trade.toItems);
+  const mySummary = getGeneralShopTradeEntriesValueSummary(myEntries);
+  const otherSummary = getGeneralShopTradeEntriesValueSummary(otherEntries);
   const countdownMs = getGeneralShopTradeCountdownRemainingMs(trade);
   const waitingInvite = trade.status === 'pending';
   status.textContent = waitingInvite
@@ -11244,6 +11850,7 @@ function renderGeneralShopTradeModal() {
         <div class="trade-board-side">
           ${renderGeneralShopTradeParticipantHeader(myUserLabel, myAccepted, 'Your side')}
           <div class="trade-board-grid">${renderGeneralShopTradeOfferSlots(trade, mySide === 'to' ? 'to' : 'from', canEdit)}</div>
+          <div class="store-summary-row" style="margin-top:0.65rem; justify-content:flex-start;"><span class="store-summary-pill">${mySummary.itemCount} item${mySummary.itemCount === 1 ? '' : 's'}</span><span class="store-summary-pill">Ref $${mySummary.referenceTotal.toLocaleString()}</span><span class="store-summary-pill">Est. Market $${mySummary.marketTotal.toLocaleString()}</span></div>
           ${canEdit ? renderGeneralShopTradeAvailablePool(trade, myUser) : ''}
         </div>
         <div class="trade-board-center">
@@ -11254,6 +11861,7 @@ function renderGeneralShopTradeModal() {
         <div class="trade-board-side">
           ${renderGeneralShopTradeParticipantHeader(otherUserLabel, otherAccepted, 'Other side')}
           <div class="trade-board-grid">${renderGeneralShopTradeOfferSlots(trade, mySide === 'to' ? 'from' : 'to', false)}</div>
+          <div class="store-summary-row" style="margin-top:0.65rem; justify-content:flex-start;"><span class="store-summary-pill">${otherSummary.itemCount} item${otherSummary.itemCount === 1 ? '' : 's'}</span><span class="store-summary-pill">Ref $${otherSummary.referenceTotal.toLocaleString()}</span><span class="store-summary-pill">Est. Market $${otherSummary.marketTotal.toLocaleString()}</span></div>
           <div class="overlay-subtle" style="margin-top:0.7rem;">${trade.note ? escapeHtml(trade.note) : 'No note added.'}</div>
         </div>
       </div>
@@ -14725,6 +15333,15 @@ try {
 }
 }
 
+function isCounterStrikeGeneralShopCaseDrop(item) {
+if (!item || item.itemType !== 'case-drop') return false;
+const title = sanitizeNullableText(item.title, '');
+const combined = `${title} ${sanitizeNullableText(item.description, '')} ${sanitizeNullableText(item.source, '')} ${sanitizeNullableText(item.sourceGame, '')}`.toLowerCase();
+if (/(counter[- ]?strike|cs2|csgo|valve|stattrak|souvenir)/.test(combined)) return true;
+if (title.includes('★')) return true;
+return /\b(ak-47|m4a4|m4a1-s|awp|glock-18|usp-s|desert eagle|deagle|karambit|bayonet|butterfly knife|flip knife|gut knife|huntsman knife|bowie knife|falchion knife|navaja knife|stiletto knife|talon knife|ursus knife|nomad knife|paracord knife|skeleton knife|survival knife|kukri knife|classic knife|shadow daggers|driver gloves|sport gloves|hand wraps|broken fang gloves|specialist gloves|hydra gloves|bloodhound gloves|moto gloves|mp9|mac-10|p90|ump-45|mp7|mp5-sd|nova|xm1014|mag-7|sawed-off|sg 553|aug|famas|galil ar|ssg 08|scar-20|g3sg1|cz75-auto|five-seven|dual berettas|tec-9|p250|r8 revolver|zeus x27|negev|m249|pp-bizon)\b/i.test(title);
+}
+
 async function adminSaveGeneralShopItem() {
 if (!canUseAdminPermission('manageGeneralShop')) return;
 const titleInput = document.getElementById('admin-general-shop-title');
@@ -15212,6 +15829,237 @@ generalShopInventoryItemSort = nextValue;
 renderGeneralShopInventoryModal();
 }
 
+async function toggleGeneralShopWatchlistItem(encodedItemId) {
+const itemId = normalizeOptionalGeneralShopItemId(decodeURIComponent(encodedItemId || ''));
+const user = getCasinoPlayerKey();
+if (!user) {
+  setGeneralShopInventoryStatus('You must be logged in to manage your watchlist.', 'error');
+  return;
+}
+if (!itemId) {
+  setGeneralShopInventoryStatus('That item could not be added to your watchlist.', 'error');
+  return;
+}
+try {
+  const balanceRef = getCasinoBalanceCollection().doc(user);
+  let nextStats = getDefaultCasinoProfileStats(user);
+  await getCasinoDb().runTransaction(async (tx) => {
+    const snap = await tx.get(balanceRef);
+    const currentStats = normalizeCasinoProfileStatsData(user, snap.exists ? (snap.data() || {}) : {});
+    const currentWatchlist = sanitizeOwnedGeneralShopItemIds(currentStats.generalShopWatchlistItemIds);
+    const nextWatchlist = currentWatchlist.includes(itemId)
+      ? currentWatchlist.filter((entry) => entry !== itemId)
+      : sanitizeOwnedGeneralShopItemIds([...currentWatchlist, itemId]);
+    nextStats = {
+      ...currentStats,
+      generalShopWatchlistItemIds: nextWatchlist
+    };
+    tx.set(balanceRef, {
+      username: user,
+      displayName: sanitizeNullableText((snap.exists ? (snap.data() || {}).displayName : '') || getCasinoPlayerDisplayName(), user),
+      generalShopWatchlistItemIds: nextWatchlist,
+      updatedAtMs: Date.now()
+    }, { merge: true });
+  });
+  casinoProfileStatsCache[user] = nextStats;
+  renderGeneralShopInventoryModal();
+  setGeneralShopInventoryStatus(isGeneralShopItemWatched(nextStats, itemId) ? 'Item added to your watchlist.' : 'Item removed from your watchlist.', 'success');
+} catch (err) {
+  setGeneralShopInventoryStatus(err && err.message ? err.message : 'Could not update your watchlist.', 'error');
+}
+}
+
+function renderActiveGeneralShopMarketListingInsights() {
+const insightsNode = document.getElementById('general-shop-market-listing-insights');
+const helpersNode = document.getElementById('general-shop-market-listing-helpers');
+const priceInput = document.getElementById('general-shop-market-listing-price');
+const inventoryId = activeGeneralShopMarketListingInventoryId;
+const ownedEntry = inventoryId ? getOwnedGeneralShopMarketListingEntry(inventoryId) : null;
+if (insightsNode) {
+  insightsNode.innerHTML = renderGeneralShopMarketInsightsMarkup(ownedEntry, priceInput ? priceInput.value : 0);
+}
+if (helpersNode) {
+  helpersNode.innerHTML = ownedEntry ? `<button type="button" onclick="applyGeneralShopMarketListingPriceHelper('match-avg')" style="background:#1f3b63; color:#fff;">Match Avg Market</button><button type="button" onclick="applyGeneralShopMarketListingPriceHelper('below-avg')" style="background:#29527f; color:#fff;">5% Below Avg</button><button type="button" onclick="applyGeneralShopMarketListingPriceHelper('above-avg')" style="background:#4a2d72; color:#fff;">10% Above Avg</button><button type="button" onclick="applyGeneralShopMarketListingPriceHelper('match-lowest')" style="background:#35543e; color:#fff;">Match Lowest Listing</button>` : '';
+}
+}
+
+function applyGeneralShopMarketListingPriceHelper(mode) {
+const inventoryId = activeGeneralShopMarketListingInventoryId;
+const ownedEntry = inventoryId ? getOwnedGeneralShopMarketListingEntry(inventoryId) : null;
+const priceInput = document.getElementById('general-shop-market-listing-price');
+if (!ownedEntry || !priceInput) return;
+priceInput.value = String(getGeneralShopMarketHelperPrice(mode, ownedEntry));
+}
+
+async function setGeneralShopAutoSellServerWearPreset(presetId) {
+const user = getCasinoPlayerKey();
+if (!user) {
+  setGeneralShopInventoryStatus('You must be logged in to change auto-sell settings.', 'error');
+  return;
+}
+const nextWearKeys = sanitizeGeneralShopAutoSellWearKeys(getGeneralShopAutoSellPresetWearKeys(presetId));
+try {
+  const balanceRef = getCasinoBalanceCollection().doc(user);
+  let nextStats = getDefaultCasinoProfileStats(user);
+  await getCasinoDb().runTransaction(async (tx) => {
+    const snap = await tx.get(balanceRef);
+    const currentStats = normalizeCasinoProfileStatsData(user, snap.exists ? (snap.data() || {}) : {});
+    nextStats = {
+      ...currentStats,
+      generalShopAutoSellServerWearKeys: nextWearKeys
+    };
+    tx.set(balanceRef, {
+      username: user,
+      displayName: sanitizeNullableText((snap.exists ? (snap.data() || {}).displayName : '') || getCasinoPlayerDisplayName(), user),
+      generalShopAutoSellServerWearKeys: nextWearKeys,
+      updatedAtMs: Date.now()
+    }, { merge: true });
+  });
+  casinoProfileStatsCache[user] = nextStats;
+  renderGeneralShopInventoryModal();
+  setGeneralShopInventoryStatus(nextWearKeys.length
+    ? `Auto-sell preset applied: ${nextWearKeys.map((entry) => {
+      const option = GENERAL_SHOP_AUTO_SELL_WEAR_OPTIONS.find((wearOption) => wearOption.id === entry);
+      return option ? option.label : '';
+    }).filter(Boolean).join(', ')}.`
+    : 'Auto-sell is off for all wear tiers.', 'success');
+} catch (err) {
+  setGeneralShopInventoryStatus(err && err.message ? err.message : 'Could not apply that auto-sell preset.', 'error');
+}
+}
+
+async function toggleGeneralShopAutoSellServerWear(wearKey, enabled) {
+const normalizedWearKey = normalizeGeneralShopAutoSellWearKey(wearKey);
+const user = getCasinoPlayerKey();
+if (!user) {
+  setGeneralShopInventoryStatus('You must be logged in to change auto-sell settings.', 'error');
+  return;
+}
+if (!normalizedWearKey) {
+  setGeneralShopInventoryStatus('That wear setting could not be changed.', 'error');
+  return;
+}
+try {
+  const balanceRef = getCasinoBalanceCollection().doc(user);
+  let nextStats = getDefaultCasinoProfileStats(user);
+  await getCasinoDb().runTransaction(async (tx) => {
+    const snap = await tx.get(balanceRef);
+    const currentStats = normalizeCasinoProfileStatsData(user, snap.exists ? (snap.data() || {}) : {});
+    const currentWearKeys = sanitizeGeneralShopAutoSellWearKeys(currentStats.generalShopAutoSellServerWearKeys);
+    const nextWearKeys = enabled
+      ? sanitizeGeneralShopAutoSellWearKeys([...currentWearKeys, normalizedWearKey])
+      : currentWearKeys.filter((entry) => entry !== normalizedWearKey);
+    nextStats = {
+      ...currentStats,
+      generalShopAutoSellServerWearKeys: nextWearKeys
+    };
+    tx.set(balanceRef, {
+      username: user,
+      displayName: sanitizeNullableText((snap.exists ? (snap.data() || {}).displayName : '') || getCasinoPlayerDisplayName(), user),
+      generalShopAutoSellServerWearKeys: nextWearKeys,
+      updatedAtMs: Date.now()
+    }, { merge: true });
+  });
+  casinoProfileStatsCache[user] = nextStats;
+  renderGeneralShopInventoryModal();
+  setGeneralShopInventoryStatus(nextStats.generalShopAutoSellServerWearKeys.length
+    ? `Auto-sell is on for ${nextStats.generalShopAutoSellServerWearKeys.map((entry) => {
+      const option = GENERAL_SHOP_AUTO_SELL_WEAR_OPTIONS.find((wearOption) => wearOption.id === entry);
+      return option ? option.label : '';
+    }).filter(Boolean).join(', ')}.`
+    : 'Auto-sell is off for all wear tiers.', 'success');
+} catch (err) {
+  setGeneralShopInventoryStatus(err && err.message ? err.message : 'Could not update auto-sell settings.', 'error');
+}
+}
+
+async function sellAutoSellMatchingOwnedGeneralShopCaseDropsToServer() {
+const user = getCasinoPlayerKey();
+const inventoryModalWasOpen = document.getElementById('general-shop-inventory-modal')?.style.display === 'flex';
+if (!user) {
+  setGeneralShopStatus('You must be logged in to sell matching case drops.', 'error');
+  setGeneralShopInventoryStatus('You must be logged in to sell matching case drops.', 'error');
+  return;
+}
+const cachedStats = getCachedCasinoProfileStats(user);
+const matchingSummary = getAutoSellOwnedGeneralShopCaseDropSummary(cachedStats);
+if (!matchingSummary.count) {
+  setGeneralShopStatus('No owned blue or purple drops match your selected auto-sell wears.', 'error');
+  setGeneralShopInventoryStatus('No owned blue or purple drops match your selected auto-sell wears.', 'error');
+  return;
+}
+if (!confirm(`Sell ${matchingSummary.count} matching drop${matchingSummary.count === 1 ? '' : 's'} to the server for $${matchingSummary.totalValue.toLocaleString()} total?`)) return;
+try {
+  const balanceRef = getCasinoBalanceCollection().doc(user);
+  let nextStats = getDefaultCasinoProfileStats(user);
+  let soldSummary = { count: 0, totalValue: 0, wearLabels: [] };
+  await getCasinoDb().runTransaction(async (tx) => {
+    const snap = await tx.get(balanceRef);
+    const currentStats = normalizeCasinoProfileStatsData(user, snap.exists ? (snap.data() || {}) : {});
+    const liveSummary = getAutoSellOwnedGeneralShopCaseDropSummary(currentStats);
+    if (!liveSummary.count) {
+      throw new Error('No owned blue or purple drops match your selected auto-sell wears.');
+    }
+    let workingStats = { ...currentStats };
+    const soldEntries = [];
+    liveSummary.entries.forEach((entry) => {
+      const removal = removeOwnedGeneralShopInventoryEntry(workingStats, entry.inventoryId);
+      if (!removal || !removal.removedEntry) return;
+      soldEntries.push(entry);
+      workingStats = {
+        ...workingStats,
+        ...removal.inventory
+      };
+    });
+    if (!soldEntries.length) {
+      throw new Error('Those matching drops are no longer in your inventory.');
+    }
+    const soldTotalValue = soldEntries.reduce((sum, entry) => sum + getOwnedGeneralShopCaseDropServerSellValue(entry), 0);
+    const nextFeaturedItemId = workingStats.ownedGeneralShopItemIds.includes(currentStats.selectedGeneralShopFeaturedItemId)
+      ? normalizeOptionalGeneralShopItemId(currentStats.selectedGeneralShopFeaturedItemId || '')
+      : '';
+    const nextBalance = currentStats.balance + soldTotalValue;
+    nextStats = {
+      ...workingStats,
+      balance: nextBalance,
+      biggestBalance: Math.max(Math.max(0, Number(currentStats.biggestBalance || 0)), nextBalance),
+      selectedGeneralShopFeaturedItemId: nextFeaturedItemId
+    };
+    soldSummary = {
+      count: soldEntries.length,
+      totalValue: soldTotalValue,
+      wearLabels: Array.from(new Set(soldEntries.map((entry) => getGeneralShopFloatWearLabel(entry.floatValue))))
+    };
+    tx.set(balanceRef, {
+      username: user,
+      displayName: sanitizeNullableText((snap.exists ? (snap.data() || {}).displayName : '') || getCasinoPlayerDisplayName(), user),
+      ...nextStats,
+      updatedAtMs: Date.now()
+    }, { merge: true });
+  });
+  casinoProfileStatsCache[user] = nextStats;
+  await loadCasinoBalance().catch(() => {});
+  await refreshCasinoProfileUiForUser(user);
+  await addCasinoInventoryHistory({
+    type: 'server_sell_bulk',
+    actor: user,
+    itemTitle: `${soldSummary.count} matching case drops`,
+    itemType: 'case-drop',
+    value: soldSummary.totalValue,
+    note: `${soldSummary.wearLabels.join(', ') || 'Selected wears'} • Auto-sold from inventory`
+  });
+  renderGeneralShopModal();
+  renderGeneralShopInventoryModal();
+  if (inventoryModalWasOpen) openModalById('general-shop-inventory-modal');
+  setGeneralShopStatus(`Sold ${soldSummary.count} matching drop${soldSummary.count === 1 ? '' : 's'} for $${soldSummary.totalValue.toLocaleString()}.`, 'success');
+  setGeneralShopInventoryStatus(`Sold ${soldSummary.count} matching drop${soldSummary.count === 1 ? '' : 's'} for $${soldSummary.totalValue.toLocaleString()}.`, 'success');
+} catch (err) {
+  if (inventoryModalWasOpen) openModalById('general-shop-inventory-modal');
+  setGeneralShopStatus(err && err.message ? err.message : 'Could not sell matching case drops.', 'error');
+  setGeneralShopInventoryStatus(err && err.message ? err.message : 'Could not sell matching case drops.', 'error');
+}
+}
+
 async function setSelectedGeneralShopFeaturedItem(encodedItemId) {
 const itemId = normalizeOptionalGeneralShopItemId(decodeURIComponent(encodedItemId || ''));
 const user = getCasinoPlayerKey();
@@ -15471,6 +16319,15 @@ const cases = getOwnedGeneralShopCases(stats);
 const ownedItems = getSortedOwnedGeneralShopItemEntries(stats);
 const marketListings = Array.isArray(generalShopMarketCache) ? generalShopMarketCache : [];
 const selectedFeaturedItemId = normalizeOptionalGeneralShopItemId(stats && stats.selectedGeneralShopFeaturedItemId || '');
+const autoSellWearKeys = sanitizeGeneralShopAutoSellWearKeys(stats && stats.generalShopAutoSellServerWearKeys);
+const watchedItemIds = sanitizeOwnedGeneralShopItemIds(stats && stats.generalShopWatchlistItemIds);
+const autoSellInventorySummary = getAutoSellOwnedGeneralShopCaseDropSummary(stats);
+const autoSellWearSummary = autoSellWearKeys.length
+  ? autoSellWearKeys.map((wearKey) => {
+    const option = GENERAL_SHOP_AUTO_SELL_WEAR_OPTIONS.find((entry) => entry.id === wearKey);
+    return option ? option.label : '';
+  }).filter(Boolean).join(', ')
+  : 'Off';
 container.innerHTML = `${renderGeneralShopCaseOpeningPanel()}
   <div class="store-shelf">
     <div class="store-shelf-header">
@@ -15504,26 +16361,35 @@ container.innerHTML = `${renderGeneralShopCaseOpeningPanel()}
         <div class="store-shelf-title">Items And Case Drops</div>
         <div class="store-shelf-subtitle">Shop items and case drops stay here until you delete them.</div>
       </div>
-      <div class="store-summary-row">${user ? `<span class="store-summary-pill">${ownedItems.length} owned item${ownedItems.length === 1 ? '' : 's'}</span><label class="store-summary-pill" style="gap:0.5rem;"><span>Sort</span><select onchange="setGeneralShopInventoryItemSort(this.value)" style="background:#0e1521; color:#e7eef8; border:1px solid rgba(97,121,150,0.35); border-radius:999px; padding:0.22rem 0.45rem;"><option value="owned" ${generalShopInventoryItemSort === 'owned' ? 'selected' : ''}>Owned Order</option><option value="rarity" ${generalShopInventoryItemSort === 'rarity' ? 'selected' : ''}>Rarity</option></select></label>` : '<span class="store-summary-pill">Sign in to access inventory</span>'}</div>
+      <div class="store-summary-row">${user ? `<span class="store-summary-pill">${ownedItems.length} owned item${ownedItems.length === 1 ? '' : 's'}</span><span class="store-summary-pill">${watchedItemIds.length} watched</span><label class="store-summary-pill" style="gap:0.5rem;"><span>Sort</span><select onchange="setGeneralShopInventoryItemSort(this.value)" style="background:#0e1521; color:#e7eef8; border:1px solid rgba(97,121,150,0.35); border-radius:999px; padding:0.22rem 0.45rem;"><option value="owned" ${generalShopInventoryItemSort === 'owned' ? 'selected' : ''}>Owned Order</option><option value="rarity" ${generalShopInventoryItemSort === 'rarity' ? 'selected' : ''}>Rarity</option></select></label>` : '<span class="store-summary-pill">Sign in to access inventory</span>'}</div>
     </div>
+    ${user ? `<div style="margin-bottom:0.9rem; padding:1rem 1.05rem; border-radius:1rem; background:linear-gradient(180deg, rgba(13,20,31,0.98) 0%, rgba(10,16,25,0.98) 100%); border:1px solid rgba(64,97,138,0.4); box-shadow:0 16px 36px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04); display:grid; gap:0.7rem;"><div><div style="font-weight:800; letter-spacing:0.01em; color:#f5fbff;">Auto-sell blue and purple drops</div><div style="margin-top:0.22rem; font-size:0.79rem; color:#9fb0c2;">Matching case drops sell to the server at half of reference value right when you open them, or you can sell the matching drops already in your inventory.</div></div><div style="display:flex; flex-wrap:wrap; gap:0.55rem;"><button type="button" onclick="sellAutoSellMatchingOwnedGeneralShopCaseDropsToServer()" style="padding:0.48rem 0.92rem; border:none; border-radius:999px; background:linear-gradient(135deg, #16a34a 0%, #15803d 100%); color:#fff; font-weight:700; box-shadow:0 10px 22px rgba(21,128,61,0.28);">Sell Matching Now${autoSellInventorySummary.count ? ` • $${autoSellInventorySummary.totalValue.toLocaleString()}` : ''}</button><button type="button" onclick="setGeneralShopAutoSellServerWearPreset('bad-wears')" style="padding:0.48rem 0.88rem; border:none; border-radius:999px; background:linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color:#fff; font-weight:700; box-shadow:0 10px 22px rgba(37,99,235,0.24);">Bad Wears</button><button type="button" onclick="setGeneralShopAutoSellServerWearPreset('except-top')" style="padding:0.48rem 0.88rem; border:none; border-radius:999px; background:linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); color:#fff; font-weight:700; box-shadow:0 10px 22px rgba(109,40,217,0.24);">Except Top</button><button type="button" onclick="setGeneralShopAutoSellServerWearPreset('clear')" style="padding:0.48rem 0.88rem; border:1px solid rgba(123,149,185,0.28); border-radius:999px; background:#1b2736; color:#d9e8f7; font-weight:700;">Clear</button></div><div style="font-size:0.76rem; color:#c7d7ea;">Selected wears: ${escapeHtml(autoSellWearSummary)}${autoSellInventorySummary.count ? ` • ${autoSellInventorySummary.count} matching drop${autoSellInventorySummary.count === 1 ? '' : 's'} in inventory` : ''}</div><div style="display:flex; flex-wrap:wrap; gap:0.5rem;">${GENERAL_SHOP_AUTO_SELL_WEAR_OPTIONS.map((option) => `<label style="display:inline-flex; align-items:center; gap:0.4rem; padding:0.5rem 0.72rem; border-radius:999px; background:${autoSellWearKeys.includes(option.id) ? 'linear-gradient(135deg, rgba(30,64,175,0.9) 0%, rgba(37,99,235,0.86) 100%)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${autoSellWearKeys.includes(option.id) ? 'rgba(96,165,250,0.65)' : 'rgba(88,110,138,0.28)'}; color:#f4f8ff; font-size:0.78rem; font-weight:${autoSellWearKeys.includes(option.id) ? '700' : '600'}; cursor:pointer; box-shadow:${autoSellWearKeys.includes(option.id) ? '0 10px 20px rgba(37,99,235,0.18)' : 'none'};"><input type="checkbox" ${autoSellWearKeys.includes(option.id) ? 'checked' : ''} onchange="toggleGeneralShopAutoSellServerWear('${option.id}', this.checked)" style="margin:0; accent-color:#dbeafe;" />${escapeHtml(option.label)}</label>`).join('')}</div></div>` : ''}
     <div class="store-mini-grid">
       ${user ? (ownedItems.length ? ownedItems.map((entry) => {
         const item = entry.item;
         const encodedItemId = encodeURIComponent(entry.itemId);
         const encodedInventoryId = encodeURIComponent(entry.inventoryId || '');
         const rarity = getGeneralShopRarityConfig(item.rarity);
-        const caseDropReferenceValue = Math.max(0, Math.floor(Number(entry.saleValue) || 0));
+        const caseDropReferenceValue = getOwnedGeneralShopCaseDropReferenceValue(entry);
+        const marketPriceSummary = item.itemType === 'case-drop' ? getGeneralShopMarketPriceSummary(entry.itemId) : { count: 0, averagePrice: 0 };
+        const recentSalesSummary = item.itemType === 'case-drop' ? getGeneralShopRecentSalesSummary(entry.itemId, 12) : { count: 0, averagePrice: 0 };
+        const serverSellValue = getOwnedGeneralShopCaseDropServerSellValue(entry);
         const floatValue = Math.min(1, Math.max(0, Number(entry.floatValue) || 0));
         const wearLabel = getGeneralShopFloatWearLabel(floatValue);
+        const watchlisted = watchedItemIds.includes(entry.itemId);
         const featured = item.itemType === 'case-drop' && selectedFeaturedItemId === entry.itemId;
+        const metaColor = item.itemType === 'case-drop' ? rarity.color : (item.active ? '#93a9c1' : '#ffcc80');
+        const legacySuffix = !item.active && item.itemType !== 'case-drop' ? ' • Legacy item removed from the live shop' : '';
         return `<div class="store-mini-card">
           <div class="store-visual-banner" style="${getGeneralShopVisualStyleText(item.visualData, 'display:flex; align-items:flex-end; padding:0.75rem; box-sizing:border-box; color:#fff; font-weight:700;')}">${escapeHtml(item.title)}</div>
           <div class="store-mini-card-title">${escapeHtml(item.title)}</div>
           <div class="store-mini-card-meta">${escapeHtml(item.description || (item.itemType === 'case-drop' ? 'Case reward drop.' : 'Shop item.'))}</div>
-          <div class="store-mini-card-meta" style="color:${item.active ? '#93a9c1' : '#ffcc80'};">${escapeHtml(rarity.label)}${item.itemType === 'case-drop' ? ` • ${escapeHtml(wearLabel)} • Float ${formatGeneralShopFloatValue(floatValue)} • Ref $${caseDropReferenceValue.toLocaleString()}${featured ? ' • Best Drop' : ''}` : ' • Owned shop item'}${item.active ? '' : ' • Legacy item removed from the live shop'}</div>
+          ${item.itemType === 'case-drop' ? getGeneralShopFloatBadgesMarkup(floatValue) : ''}
+          <div class="store-mini-card-meta" style="color:${metaColor};">${escapeHtml(rarity.label)}${item.itemType === 'case-drop' ? ` • ${escapeHtml(wearLabel)} • Float ${formatGeneralShopFloatValue(floatValue)}` : ' • Owned shop item'}${legacySuffix}</div>
+          ${item.itemType === 'case-drop' ? `<div class="store-mini-card-meta" style="color:#9fb0c2;">Ref $${caseDropReferenceValue.toLocaleString()}${marketPriceSummary.count ? ` • Avg Market $${marketPriceSummary.averagePrice.toLocaleString()}` : ''}${featured ? ' • Best Drop' : ''}</div>${recentSalesSummary.count ? `<div class="store-mini-card-meta" style="color:#8097b2;">Recent Sales $${recentSalesSummary.averagePrice.toLocaleString()}</div>` : ''}` : ''}
           <div class="store-mini-card-actions">
             ${item.itemType === 'case-drop'
-              ? `<button type="button" onclick="listOwnedGeneralShopCaseDropOnMarket('${encodedInventoryId}')" style="background:#1565c0; color:#fff; border:none; border-radius:0.55rem;">List On Market</button><button type="button" onclick="openTradeOfferPrompt('${encodedInventoryId}')" style="background:#6a1b9a; color:#fff; border:none; border-radius:0.55rem;">Trade</button><button type="button" onclick="setSelectedGeneralShopFeaturedItem('${encodedItemId}')" style="background:${featured ? '#c28b18' : '#37474f'}; color:#fff; border:none; border-radius:0.55rem;">${featured ? 'Best Drop' : 'Set Best Drop'}</button>`
+              ? `<button type="button" onclick="listOwnedGeneralShopCaseDropOnMarket('${encodedInventoryId}')" style="background:#1565c0; color:#fff; border:none; border-radius:0.55rem;">List On Market</button>${serverSellValue ? `<button type="button" onclick="sellOwnedGeneralShopCaseDrop('${encodedInventoryId}')" style="background:#6d4c41; color:#fff; border:none; border-radius:0.55rem;">Sell To Server $${serverSellValue.toLocaleString()}</button>` : ''}<button type="button" onclick="openTradeOfferPrompt('${encodedInventoryId}')" style="background:#6a1b9a; color:#fff; border:none; border-radius:0.55rem;">Trade</button><button type="button" onclick="toggleGeneralShopWatchlistItem('${encodedItemId}')" style="background:${watchlisted ? '#f59e0b' : '#334155'}; color:#fff; border:none; border-radius:0.55rem;">${watchlisted ? 'Watching' : 'Watch Item'}</button><button type="button" onclick="setSelectedGeneralShopFeaturedItem('${encodedItemId}')" style="background:${featured ? '#c28b18' : '#37474f'}; color:#fff; border:none; border-radius:0.55rem;">${featured ? 'Best Drop' : 'Set Best Drop'}</button>`
               : `<button type="button" onclick="deleteOwnedGeneralShopItem('${encodedInventoryId}')" style="background:#5d4037; color:#fff; border:none; border-radius:0.55rem;">Delete</button>`}
           </div>
         </div>`;
@@ -15534,7 +16400,7 @@ container.innerHTML = `${renderGeneralShopCaseOpeningPanel()}
     <div class="store-shelf-header">
       <div>
         <div class="store-shelf-title">Skin Market</div>
-        <div class="store-shelf-subtitle">List case drops at your own price and buy other players' skins. Floats stay with the skin.</div>
+        <div class="store-shelf-subtitle">List case drops at your own price, explain the ask, and buy other players' skins. Floats stay with the skin.</div>
       </div>
       <div class="store-summary-row">${user ? `<span class="store-summary-pill">${marketListings.length} live listing${marketListings.length === 1 ? '' : 's'}</span>` : '<span class="store-summary-pill">Sign in to buy and list skins</span>'}</div>
     </div>
@@ -15543,17 +16409,24 @@ container.innerHTML = `${renderGeneralShopCaseOpeningPanel()}
         const item = getGeneralShopItem(listing.itemId);
         const rarity = getGeneralShopRarityConfig((item && item.rarity) || listing.rarity);
         const sellerName = sanitizeNullableText(listing.sellerDisplayName, listing.seller || 'seller');
+        const marketPriceSummary = getGeneralShopMarketPriceSummary(listing.itemId);
+        const recentSalesSummary = getGeneralShopRecentSalesSummary(listing.itemId, 12);
+        const watchlisted = watchedItemIds.includes(listing.itemId);
         const encodedListingId = encodeURIComponent(listing.id);
         const ownListing = !!user && normalizeUsername(listing.seller) === normalizeUsername(user);
         return `<div class="store-mini-card">
           <div class="store-visual-banner" style="${getGeneralShopVisualStyleText(item && item.visualData, 'display:flex; align-items:flex-end; padding:0.75rem; box-sizing:border-box; color:#fff; font-weight:700;')}">${escapeHtml(item && item.title || listing.itemTitle || listing.itemId)}</div>
           <div class="store-mini-card-title">${escapeHtml(item && item.title || listing.itemTitle || 'Market Skin')}</div>
+          ${getGeneralShopFloatBadgesMarkup(listing.floatValue)}
           <div class="store-mini-card-meta">${escapeHtml(sellerName)} • ${escapeHtml(getGeneralShopFloatWearLabel(listing.floatValue))} • Float ${formatGeneralShopFloatValue(listing.floatValue)}</div>
-          <div class="store-mini-card-meta" style="color:${rarity.color};">${escapeHtml(rarity.label)} • Ask $${Math.max(0, Number(listing.listPrice || 0)).toLocaleString()} • Ref $${Math.max(0, Number(listing.saleValue || 0)).toLocaleString()}</div>
+          <div class="store-mini-card-meta" style="color:${rarity.color};">${escapeHtml(rarity.label)} • Ask $${Math.max(0, Number(listing.listPrice || 0)).toLocaleString()} • Ref $${getGeneralShopMarketListingReferenceValue(listing).toLocaleString()}${marketPriceSummary.count ? ` • Avg Market $${marketPriceSummary.averagePrice.toLocaleString()}` : ''}</div>
+          <div class="store-mini-card-meta" style="color:#9fb0c2;">${marketPriceSummary.count ? `Low $${marketPriceSummary.lowestListingPrice.toLocaleString()} • High $${marketPriceSummary.highestListingPrice.toLocaleString()}` : 'No other live listings'}${recentSalesSummary.count ? ` • Recent Sales $${recentSalesSummary.averagePrice.toLocaleString()}` : ''}</div>
+          ${listing.askReason ? `<div class="store-mini-card-meta">Why this price: ${escapeHtml(listing.askReason)}</div>` : ''}
           <div class="store-mini-card-actions">
             ${ownListing
               ? `<button type="button" onclick="cancelGeneralShopMarketListing('${encodedListingId}')" style="background:#5d4037; color:#fff; border:none; border-radius:0.55rem;">Cancel Listing</button>`
               : `<button type="button" onclick="buyGeneralShopMarketListing('${encodedListingId}')" style="background:${user ? '#2e7d32' : '#455a64'}; color:#fff; border:none; border-radius:0.55rem;">${user ? `Buy $${Math.max(0, Number(listing.listPrice || 0)).toLocaleString()}` : 'Sign In To Buy'}</button>`}
+            ${!ownListing ? `<button type="button" onclick="toggleGeneralShopWatchlistItem('${encodeURIComponent(listing.itemId)}')" style="background:${watchlisted ? '#f59e0b' : '#334155'}; color:#fff; border:none; border-radius:0.55rem;">${watchlisted ? 'Watching' : 'Watch Item'}</button>` : ''}
           </div>
         </div>`;
       }).join('') : '<div class="submission-empty" style="grid-column:1 / -1;">No skins are listed on the market right now.</div>'}
@@ -15731,6 +16604,13 @@ await waitForMs(420);
 async function openGeneralShopCase(encodedItemId) {
 const itemId = normalizeOptionalGeneralShopItemId(decodeURIComponent(encodedItemId || ''));
 const user = getCasinoPlayerKey();
+let openedRewardFloatValue = 0;
+let openedRewardReferenceValue = 0;
+let openedRewardWearLabel = '';
+let shouldAutoSellReward = false;
+let autoSoldReward = false;
+let autoSoldRewardValue = 0;
+let pendingAutoSellInventoryId = '';
 if (!user) {
   setGeneralShopInventoryStatus('You must be logged in to open a case.', 'error');
   return;
@@ -15752,7 +16632,6 @@ try {
   if (!rewardInfo || !rewardInfo.item) {
     throw new Error('This case has no valid case drops yet.');
   }
-  const rewardSaleValue = getGeneralShopCaseDropSaleValue(caseItem, rewardInfo.item);
   await animateGeneralShopCaseOpening(caseItem, rewardInfo).catch(() => {});
   let nextStats = getDefaultCasinoProfileStats(user);
   await getCasinoDb().runTransaction(async (tx) => {
@@ -15768,29 +16647,42 @@ try {
     } else {
       nextCaseCounts[caseItem.id] = currentCount - 1;
     }
+    const rewardFloatValue = getDeterministicGeneralShopFloatValue(`${user}|${caseItem.id}|${rewardInfo.item.id}|${Date.now()}|${currentCount}`);
+    const rewardSaleValue = getGeneralShopCaseDropSaleValue(caseItem, rewardInfo.item);
+    const rewardReferenceValue = getGeneralShopCaseDropReferenceValue(caseItem, rewardInfo.item, rewardFloatValue, rewardSaleValue);
+    const rewardWearKey = getGeneralShopFloatWearKey(rewardFloatValue);
+    shouldAutoSellReward = isGeneralShopServerSellEligibleRarity(rewardInfo.item.rarity)
+      && liveStats.generalShopAutoSellServerWearKeys.includes(rewardWearKey);
+    const rewardServerSellValue = shouldAutoSellReward ? getGeneralShopServerSellValueFromReferenceValue(rewardReferenceValue) : 0;
+    openedRewardFloatValue = rewardFloatValue;
+    openedRewardReferenceValue = rewardReferenceValue;
+    openedRewardWearLabel = getGeneralShopFloatWearLabel(rewardFloatValue);
+    autoSoldRewardValue = rewardServerSellValue;
     const rewardInventoryEntry = {
       itemId: rewardInfo.item.id,
       saleValue: rewardSaleValue,
       inventoryId: createGeneralShopInventoryInstanceId(rewardInfo.item.id),
-      floatValue: getDeterministicGeneralShopFloatValue(`${user}|${caseItem.id}|${rewardInfo.item.id}|${Date.now()}|${currentCount}`)
+      floatValue: rewardFloatValue
     };
+    pendingAutoSellInventoryId = shouldAutoSellReward ? rewardInventoryEntry.inventoryId : '';
     const nextInventory = appendOwnedGeneralShopInventoryEntry(liveStats, rewardInventoryEntry);
     const currentBestDrop = getAllTimeBestGeneralShopDropRecord(liveStats);
     const currentBestDropValue = Math.max(0, Number(currentBestDrop && currentBestDrop.value || 0));
     const currentBestDropRarity = getGeneralShopRaritySortValue(currentBestDrop && currentBestDrop.rarity || 'mil-spec');
     const rewardDropRarity = getGeneralShopRaritySortValue(rewardInfo.item.rarity);
     const shouldUpdateBestDrop = !currentBestDrop
-      || rewardSaleValue > currentBestDropValue
-      || (rewardSaleValue === currentBestDropValue && rewardDropRarity > currentBestDropRarity)
-      || (rewardSaleValue === currentBestDropValue && rewardDropRarity === currentBestDropRarity && rewardInfo.item.title.localeCompare(currentBestDrop.title) < 0);
+      || rewardReferenceValue > currentBestDropValue
+      || (rewardReferenceValue === currentBestDropValue && rewardDropRarity > currentBestDropRarity)
+      || (rewardReferenceValue === currentBestDropValue && rewardDropRarity === currentBestDropRarity && rewardInfo.item.title.localeCompare(currentBestDrop.title) < 0);
     nextStats = {
       ...liveStats,
       ownedGeneralShopCaseCounts: nextCaseCounts,
       ...nextInventory,
+      generalShopCasesOpened: Math.max(0, Number(liveStats.generalShopCasesOpened || 0)) + 1,
       allTimeBestGeneralShopDropItemId: shouldUpdateBestDrop ? rewardInfo.item.id : liveStats.allTimeBestGeneralShopDropItemId,
       allTimeBestGeneralShopDropTitle: shouldUpdateBestDrop ? rewardInfo.item.title : liveStats.allTimeBestGeneralShopDropTitle,
       allTimeBestGeneralShopDropRarity: shouldUpdateBestDrop ? normalizeGeneralShopRarity(rewardInfo.item.rarity) : normalizeGeneralShopRarity(liveStats.allTimeBestGeneralShopDropRarity),
-      allTimeBestGeneralShopDropValue: shouldUpdateBestDrop ? rewardSaleValue : Math.max(0, Number(liveStats.allTimeBestGeneralShopDropValue || 0))
+      allTimeBestGeneralShopDropValue: shouldUpdateBestDrop ? rewardReferenceValue : Math.max(0, Number(liveStats.allTimeBestGeneralShopDropValue || 0))
     };
     const { ownedGeneralShopCaseCounts, ...nextStatsWithoutCaseCounts } = nextStats;
     const writeData = {
@@ -15809,6 +16701,47 @@ try {
   casinoProfileStatsCache[user] = nextStats;
   await loadCasinoBalance().catch(() => {});
   await revealGeneralShopCaseReward(rewardInfo).catch(() => {});
+  if (shouldAutoSellReward && pendingAutoSellInventoryId) {
+    await waitForMs(700);
+    try {
+      await getCasinoDb().runTransaction(async (tx) => {
+        const snap = await tx.get(balanceRef);
+        const currentStats = normalizeCasinoProfileStatsData(user, snap.exists ? (snap.data() || {}) : {});
+        const ownedEntry = getOwnedGeneralShopItemEntries(currentStats).find((entry) => entry.inventoryId === pendingAutoSellInventoryId);
+        if (!canSellOwnedGeneralShopCaseDropToServer(ownedEntry)) {
+          throw new Error('That auto-sell case drop is no longer available to sell.');
+        }
+        const removal = removeOwnedGeneralShopInventoryEntry(currentStats, pendingAutoSellInventoryId);
+        if (!removal || !removal.removedEntry) {
+          throw new Error('That auto-sell case drop is no longer in your inventory.');
+        }
+        const nextFeaturedItemId = currentStats.selectedGeneralShopFeaturedItemId === removal.removedEntry.itemId && !removal.inventory.ownedGeneralShopItemIds.includes(removal.removedEntry.itemId)
+          ? ''
+          : normalizeOptionalGeneralShopItemId(currentStats.selectedGeneralShopFeaturedItemId || '');
+        const nextBalance = currentStats.balance + autoSoldRewardValue;
+        nextStats = {
+          ...currentStats,
+          ...removal.inventory,
+          balance: nextBalance,
+          biggestBalance: Math.max(Math.max(0, Number(currentStats.biggestBalance || 0)), nextBalance),
+          selectedGeneralShopFeaturedItemId: nextFeaturedItemId
+        };
+        tx.set(balanceRef, {
+          username: user,
+          displayName: sanitizeNullableText((snap.exists ? (snap.data() || {}).displayName : '') || displayName, user),
+          ...nextStats,
+          updatedAtMs: Date.now()
+        }, { merge: true });
+      });
+      autoSoldReward = true;
+      casinoProfileStatsCache[user] = nextStats;
+      await loadCasinoBalance().catch(() => {});
+    } catch (sellErr) {
+      autoSoldReward = false;
+      await loadCasinoBalance().catch(() => {});
+      setGeneralShopInventoryStatus(`You opened ${caseItem.title} and got ${rewardInfo.item.title}, but auto-sell could not finish so it stayed in your inventory.`, 'success');
+    }
+  }
   await addCasinoInventoryHistory({
     type: 'open_case',
     actor: user,
@@ -15818,20 +16751,35 @@ try {
     caseId: caseItem.id,
     caseTitle: caseItem.title,
     rarity: rewardInfo.item.rarity,
-    value: rewardSaleValue,
+    value: openedRewardReferenceValue,
+    note: `${openedRewardWearLabel} • ${formatGeneralShopFloatValue(openedRewardFloatValue)}${autoSoldReward ? ` • Auto-sold after reveal $${autoSoldRewardValue.toLocaleString()}` : ''}`,
     amount: getOwnedGeneralShopCaseCount(nextStats, caseItem.id)
   });
-  pushNotification({ type: 'case', title: 'Case opened', body: `${caseItem.title} gave you ${rewardInfo.item.title}.`, read: false });
+  if (autoSoldReward) {
+    await addCasinoInventoryHistory({
+      type: 'server_sell',
+      actor: user,
+      itemId: rewardInfo.item.id,
+      itemTitle: rewardInfo.item.title,
+      itemType: rewardInfo.item.itemType,
+      caseId: caseItem.id,
+      caseTitle: caseItem.title,
+      rarity: rewardInfo.item.rarity,
+      value: autoSoldRewardValue,
+      note: `Auto-sold after reveal • ${openedRewardWearLabel} • ${formatGeneralShopFloatValue(openedRewardFloatValue)}`
+    });
+  }
+  pushNotification({ type: 'case', title: 'Case opened', body: autoSoldReward ? `${caseItem.title} gave you ${rewardInfo.item.title}, and it auto-sold for $${autoSoldRewardValue.toLocaleString()}.` : `${caseItem.title} gave you ${rewardInfo.item.title}.`, read: false });
   await publishCasinoActivity({
     type: 'shop',
     title: `${displayName} opened ${caseItem.title}`,
-    body: `Won ${rewardInfo.item.title} (${getGeneralShopRarityConfig(rewardInfo.rarity).label}).`,
+    body: autoSoldReward ? `Won ${rewardInfo.item.title} (${getGeneralShopRarityConfig(rewardInfo.rarity).label}) and auto-sold it for $${autoSoldRewardValue.toLocaleString()}.` : `Won ${rewardInfo.item.title} (${getGeneralShopRarityConfig(rewardInfo.rarity).label}).`,
     by: user
   });
   await refreshCasinoProfileUiForUser(user);
   renderGeneralShopModal();
   renderGeneralShopInventoryModal();
-  setGeneralShopInventoryStatus(`You opened ${caseItem.title} and got ${rewardInfo.rarity === 'special' ? `GOLD: ${rewardInfo.item.title}` : rewardInfo.item.title}.`, 'success');
+  setGeneralShopInventoryStatus(autoSoldReward ? `You opened ${caseItem.title} and got ${rewardInfo.rarity === 'special' ? `GOLD: ${rewardInfo.item.title}` : rewardInfo.item.title}. Auto-sold for $${autoSoldRewardValue.toLocaleString()}.` : `You opened ${caseItem.title} and got ${rewardInfo.rarity === 'special' ? `GOLD: ${rewardInfo.item.title}` : rewardInfo.item.title}.`, 'success');
 } catch (err) {
   resetGeneralShopCaseOpeningState();
   setGeneralShopInventoryStatus(err && err.message ? err.message : 'Could not open that case.', 'error');
@@ -15904,7 +16852,88 @@ try {
 }
 
 async function sellOwnedGeneralShopCaseDrop(encodedItemId) {
-return listOwnedGeneralShopCaseDropOnMarket(encodedItemId);
+const inventoryId = sanitizeOwnedGeneralShopInventoryInstanceId(decodeURIComponent(encodedItemId || ''));
+const user = getCasinoPlayerKey();
+const inventoryModalWasOpen = document.getElementById('general-shop-inventory-modal')?.style.display === 'flex';
+if (!user) {
+  setGeneralShopStatus('You must be logged in to sell a case drop.', 'error');
+  setGeneralShopInventoryStatus('You must be logged in to sell a case drop.', 'error');
+  return;
+}
+if (!inventoryId) {
+  setGeneralShopStatus('That case drop could not be found.', 'error');
+  setGeneralShopInventoryStatus('That case drop could not be found.', 'error');
+  return;
+}
+const currentEntry = getOwnedGeneralShopItemEntries(getCachedCasinoProfileStats(user)).find((entry) => entry.inventoryId === inventoryId);
+if (!canSellOwnedGeneralShopCaseDropToServer(currentEntry)) {
+  setGeneralShopStatus('Only blue and purple case drops can be sold to the server.', 'error');
+  setGeneralShopInventoryStatus('Only blue and purple case drops can be sold to the server.', 'error');
+  return;
+}
+const payout = getOwnedGeneralShopCaseDropServerSellValue(currentEntry);
+const label = currentEntry && currentEntry.item ? currentEntry.item.title : 'this case drop';
+if (!payout) {
+  setGeneralShopStatus('That case drop has no server sell value.', 'error');
+  setGeneralShopInventoryStatus('That case drop has no server sell value.', 'error');
+  return;
+}
+if (!confirm(`Sell ${label} to the server for $${payout.toLocaleString()}? This pays half of the current reference price.`)) return;
+try {
+  const balanceRef = getCasinoBalanceCollection().doc(user);
+  let nextStats = getDefaultCasinoProfileStats(user);
+  await getCasinoDb().runTransaction(async (tx) => {
+    const snap = await tx.get(balanceRef);
+    const currentStats = normalizeCasinoProfileStatsData(user, snap.exists ? (snap.data() || {}) : {});
+    const ownedEntry = getOwnedGeneralShopItemEntries(currentStats).find((entry) => entry.inventoryId === inventoryId);
+    if (!canSellOwnedGeneralShopCaseDropToServer(ownedEntry)) {
+      throw new Error('Only blue and purple case drops can be sold to the server.');
+    }
+    const removal = removeOwnedGeneralShopInventoryEntry(currentStats, inventoryId);
+    if (!removal || !removal.removedEntry) {
+      throw new Error('You do not own that case drop.');
+    }
+    const nextFeaturedItemId = currentStats.selectedGeneralShopFeaturedItemId === removal.removedEntry.itemId && !removal.inventory.ownedGeneralShopItemIds.includes(removal.removedEntry.itemId)
+      ? ''
+      : normalizeOptionalGeneralShopItemId(currentStats.selectedGeneralShopFeaturedItemId || '');
+    const nextBalance = currentStats.balance + getOwnedGeneralShopCaseDropServerSellValue(ownedEntry);
+    nextStats = {
+      ...currentStats,
+      ...removal.inventory,
+      balance: nextBalance,
+      biggestBalance: Math.max(Math.max(0, Number(currentStats.biggestBalance || 0)), nextBalance),
+      selectedGeneralShopFeaturedItemId: nextFeaturedItemId
+    };
+    tx.set(balanceRef, {
+      username: user,
+      displayName: sanitizeNullableText((snap.exists ? (snap.data() || {}).displayName : '') || getCasinoPlayerDisplayName(), user),
+      ...nextStats,
+      updatedAtMs: Date.now()
+    }, { merge: true });
+  });
+  casinoProfileStatsCache[user] = nextStats;
+  await loadCasinoBalance().catch(() => {});
+  await refreshCasinoProfileUiForUser(user);
+  await addCasinoInventoryHistory({
+    type: 'server_sell',
+    actor: user,
+    itemId: currentEntry.itemId,
+    itemTitle: label,
+    itemType: 'case-drop',
+    rarity: currentEntry.item.rarity,
+    value: payout,
+    note: `${getGeneralShopFloatWearLabel(currentEntry.floatValue)} • ${formatGeneralShopFloatValue(currentEntry.floatValue)}`
+  });
+  renderGeneralShopModal();
+  renderGeneralShopInventoryModal();
+  if (inventoryModalWasOpen) openModalById('general-shop-inventory-modal');
+  setGeneralShopStatus(`${label} sold to the server for $${payout.toLocaleString()}.`, 'success');
+  setGeneralShopInventoryStatus(`${label} sold to the server for $${payout.toLocaleString()}.`, 'success');
+} catch (err) {
+  if (inventoryModalWasOpen) openModalById('general-shop-inventory-modal');
+  setGeneralShopStatus(err && err.message ? err.message : 'Could not sell that case drop to the server.', 'error');
+  setGeneralShopInventoryStatus(err && err.message ? err.message : 'Could not sell that case drop to the server.', 'error');
+}
 }
 
 function renderProfileIdentity(profileUserKey, stats, profile) {
@@ -16131,13 +17160,15 @@ sectionEl.innerHTML = `
         ${ownedItems.length ? ownedItems.map((entry) => {
           const item = entry.item;
           const rarity = getGeneralShopRarityConfig(item.rarity);
-          const saleValue = Math.max(0, Math.floor(Number(entry.saleValue || 0)));
+          const saleValue = getOwnedGeneralShopCaseDropReferenceValue(entry);
           const floatValue = Math.min(1, Math.max(0, Number(entry.floatValue || 0)));
+          const metaColor = item.itemType === 'case-drop' ? rarity.color : (item.active ? '#93a9c1' : '#ffcc80');
+          const legacySuffix = !item.active && item.itemType !== 'case-drop' ? ' • Legacy item' : '';
           return `<div class="store-mini-card">
             <div class="store-visual-banner" style="${getGeneralShopVisualStyleText(item.visualData, 'display:flex; align-items:flex-end; padding:0.75rem; box-sizing:border-box; color:#fff; font-weight:700;')}">${escapeHtml(item.title)}</div>
             <div class="store-mini-card-title">${escapeHtml(item.title)}</div>
             <div class="store-mini-card-meta">${escapeHtml(item.description || (item.itemType === 'case-drop' ? 'Case reward drop.' : 'Shop item.'))}</div>
-            <div class="store-mini-card-meta" style="color:${item.active ? '#93a9c1' : '#ffcc80'};">${escapeHtml(rarity.label)}${item.itemType === 'case-drop' ? ` • ${escapeHtml(getGeneralShopFloatWearLabel(floatValue))} • Float ${formatGeneralShopFloatValue(floatValue)} • Ref $${saleValue.toLocaleString()}` : ` • Shop item • Worth $${Math.max(0, Number(item.price || 0)).toLocaleString()}`}${item.active ? '' : ' • Legacy item'}</div>
+            <div class="store-mini-card-meta" style="color:${metaColor};">${escapeHtml(rarity.label)}${item.itemType === 'case-drop' ? ` • ${escapeHtml(getGeneralShopFloatWearLabel(floatValue))} • Float ${formatGeneralShopFloatValue(floatValue)} • Ref $${saleValue.toLocaleString()}` : ` • Shop item • Worth $${Math.max(0, Number(item.price || 0)).toLocaleString()}`}${legacySuffix}</div>
           </div>`;
         }).join('') : '<div class="submission-empty" style="grid-column:1 / -1;">No items or case drops owned.</div>'}
       </div>
@@ -26234,6 +27265,8 @@ loadRoleCache();
 loadUserTagCache();
 loadUserProfileCache();
 listenForGeneralShop();
+listenForGeneralShopMarket();
+listenForGeneralShopMarketSales();
 listenForProfileBackgroundShop();
 loadModerationSettings();
 startActivityHeartbeat();

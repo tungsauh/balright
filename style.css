@@ -925,9 +925,10 @@ color: #9db2c9;
 
 .store-mini-grid {
 display: grid;
-grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
 gap: 0.75rem;
-justify-items: start;
+justify-items: stretch;
+align-items: start;
 }
 
 .store-mini-card {
@@ -938,7 +939,9 @@ border-radius: 0.85rem;
 display: flex;
 flex-direction: column;
 gap: 0.45rem;
-width: min(100%, 380px);
+width: 100%;
+min-width: 0;
+box-sizing: border-box;
 }
 
 .store-mini-card-title {
@@ -952,15 +955,15 @@ color: #93a9c1;
 }
 
 .store-mini-card-actions {
-display: flex;
+display: grid;
+grid-template-columns: 1fr;
 gap: 0.45rem;
-flex-wrap: wrap;
 margin-top: auto;
 }
 
 .store-mini-card-actions button {
-flex: 1;
-min-width: 100px;
+width: 100%;
+min-width: 0;
 padding: 0.55rem 0.7rem;
 font-size: 0.78rem;
 }

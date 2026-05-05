@@ -1877,6 +1877,33 @@ oninput="onChatInput()"
 </div>
 </div>
 
+<div id="general-shop-market-listing-modal" class="overlay-modal" onclick="if(event.target===this)closeGeneralShopMarketListingModal()">
+<div class="overlay-panel" style="width:min(32rem, calc(100vw - 2rem));">
+<div class="overlay-header">
+<div>
+<h3 id="general-shop-market-listing-title">List On Market</h3>
+<div id="general-shop-market-listing-subtle" class="overlay-subtle">Set your ask and say why you want that amount.</div>
+</div>
+<button onclick="closeGeneralShopMarketListingModal()" style="padding:0.35rem 0.7rem;">Close</button>
+</div>
+<div class="overlay-field">
+<label for="general-shop-market-listing-price">Ask price</label>
+<input id="general-shop-market-listing-price" type="number" min="1" max="1000000000" step="1" placeholder="1000" oninput="renderActiveGeneralShopMarketListingInsights()" />
+</div>
+<div id="general-shop-market-listing-insights" style="display:grid; gap:0.55rem; margin-bottom:0.7rem;"></div>
+<div id="general-shop-market-listing-helpers" class="overlay-actions" style="margin-bottom:0.7rem; flex-wrap:wrap;"></div>
+<div class="overlay-field">
+<label for="general-shop-market-listing-reason">Why this price?</label>
+<textarea id="general-shop-market-listing-reason" maxlength="220" placeholder="Optional note for buyers"></textarea>
+</div>
+<div id="general-shop-market-listing-status" class="overlay-status"></div>
+<div class="overlay-actions">
+<button onclick="closeGeneralShopMarketListingModal()" style="background:#444; color:#fff;">Cancel</button>
+<button onclick="submitGeneralShopMarketListing()" style="background:#1565c0; color:#fff;">List Skin</button>
+</div>
+</div>
+</div>
+
 <div id="general-shop-trade-modal" class="overlay-modal" onclick="if(event.target===this)closeGeneralShopTradeModal()">
 <div class="overlay-panel" style="width:min(84rem, calc(100vw - 2rem)); max-height:min(92vh, 60rem);">
 <div class="overlay-header">
