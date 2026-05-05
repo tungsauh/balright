@@ -736,9 +736,21 @@ cursor: pointer;
 <button onclick="adminRewardGrantUseSelectedUser()" style="background:#37474f; color:#fff; border:none; border-radius:0.25rem;">Use Selected User</button>
 </div>
 <div class="admin-inline-input-row">
-<select id="admin-reward-grant-item" style="flex:1 1 14rem; min-width:12rem;"></select>
+<select id="admin-reward-grant-item" onchange="updateAdminRewardGrantControls()" style="flex:1 1 14rem; min-width:12rem;"></select>
 <input type="number" id="admin-reward-grant-quantity" min="1" max="50" value="1" placeholder="Qty" />
 <button onclick="adminGrantSelectedReward()" style="background:#1565c0; color:#fff; border:none; border-radius:0.25rem;">Grant Reward</button>
+</div>
+<div class="admin-inline-input-row" id="admin-reward-grant-wear-row" style="display:none; align-items:center;">
+<select id="admin-reward-grant-wear" onchange="updateAdminRewardGrantControls()" style="flex:0 0 12rem; min-width:12rem;">
+<option value="">Random Wear</option>
+<option value="pristine">Fresh Issue</option>
+<option value="factory-new">Factory New</option>
+<option value="minimal-wear">Minimal Wear</option>
+<option value="field-tested">Field-Tested</option>
+<option value="well-worn">Well-Worn</option>
+<option value="battle-scarred">Battle-Scarred</option>
+</select>
+<div id="admin-reward-grant-float-note" class="admin-helper-text admin-helper-text--flush" style="flex:1 1 18rem; margin:0;"></div>
 </div>
 <div id="admin-reward-grant-status" class="admin-note-text"></div>
 <div id="admin-reward-grant-manager" class="admin-scroll-panel" style="max-height:200px;"></div>

@@ -1772,6 +1772,26 @@ function getGeneralShopFloatReferenceMultiplier(value = 0) {
   return 0.25;
 }
 
+function getGeneralShopFloatWearBounds(wearKey = '') {
+  const normalized = normalizeGeneralShopAutoSellWearKey(wearKey);
+  if (normalized === 'pristine') return { min: 0.0001, max: 0.001 };
+  if (normalized === 'factory-new') return { min: 0.0011, max: 0.07 };
+  if (normalized === 'minimal-wear') return { min: 0.0701, max: 0.15 };
+  if (normalized === 'field-tested') return { min: 0.1501, max: 0.38 };
+  if (normalized === 'well-worn') return { min: 0.3801, max: 0.45 };
+  if (normalized === 'battle-scarred') return { min: 0.4501, max: 0.9999 };
+  return null;
+}
+
+function createRandomGeneralShopFloatValueForWearKey(wearKey = '') {
+  const bounds = getGeneralShopFloatWearBounds(wearKey);
+  if (!bounds) return null;
+  const minStep = Math.round(bounds.min * 10000);
+  const maxStep = Math.round(bounds.max * 10000);
+  const randomStep = minStep + Math.floor(Math.random() * ((maxStep - minStep) + 1));
+  return Math.min(1, Math.max(0, randomStep / 10000));
+}
+
 function getGeneralShopFloatAdjustedReferenceValue(baseValue = 0, floatValue = 0) {
   const safeBaseValue = Math.max(0, Math.floor(Number(baseValue) || 0));
   return Math.max(0, Math.floor(safeBaseValue * getGeneralShopFloatReferenceMultiplier(floatValue)));
@@ -14619,6 +14639,7 @@ const username = normalizeUsername(targetUsername || resolveAdminTargetUsername(
 const input = document.getElementById('admin-reward-grant-username');
 if (input && username) input.value = username;
 try {
+  const previousItemId = normalizeOptionalGeneralShopItemId(select.value || '');
   const snapshot = await getGeneralShopCollection().get().catch(() => null);
   const liveItems = snapshot && Array.isArray(snapshot.docs)
     ? snapshot.docs.map((doc) => normalizeGeneralShopItem(doc.id, doc.data() || {}))
@@ -14629,6 +14650,10 @@ try {
   });
   adminRewardGrantCatalogCache = merged.sort((a, b) => a.title.localeCompare(b.title));
   select.innerHTML = adminRewardGrantCatalogCache.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(`${item.title} (${item.itemType}${item.itemType === 'case' ? '' : ` • ${getGeneralShopRarityConfig(item.rarity).label}`})`)}</option>`).join('');
+  if (previousItemId && adminRewardGrantCatalogCache.some((item) => item.id === previousItemId)) {
+    select.value = previousItemId;
+  }
+  updateAdminRewardGrantControls();
   if (!username) {
     container.innerHTML = '<div class="submission-empty">Select a user to preview reward grants.</div>';
     return;
@@ -14639,6 +14664,37 @@ try {
 } catch (err) {
   container.innerHTML = '<div class="submission-empty">Failed to load reward grant data.</div>';
 }
+}
+
+function updateAdminRewardGrantControls() {
+const select = document.getElementById('admin-reward-grant-item');
+const wearRow = document.getElementById('admin-reward-grant-wear-row');
+const wearSelect = document.getElementById('admin-reward-grant-wear');
+const wearNote = document.getElementById('admin-reward-grant-float-note');
+if (!select) return;
+const itemId = normalizeOptionalGeneralShopItemId(select.value || '');
+const item = adminRewardGrantCatalogCache.find((entry) => entry.id === itemId) || getGeneralShopItem(itemId);
+const selectedWearKey = normalizeGeneralShopAutoSellWearKey(wearSelect && wearSelect.value);
+const bounds = getGeneralShopFloatWearBounds(selectedWearKey);
+const showWearPicker = !!(item && item.itemType === 'case-drop');
+if (wearRow) wearRow.style.display = showWearPicker ? 'flex' : 'none';
+if (wearSelect) {
+  wearSelect.disabled = !showWearPicker;
+  if (!showWearPicker) wearSelect.value = '';
+}
+if (wearNote) {
+  wearNote.textContent = !showWearPicker
+    ? 'Float wear only applies to granted case drops.'
+    : bounds
+      ? `The grant will roll a float between ${bounds.min.toFixed(4)} and ${bounds.max.toFixed(4)} so it stays ${getGeneralShopAutoSellWearLabel(selectedWearKey)}.`
+      : 'Pick a wear and the grant will roll a float that stays inside that wear range.';
+}
+}
+
+function getGeneralShopAutoSellWearLabel(wearKey = '') {
+const normalized = normalizeGeneralShopAutoSellWearKey(wearKey);
+const option = GENERAL_SHOP_AUTO_SELL_WEAR_OPTIONS.find((entry) => entry.id === normalized);
+return option ? option.label : 'Random Wear';
 }
 
 function adminRewardGrantUseSelectedUser() {
@@ -14652,6 +14708,7 @@ async function adminGrantSelectedReward() {
 if (!canUseAdminPermission('manageRewardGrants')) return;
 const username = normalizeUsername(resolveAdminTargetUsername('admin-reward-grant-username'));
 const itemId = normalizeOptionalGeneralShopItemId(document.getElementById('admin-reward-grant-item')?.value || '');
+const selectedWearKey = normalizeGeneralShopAutoSellWearKey(document.getElementById('admin-reward-grant-wear')?.value || '');
 const quantity = Math.max(1, Math.min(50, Math.floor(Number(document.getElementById('admin-reward-grant-quantity')?.value) || 1)));
 const item = adminRewardGrantCatalogCache.find((entry) => entry.id === itemId) || getGeneralShopItem(itemId);
 if (!username || !item) {
@@ -14686,18 +14743,24 @@ try {
       }
       return;
     }
-    const nextItemIds = sanitizeOwnedGeneralShopItemIds(currentStats.ownedGeneralShopItemIds).slice();
-    const nextSaleValues = sanitizeOwnedGeneralShopItemSaleValues(nextItemIds, currentStats.ownedGeneralShopItemSaleValues).slice();
     const saleValue = item.itemType === 'case-drop' ? getLegacyGeneralShopCaseDropSaleValue(item) : 0;
+    let workingStats = currentStats;
     for (let index = 0; index < quantity; index += 1) {
-      nextItemIds.push(item.id);
-      nextSaleValues.push(saleValue);
+      const inventoryId = createGeneralShopInventoryInstanceId(item.id);
+      const floatValue = item.itemType === 'case-drop'
+        ? (createRandomGeneralShopFloatValueForWearKey(selectedWearKey) ?? getDeterministicGeneralShopFloatValue(`${inventoryId}|${item.id}|grant`))
+        : 0;
+      workingStats = {
+        ...workingStats,
+        ...appendOwnedGeneralShopInventoryEntry(workingStats, {
+          itemId: item.id,
+          saleValue,
+          inventoryId,
+          floatValue
+        })
+      };
     }
-    nextStats = {
-      ...currentStats,
-      ownedGeneralShopItemIds: sanitizeOwnedGeneralShopItemIds(nextItemIds),
-      ownedGeneralShopItemSaleValues: sanitizeOwnedGeneralShopItemSaleValues(nextItemIds, nextSaleValues)
-    };
+    nextStats = workingStats;
     tx.set(ref, {
       username,
       displayName: sanitizeNullableText((snap.exists ? (snap.data() || {}).displayName : '') || username, username),
@@ -14706,10 +14769,10 @@ try {
     }, { merge: true });
   });
   casinoProfileStatsCache[username] = nextStats;
-  await writeAuditLog('grant_reward', username, `Granted ${quantity}x ${item.title}`);
+  await writeAuditLog('grant_reward', username, `Granted ${quantity}x ${item.title}${item.itemType === 'case-drop' ? ` (${getGeneralShopAutoSellWearLabel(selectedWearKey)})` : ''}`);
   await loadAdminRewardGrantTool(username);
   await refreshCasinoViewsAfterAdminChange(username);
-  setAdminToolStatus('admin-reward-grant-status', `Granted ${quantity}x ${item.title} to ${username}.`, 'success');
+  setAdminToolStatus('admin-reward-grant-status', `Granted ${quantity}x ${item.title} to ${username}${item.itemType === 'case-drop' ? ` with ${getGeneralShopAutoSellWearLabel(selectedWearKey)} floats.` : '.'}`, 'success');
 } catch (err) {
   setAdminToolStatus('admin-reward-grant-status', 'Failed to grant that reward.', 'error');
 }
