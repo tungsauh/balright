@@ -789,7 +789,7 @@ cursor: pointer;
 <button class="admin-section-toggle" type="button" onclick="toggleAdminSectionCard('general-shop')">Minimize</button>
 </div>
 <div class="admin-section-body">
-<div class="admin-note-text">Owner only. Add live shop items, hidden case drops, and cases. Case drops do not show in the live shop.</div>
+<div class="admin-note-text">Owner only. Add live shop items, hidden case drops, cases, sticker packs, and holo stickers. Case drops and stickers do not show in the live shop.</div>
 <input type="hidden" id="admin-general-shop-id" />
 <div class="admin-inline-input-row" style="margin-top:0.55rem;">
 <input type="text" id="admin-general-shop-title" maxlength="40" placeholder="Item name" oninput="updateAdminGeneralShopPreview()" />
@@ -801,6 +801,8 @@ cursor: pointer;
 <option value="shop-item">Shop Item</option>
 <option value="case-drop">Case Drop</option>
 <option value="case">Case</option>
+<option value="sticker">Sticker</option>
+<option value="sticker-pack">Sticker Pack</option>
 </select>
 <select id="admin-general-shop-rarity" onchange="updateAdminGeneralShopPreview()" style="flex:1 1 11rem; min-width:11rem;">
 <option value="mil-spec">Blue</option>
@@ -810,8 +812,12 @@ cursor: pointer;
 <option value="special">Gold</option>
 </select>
 </div>
+<div id="admin-general-shop-sticker-config" class="admin-inline-input-row" style="display:none; margin-top:0.55rem; align-items:center;">
+<label style="display:flex; gap:0.45rem; align-items:center; color:#dce6f2; font-size:0.82rem; white-space:nowrap;"><input type="checkbox" id="admin-general-shop-holo" onchange="updateAdminGeneralShopPreview()" /> Holo Sticker</label>
+<div class="admin-note-text admin-helper-text--flush" style="margin:0; flex:1 1 16rem;">Use Sticker for rewards that can go inside sticker packs. Turn on Holo Sticker for the shiny holo version.</div>
+</div>
 <div id="admin-general-shop-case-config" style="display:none; margin-top:0.55rem;">
-<div class="admin-note-text" style="margin-bottom:0.45rem;">One reward per line as <strong>item-id|rarity</strong>. Click a case drop below to add it to the case.</div>
+<div class="admin-note-text" style="margin-bottom:0.45rem;">One reward per line as <strong>item-id|rarity</strong>. Click a case drop or sticker below to add it to the pack.</div>
 <textarea id="admin-general-shop-case-items" maxlength="3000" placeholder="blue-skin|mil-spec&#10;red-skin|covert&#10;gold-skin|special" style="width:100%; min-height:8rem; box-sizing:border-box;"></textarea>
 <div id="admin-general-shop-case-reference" style="margin-top:0.55rem; display:flex; gap:0.45rem; flex-wrap:wrap;"></div>
 </div>
