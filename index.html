@@ -743,6 +743,7 @@ cursor: pointer;
 <div class="admin-inline-input-row" id="admin-reward-grant-wear-row" style="display:none; align-items:center;">
 <select id="admin-reward-grant-wear" onchange="updateAdminRewardGrantControls()" style="flex:0 0 12rem; min-width:12rem;">
 <option value="">Random Wear</option>
+<option value="mape-rinors">Mape Rinors</option>
 <option value="pristine">Fresh Issue</option>
 <option value="factory-new">Factory New</option>
 <option value="minimal-wear">Minimal Wear</option>
@@ -750,6 +751,7 @@ cursor: pointer;
 <option value="well-worn">Well-Worn</option>
 <option value="battle-scarred">Battle-Scarred</option>
 </select>
+<input type="number" id="admin-reward-grant-float" min="0" max="1" step="0.000001" placeholder="Exact float (optional)" oninput="updateAdminRewardGrantControls()" style="flex:0 0 12rem; min-width:12rem;" />
 <div id="admin-reward-grant-float-note" class="admin-helper-text admin-helper-text--flush" style="flex:1 1 18rem; margin:0;"></div>
 </div>
 <div id="admin-reward-grant-status" class="admin-note-text"></div>
@@ -842,6 +844,37 @@ cursor: pointer;
 </div>
 <div id="admin-general-shop-status" class="admin-note-text"></div>
 <div id="admin-general-shop-manager" class="admin-compact-list"></div>
+</div>
+</div>
+
+<div class="admin-section-card" data-admin-scope="owner" data-admin-permission="manageGeneralShop" data-admin-section-id="general-shop-pricing">
+<div class="admin-section-heading">
+<div class="admin-section-title">Drop + Sticker Pricing</div>
+<button class="admin-section-toggle" type="button" onclick="toggleAdminSectionCard('general-shop-pricing')">Minimize</button>
+</div>
+<div class="admin-section-body">
+<div class="admin-note-text">Owner only. Override the reference price and fallback market price for case drops and stickers. Leave a field blank to keep auto pricing.</div>
+<div class="admin-inline-input-row" style="margin-top:0.55rem;">
+<select id="admin-general-shop-pricing-item" onchange="updateAdminGeneralShopPricingEditor()" style="flex:1 1 16rem; min-width:14rem;"></select>
+<button onclick="loadAdminGeneralShopPricingTool()" style="background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Refresh</button>
+</div>
+<div class="admin-inline-input-row" style="margin-top:0.55rem;">
+<input type="number" id="admin-general-shop-pricing-reference" min="0" max="1000000000" placeholder="Reference price override" />
+<input type="number" id="admin-general-shop-pricing-market" min="0" max="1000000000" placeholder="Market price fallback" />
+<button onclick="adminSaveGeneralShopPricing()" style="background:#1565c0; color:#fff; border:none; border-radius:0.25rem;">Save Prices</button>
+</div>
+<div class="admin-inline-input-row" style="margin-top:0.45rem; flex-wrap:wrap;">
+<button onclick="applyAdminGeneralShopPricingPreset('ref-auto')" style="background:#37474f; color:#fff; border:none; border-radius:0.25rem;">Ref Auto</button>
+<button onclick="applyAdminGeneralShopPricingPreset('ref-plus-10')" style="background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Ref +10%</button>
+<button onclick="applyAdminGeneralShopPricingPreset('ref-plus-25')" style="background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Ref +25%</button>
+<button onclick="applyAdminGeneralShopPricingPreset('market-match-ref')" style="background:#37474f; color:#fff; border:none; border-radius:0.25rem;">Market = Ref</button>
+<button onclick="applyAdminGeneralShopPricingPreset('market-match-live')" style="background:#37474f; color:#fff; border:none; border-radius:0.25rem;">Market = Live Avg</button>
+<button onclick="applyAdminGeneralShopPricingPreset('market-plus-10')" style="background:#455a64; color:#fff; border:none; border-radius:0.25rem;">Market +10%</button>
+<button onclick="applyAdminGeneralShopPricingPreset('clear-all')" style="background:#5d4037; color:#fff; border:none; border-radius:0.25rem;">Clear</button>
+</div>
+<div id="admin-general-shop-pricing-note" class="admin-note-text"></div>
+<div id="admin-general-shop-pricing-status" class="admin-note-text"></div>
+<div id="admin-general-shop-pricing-manager" class="admin-compact-list"></div>
 </div>
 </div>
 
@@ -1926,8 +1959,8 @@ oninput="onChatInput()"
 <div class="overlay-panel" style="width:min(84rem, calc(100vw - 2rem)); max-height:min(92vh, 60rem);">
 <div class="overlay-header">
 <div>
-<h3>Live Trade</h3>
-<div class="overlay-subtle">Accept the request, adjust both sides, then both players accept to start the 3 second lock-in countdown.</div>
+<h3>Direct Trade</h3>
+<div class="overlay-subtle">One player offers one item. The other player chooses one item back when they accept, and the swap finishes right away.</div>
 </div>
 <button onclick="closeGeneralShopTradeModal()" style="padding:0.35rem 0.7rem;">Close</button>
 </div>
@@ -1941,7 +1974,7 @@ oninput="onChatInput()"
 <div class="overlay-header">
 <div>
 <h3>Trade Request</h3>
-<div class="overlay-subtle">See who sent it and what they are putting up before you answer.</div>
+<div class="overlay-subtle">See the offered item first, then choose one of your own items if you want to accept.</div>
 </div>
 <button onclick="closeGeneralShopTradeInviteModal()" style="padding:0.35rem 0.7rem;">Close</button>
 </div>
